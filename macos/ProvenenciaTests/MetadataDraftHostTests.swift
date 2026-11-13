@@ -133,6 +133,7 @@ struct MetadataDraftHostTests {
         await board.moveSaved(from: IndexSet(integer: 1), to: 0)
         #expect(ids(host.entries) == ["url", "roll", "provider"])
         #expect(!host.isChanged)
+        #expect(host.draft == nil)
 
         let a = catalogMetadataEntry(provider, "1", order: 5)
         let b = catalogMetadataEntry(roll, "2", order: 6)
@@ -157,6 +158,13 @@ struct MetadataDraftHostTests {
         #expect(!board.canConfirmAddRow)
         board.openAddRow()
         #expect(!board.canConfirmAddRow)
+        let before = host.entries.count
+        board.addRow?.value = "F-7"
+        #expect(!board.canConfirmAddRow)
+        await board.confirmAddRow()
+        #expect(board.addRow != nil)
+        #expect(host.entries.count == before)
+        board.addRow?.value = ""
         board.addRow?.fieldID = "film"
         board.addRow?.value = "  "
         #expect(!board.canConfirmAddRow)
@@ -174,9 +182,8 @@ struct MetadataDraftHostTests {
     @Test func refusalLandsOnItsRow() {
         let host = makeHost()
         let board = MetadataBoardModel(host: host)
-        func invalid(_ params: [String], code: String = "sourcemetadata.invalid") -> CoreInvokeError {
-            .coded(status: 1, code: code, kind: .user, params: params)
-        }
+        func invalid(_ params: [String]) -> CoreInvokeError { catalogMetadataRefusal(params: params) }
+        let notMetadata = CoreInvokeError.coded(status: 1, code: "artifacts.invalid", kind: .user, params: ["url"])
 
         board.beginEdit(fieldID: "roll")
         let error = invalid(["url"])
@@ -187,8 +194,24 @@ struct MetadataDraftHostTests {
         #expect(board.fieldErrorID == "url")
         #expect(board.fieldError == L10n.Errors.message(for: error))
 
+        let typedHere = MetadataBoardModel(host: makeHost())
+        typedHere.beginEdit(fieldID: "roll")
+        typedHere.drafts["roll"] = "13"
+        #expect(typedHere.showRefusal(invalid(["roll"])))
+        #expect(typedHere.drafts["roll"] == "13")
+        #expect(typedHere.editingFieldID == "roll")
+        #expect(typedHere.fieldErrorID == "roll")
+
+        let typedElsewhere = MetadataBoardModel(host: makeHost())
+        typedElsewhere.beginEdit(fieldID: "url")
+        typedElsewhere.drafts["url"] = "https://example.org/typed"
+        #expect(typedElsewhere.showRefusal(invalid(["roll"])))
+        #expect(typedElsewhere.drafts["url"] == "https://example.org/typed")
+        #expect(typedElsewhere.editingFieldID == "url")
+        #expect(typedElsewhere.fieldErrorID == "roll")
+
         let fresh = MetadataBoardModel(host: makeHost())
-        for refused in [invalid([]), invalid([""]), invalid(["gone"]), invalid(["url"], code: "artifacts.invalid")] {
+        for refused in [invalid([]), invalid([""]), invalid(["gone"]), notMetadata] {
             #expect(!fresh.showRefusal(refused))
         }
         #expect(fresh.editingFieldID == nil && fresh.fieldError == nil && fresh.fieldErrorID == nil)

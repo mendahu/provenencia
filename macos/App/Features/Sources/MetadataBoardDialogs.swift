@@ -93,7 +93,7 @@ final class MetadataBoardDialogs {
     }
 
     func askClear(on board: MetadataBoardModel, fieldID: String) {
-        guard let entry = board.entries.first(where: { $0.field.id == fieldID }), entry.hasValue else { return }
+        guard let entry = board.savedEntry(fieldID: fieldID) else { return }
         pendingDelete = MetadataBoardDeleteItem(fieldID: fieldID, label: entry.field.label, board: board)
     }
 

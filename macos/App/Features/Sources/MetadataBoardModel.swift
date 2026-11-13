@@ -81,10 +81,15 @@ final class MetadataBoardModel {
         drafts = drafts.filter { ids.contains($0.key) }
     }
 
+    /// The row holding a saved value for `fieldID`; nil for an empty suggestion or no row.
+    func savedEntry(fieldID: String) -> CatalogMetadataEntry? {
+        entries.first { $0.field.id == fieldID && $0.hasValue }
+    }
+
     // MARK: Row edit
 
     func beginEdit(fieldID: String) {
-        guard let entry = entries.first(where: { $0.field.id == fieldID }), entry.hasValue else { return }
+        guard let entry = savedEntry(fieldID: fieldID) else { return }
         if let current = editingFieldID, current != fieldID {
             cancelEdit()
         }
@@ -141,7 +146,7 @@ final class MetadataBoardModel {
     /// Asks a clear of a value: with no value for `fieldID`, false; on a host that confirms, true and
     /// nothing is written (the caller opens its confirm); otherwise clears at once and answers false.
     func requestClear(fieldID: String) async -> Bool {
-        guard entries.contains(where: { $0.field.id == fieldID && $0.hasValue }) else { return false }
+        guard savedEntry(fieldID: fieldID) != nil else { return false }
         if host.confirmsClear { return true }
         _ = await clear(fieldID: fieldID)
         return false
@@ -244,16 +249,24 @@ final class MetadataBoardModel {
     }
 
     /// Lands an owner's refused write on the row it names: the refused value's field id is
-    /// `params[0]`. True when the row took it (its edit open, its error placed); false when the error
-    /// is no row refusal or names no row with a value, and nothing changes.
+    /// `params[0]`. True when the row took it (its error placed); false when the error is no row
+    /// refusal or names no row with a value, and nothing changes. Typed text is never discarded:
+    /// the row's own open edit keeps its buffer, and another row's open edit with a buffer that
+    /// differs from its saved value stays open; otherwise the refused row opens for edit.
     func showRefusal(_ error: Error) -> Bool {
         guard let fieldID = (error as? CoreInvokeError)?.params.first,
-              entries.contains(where: { $0.field.id == fieldID && $0.hasValue }),
+              savedEntry(fieldID: fieldID) != nil,
               let message = rowRefusalMessage(error)
         else { return false }
-        beginEdit(fieldID: fieldID)
+        if editingFieldID != fieldID, !hasTypedEdit { beginEdit(fieldID: fieldID) }
         placeRowError(message, fieldID: fieldID)
         return true
+    }
+
+    /// True when the row in edit holds text that is not its saved value.
+    private var hasTypedEdit: Bool {
+        guard let id = editingFieldID, let saved = savedEntry(fieldID: id) else { return false }
+        return drafts[id] != saved.valueText
     }
 
     func dismissSuggestion(fieldID: String) async {
