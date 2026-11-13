@@ -1,29 +1,32 @@
 import SwiftUI
 
-/// One owner's metadata board: saved reorderable rows, type suggestions, and the
-/// empty state. The page draws the section header and intro around it, and owns
-/// the Add dialog and clear confirm (`MetadataBoardDialogs`) the board asks for.
+/// Where a board sits, which decides how a researcher adds a field to it.
+enum MetadataBoardPlacement {
+    /// On the Source page: the section header's Add field button opens the row at the foot.
+    case page
+    /// In a form: the board draws its own ghost Add field button at the foot.
+    case form
+}
+
+/// One owner's metadata board: saved reorderable rows, type suggestions, the
+/// empty state and the inline Add field row. The page draws the section header
+/// around it, and owns the clear confirm (`MetadataBoardDialogs`) the board asks for.
 struct MetadataBoardView: View {
     @Bindable var board: MetadataBoardModel
+    let placement: MetadataBoardPlacement
     /// Prefix of every accessibility identifier the board draws (`<prefix>.list`, `<prefix>.<fieldID>.value`, …).
     let accessibilityIdentifierPrefix: String
-    let onAdd: () -> Void
     let onClear: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            if board.saved.isEmpty, board.suggested.isEmpty {
+            if placement == .page, board.saved.isEmpty, board.suggested.isEmpty {
                 PVEmptyState(
                     icon: .list,
                     title: L10n.Sources.metadataEmptyTitle,
                     message: L10n.string(L10n.Sources.metadataEmptyMessage),
                     compact: true
-                ) {
-                    PVButton(L10n.Sources.addMetadata, variant: .primary, size: .sm, icon: .plus) {
-                        onAdd()
-                    }
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).empty.add")
-                }
+                )
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).empty")
             } else {
                 if !board.saved.isEmpty {
@@ -56,6 +59,7 @@ struct MetadataBoardView: View {
                                 error: board.fieldErrorID == entry.field.id
                                     ? board.fieldError
                                     : nil,
+                                onTyped: { board.setTyped($0, fieldID: entry.field.id) },
                                 onSave: { value in
                                     board.drafts[entry.field.id] = value
                                     Task { await board.save(fieldID: entry.field.id) }
@@ -67,6 +71,22 @@ struct MetadataBoardView: View {
                         }
                     }
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).suggestions")
+                }
+            }
+
+            if board.addRow != nil {
+                MetadataBoardAddRowView(
+                    board: board,
+                    comboWidth: placement == .form ? 168 : 150,
+                    accessibilityIdentifierPrefix: accessibilityIdentifierPrefix
+                )
+            } else if placement == .form {
+                HStack {
+                    PVButton(L10n.Sources.addMetadata, variant: .ghost, size: .sm, icon: .plus) {
+                        board.openAddRow()
+                    }
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).add")
+                    Spacer(minLength: 0)
                 }
             }
         }
@@ -90,6 +110,7 @@ struct MetadataBoardView: View {
                 error: board.fieldErrorID == entry.field.id
                     ? board.fieldError
                     : nil,
+                onTyped: { board.setTyped($0, fieldID: entry.field.id) },
                 onBeginEdit: { board.beginEdit(fieldID: entry.field.id) },
                 onSave: { value in
                     board.drafts[entry.field.id] = value
@@ -104,50 +125,90 @@ struct MetadataBoardView: View {
     }
 }
 
-/// Field + value form for the Add Metadata dialog (hosted by the page shell).
-struct MetadataBoardAddForm: View {
-    @Bindable var dialogs: MetadataBoardDialogs
-    /// Prefix of the form's identifiers (`<prefix>.field`, `<prefix>.value`).
+/// The inline Add field row at the foot of a board: a field picker, a value
+/// input, ✓ and ✕, and under them the refusal or the "taken" notice. ✓ saves at
+/// once; Escape closes the row. While drawn it is the sheet's one inner edit.
+private struct MetadataBoardAddRowView: View {
+    @Bindable var board: MetadataBoardModel
+    let comboWidth: CGFloat
     let accessibilityIdentifierPrefix: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            PVField(
-                label: L10n.Sources.metadataField,
-                hint: L10n.Sources.metadataFieldHint,
-                error: dialogs.addFieldError,
-                marker: .required
-            ) {
-                PVComboBox(
-                    selection: $dialogs.addFieldID,
-                    options: dialogs.fieldComboOptions,
-                    placeholder: L10n.Sources.metadataField,
-                    emptyLabel: L10n.Sources.typeNoMatch,
-                    isInvalid: dialogs.addFieldError != nil,
-                    label: L10n.Sources.metadataField,
-                    accessibilityIdentifierPrefix: "\(accessibilityIdentifierPrefix).field"
-                )
-                .onChange(of: dialogs.addFieldID) { _, newValue in
-                    if !newValue.isEmpty { dialogs.addFieldError = nil }
-                }
-            }
-            PVField(
-                label: L10n.Sources.metadataValue,
-                hint: L10n.Sources.metadataValueHint,
-                error: dialogs.addValueError,
-                marker: .required
-            ) {
-                PVInput(
-                    text: $dialogs.addValue,
-                    isInvalid: dialogs.addValueError != nil
-                )
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).value")
-                .onChange(of: dialogs.addValue) { _, _ in
-                    if dialogs.addValueError != nil {
-                        dialogs.addValueError = nil
+        let prefix = "\(accessibilityIdentifierPrefix).addRow"
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            PVCard(cornerRadius: PVRadius.sm) {
+                HStack(spacing: PVSpacing.space4) {
+                    PVComboBox(
+                        selection: Binding(
+                            get: { board.addRow?.fieldID ?? "" },
+                            set: { board.pickAddRowField($0) }
+                        ),
+                        options: board.fieldComboOptions,
+                        size: .sm,
+                        placeholder: L10n.Sources.metadataField,
+                        emptyLabel: L10n.Sources.typeNoMatch,
+                        isInvalid: false,
+                        label: L10n.Sources.metadataField,
+                        accessibilityIdentifierPrefix: "\(prefix).field"
+                    )
+                    .frame(width: comboWidth)
+                    PVInput(
+                        text: Binding(
+                            get: { board.addRow?.value ?? "" },
+                            set: { board.setAddRowValue($0) }
+                        ),
+                        size: .sm,
+                        mono: true,
+                        prompt: L10n.Sources.metadataValue,
+                        isInvalid: board.addRow?.error != nil
+                    )
+                    .onSubmit { Task { await board.confirmAddRow() } }
+                    .accessibilityLabel(L10n.string(L10n.Sources.metadataValue))
+                    .accessibilityIdentifier("\(prefix).value")
+                    confirmControl
+                    PVIconButton(
+                        .dismiss,
+                        label: L10n.Sources.metadataAddRowCancelLabel,
+                        size: .sm
+                    ) {
+                        board.closeAddRow()
                     }
+                    .accessibilityIdentifier("\(prefix).cancel")
                 }
+                .padding(.vertical, PVSpacing.space4)
+                .padding(.horizontal, PVSpacing.space5)
             }
+            if let error = board.addRow?.error, !error.isEmpty {
+                PVErrorText(error, size: .caption, announces: true)
+            } else if let taken = board.addRow?.takenFieldLabel {
+                Text(L10n.Sources.metadataAddRowFieldTaken(field: taken))
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .pvAnnounce(L10n.Sources.metadataAddRowFieldTaken(field: taken))
+            }
+        }
+        // Escape closes the row; the enclosing sheet's own Escape stands down while it is open.
+        .onExitCommand { board.closeAddRow() }
+        .pvSheetInnerEdit(true)
+    }
+
+    @ViewBuilder
+    private var confirmControl: some View {
+        if board.isSavingAddRow {
+            ProgressView()
+                .controlSize(.small)
+                .frame(width: PVControlSize.sm.height, height: PVControlSize.sm.height)
+        } else {
+            PVIconButton(
+                .check,
+                label: L10n.Sources.metadataAddRowConfirmLabel,
+                size: .sm,
+                tone: .accent
+            ) {
+                Task { await board.confirmAddRow() }
+            }
+            .disabled(!board.canConfirmAddRow)
+            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).addRow.confirm")
         }
     }
 }
@@ -158,6 +219,7 @@ private struct MetadataBoardSuggestionRow: View {
     let entry: CatalogMetadataEntry
     let isSaving: Bool
     var error: String? = nil
+    let onTyped: (Bool) -> Void
     let onSave: (String) -> Void
     let onDismiss: () -> Void
 
@@ -210,6 +272,10 @@ private struct MetadataBoardSuggestionRow: View {
             .padding(.vertical, PVSpacing.space4)
             .padding(.horizontal, PVSpacing.space5)
         }
+        // Typed text is an inner edit: Escape clears it before the sheet reacts.
+        .pvSheetInnerEdit(!draft.isEmpty)
+        .onExitCommand { draft = "" }
+        .onChange(of: draft) { _, text in onTyped(!text.isEmpty) }
     }
 }
 
@@ -222,6 +288,7 @@ private struct MetadataBoardTextEditor: View {
     let isEditing: Bool
     let isSaving: Bool
     var error: String? = nil
+    let onTyped: (Bool) -> Void
     let onBeginEdit: () -> Void
     let onSave: (String) -> Void
     let onCancel: () -> Void
@@ -281,8 +348,11 @@ private struct MetadataBoardTextEditor: View {
         .onChange(of: isEditing, initial: true) { _, editing in
             if editing {
                 draft = entry.valueText
+            } else {
+                onTyped(false)
             }
         }
+        .onChange(of: draft) { _, text in onTyped(isEditing && text != entry.valueText) }
     }
 
     private var displayValue: some View {

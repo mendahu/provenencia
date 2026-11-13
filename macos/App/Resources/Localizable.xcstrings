@@ -8233,49 +8233,13 @@
       }
     },
     "sources.page.addMetadata": {
-      "comment": "Button to open Add metadata field dialog",
+      "comment": "Button that opens the inline Add field row",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Add field"
-          }
-        }
-      }
-    },
-    "sources.page.addMetadataConfirm": {
-      "comment": "Confirm button on the Add metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add"
-          }
-        }
-      }
-    },
-    "sources.page.addMetadataDialogSubtitle": {
-      "comment": "Subtitle of the Add metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick any field from this project’s vocabulary, then enter the value as written on the record."
-          }
-        }
-      }
-    },
-    "sources.page.addMetadataDialogTitle": {
-      "comment": "Title of the Add metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add metadata"
           }
         }
       }
@@ -9756,54 +9720,6 @@
         }
       }
     },
-    "sources.page.metadataFieldCount": {
-      "comment": "Metadata section count; argument is saved field count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld field"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld fields"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "sources.page.metadataFieldHint": {
-      "comment": "Hint under metadata field picker",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search the whole source metadata vocabulary"
-          }
-        }
-      }
-    },
-    "sources.page.metadataFieldRequired": {
-      "comment": "Validation when Add metadata is submitted without a field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a field."
-          }
-        }
-      }
-    },
     "sources.page.metadataHeading": {
       "comment": "Heading for the Metadata section on the Source page",
       "extractionState": "manual",
@@ -9817,7 +9733,7 @@
       }
     },
     "sources.page.metadataIntro": {
-      "comment": "Prose under the Metadata section heading",
+      "comment": "Tooltip on the Metadata section's help icon",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9864,26 +9780,50 @@
         }
       }
     },
-    "sources.page.metadataValueHint": {
-      "comment": "Hint under metadata value field",
+    "sources.page.metadataAddRowFieldTaken": {
+      "comment": "Notice under the inline Add field row when its picked field was added elsewhere; argument is the field label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter it as written on the record"
+            "value": "%@ was added in another window. Pick another field."
           }
         }
       }
     },
-    "sources.page.metadataValueRequired": {
-      "comment": "Validation when Add metadata is submitted without a value",
+    "sources.page.metadataHelpLabel": {
+      "comment": "VoiceOver label for the help icon beside the Metadata heading",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a value."
+            "value": "About metadata"
+          }
+        }
+      }
+    },
+    "sources.page.metadataAddRowCancelLabel": {
+      "comment": "VoiceOver label for the cancel on the inline Add field row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop adding a field"
+          }
+        }
+      }
+    },
+    "sources.page.metadataAddRowConfirmLabel": {
+      "comment": "VoiceOver label for the check on the inline Add field row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add this field"
           }
         }
       }

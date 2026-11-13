@@ -6339,14 +6339,6 @@ enum L10n {
             comment: "Inline error when DateValue millisecond is out of range"
         )
 
-        static func metadataFieldCount(_ count: Int) -> String {
-            return L10n.format(LocalizedStringResource(
-                "sources.page.metadataFieldCount",
-                defaultValue: "%lld fields",
-                comment: "Metadata section count; argument is saved field count"
-            ), count)
-        }
-
         static func artifactsCount(_ count: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifactsCount",
@@ -6627,13 +6619,13 @@ enum L10n {
         static let addMetadata = LocalizedStringResource(
             "sources.page.addMetadata",
             defaultValue: "Add field",
-            comment: "Button to open Add metadata field dialog"
+            comment: "Button that opens the inline Add field row"
         )
 
         static let metadataIntro = LocalizedStringResource(
             "sources.page.metadataIntro",
             defaultValue: "Metadata describes the source itself — what the record says about its own making: a registration number, a call number, the reel it sits on. Facts the record asserts about people or events are not metadata; those become citations and asserted facts, so they can move on to the entities they describe.",
-            comment: "Prose under the Metadata section heading"
+            comment: "Tooltip on the Metadata section's help icon"
         )
 
         static let metadataEmptyTitle = LocalizedStringResource(
@@ -6657,34 +6649,10 @@ enum L10n {
             ), field)
         }
 
-        static let addMetadataDialogTitle = LocalizedStringResource(
-            "sources.page.addMetadataDialogTitle",
-            defaultValue: "Add metadata",
-            comment: "Title of the Add metadata dialog"
-        )
-
-        static let addMetadataDialogSubtitle = LocalizedStringResource(
-            "sources.page.addMetadataDialogSubtitle",
-            defaultValue: "Pick any field from this project’s vocabulary, then enter the value as written on the record.",
-            comment: "Subtitle of the Add metadata dialog"
-        )
-
-        static let addMetadataConfirm = LocalizedStringResource(
-            "sources.page.addMetadataConfirm",
-            defaultValue: "Add",
-            comment: "Confirm button on the Add metadata dialog"
-        )
-
         static let metadataField = LocalizedStringResource(
             "sources.page.metadataField",
             defaultValue: "Field",
             comment: "Label for metadata field picker"
-        )
-
-        static let metadataFieldHint = LocalizedStringResource(
-            "sources.page.metadataFieldHint",
-            defaultValue: "Search the whole source metadata vocabulary",
-            comment: "Hint under metadata field picker"
         )
 
         static let metadataValue = LocalizedStringResource(
@@ -6693,22 +6661,30 @@ enum L10n {
             comment: "Label for metadata value entry"
         )
 
-        static let metadataValueHint = LocalizedStringResource(
-            "sources.page.metadataValueHint",
-            defaultValue: "Enter it as written on the record",
-            comment: "Hint under metadata value field"
+        static func metadataAddRowFieldTaken(field: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.metadataAddRowFieldTaken",
+                defaultValue: "%@ was added in another window. Pick another field.",
+                comment: "Notice under the inline Add field row when its picked field was added elsewhere; argument is the field label"
+            ), field)
+        }
+
+        static let metadataHelpLabel = LocalizedStringResource(
+            "sources.page.metadataHelpLabel",
+            defaultValue: "About metadata",
+            comment: "VoiceOver label for the help icon beside the Metadata heading"
         )
 
-        static let metadataFieldRequired = LocalizedStringResource(
-            "sources.page.metadataFieldRequired",
-            defaultValue: "Choose a field.",
-            comment: "Validation when Add metadata is submitted without a field"
+        static let metadataAddRowCancelLabel = LocalizedStringResource(
+            "sources.page.metadataAddRowCancelLabel",
+            defaultValue: "Stop adding a field",
+            comment: "VoiceOver label for the cancel on the inline Add field row"
         )
 
-        static let metadataValueRequired = LocalizedStringResource(
-            "sources.page.metadataValueRequired",
-            defaultValue: "Enter a value.",
-            comment: "Validation when Add metadata is submitted without a value"
+        static let metadataAddRowConfirmLabel = LocalizedStringResource(
+            "sources.page.metadataAddRowConfirmLabel",
+            defaultValue: "Add this field",
+            comment: "VoiceOver label for the check on the inline Add field row"
         )
 
         static let metadataSuggestionPlaceholder = LocalizedStringResource(

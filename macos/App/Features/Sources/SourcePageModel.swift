@@ -97,7 +97,6 @@ final class SourcePageModel {
     var acceptsArtifactPageDrop: Bool {
         !artifacts.isAdding
             && !artifacts.isAttaching
-            && !metadataDialogs.isAdding
             && metadataDialogs.pendingDelete == nil
             && notes.pendingDelete == nil
             && pendingImpact == nil

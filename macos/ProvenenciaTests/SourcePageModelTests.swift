@@ -870,28 +870,28 @@ struct SourcePageModelTests {
         #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.map(\.field.id) == before)
     }
 
-    @Test func addMetadataFromDialog() async {
+    @Test func addRowSavesTheSourceValue() async {
         let author = authorField()
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadataDialogs.openAdd(on: model.metadata)
-        model.metadataDialogs.addFieldID = author.id
+        model.metadata.openAddRow()
+        model.metadata.pickAddRowField(author.id)
         store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
             CatalogMetadataEntry(
                 field: author, valueText: "Eliza",
                 hasValue: true, suggested: false, sortOrder: 0
             ),
         ]
-        model.metadataDialogs.addValue = "Eliza"
-        await model.metadataDialogs.createFromAdd()
-        #expect(model.metadataDialogs.isAdding == false)
+        model.metadata.setAddRowValue("Eliza")
+        await model.metadata.confirmAddRow()
+        #expect(model.metadata.addRow == nil)
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
     /// A field added on the Metadata page reaches the Add-metadata dropdown
     /// without the page reloading: the dropdown reads the shared field list.
-    @Test func addMetadataDropdownSeesFieldCreatedElsewhere() async throws {
+    @Test func addRowPickerSeesFieldCreatedElsewhere() async throws {
         let store = makeStore(fields: [authorField()])
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = SourcePageModel(
@@ -923,21 +923,19 @@ struct SourcePageModelTests {
         #expect(workspaceBefore?.value == payloadBefore)
     }
 
-    @Test func addMetadataRequiresFieldAndValue() async {
+    @Test func addRowNeedsFieldAndValue() async {
         let author = authorField()
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadataDialogs.openAdd(on: model.metadata)
-        await model.metadataDialogs.createFromAdd()
-        #expect(model.metadataDialogs.addFieldError != nil)
-        #expect(model.metadataDialogs.isAdding == true)
+        model.metadata.openAddRow()
+        #expect(!model.metadata.canConfirmAddRow)
 
-        model.metadataDialogs.addFieldID = author.id
-        model.metadataDialogs.addValue = "   "
-        await model.metadataDialogs.createFromAdd()
-        #expect(model.metadataDialogs.addValueError != nil)
-        #expect(model.metadataDialogs.isAdding == true)
+        model.metadata.pickAddRowField(author.id)
+        model.metadata.setAddRowValue("   ")
+        #expect(!model.metadata.canConfirmAddRow)
+        await model.metadata.confirmAddRow()
+        #expect(model.metadata.addRow != nil)
         #expect(model.metadata.entries.isEmpty)
     }
 
@@ -1120,18 +1118,18 @@ struct SourcePageModelTests {
         #expect(model.pageError == nil)
     }
 
-    @Test func invalidMetadataAddLandsOnValueField() async {
+    @Test func addRowRefusalStaysOnTheRow() async {
         let field = urlField()
         let store = makeStore(fields: [field])
         store.setMetadataError = catalogMetadataRefusal()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadataDialogs.openAdd(on: model.metadata)
-        model.metadataDialogs.addFieldID = field.id
-        model.metadataDialogs.addValue = "javascript:alert(1)"
-        await model.metadataDialogs.createFromAdd()
-        #expect(model.metadataDialogs.addValueError == L10n.Errors.message(for: store.setMetadataError!))
-        #expect(model.metadataDialogs.isAdding == true)
+        model.metadata.openAddRow()
+        model.metadata.pickAddRowField(field.id)
+        model.metadata.setAddRowValue("javascript:alert(1)")
+        await model.metadata.confirmAddRow()
+        #expect(model.metadata.addRow?.error == L10n.Errors.message(for: store.setMetadataError!))
+        #expect(model.metadata.addRow != nil)
         #expect(model.pageError == nil)
         #expect(model.metadata.entries.isEmpty)
     }
