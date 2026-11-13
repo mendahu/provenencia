@@ -30,10 +30,22 @@ Maintainability (fresh, strongest model): **Fits with changes**. Executability (
 | X-8 | minor | AC labels collide with existing subtest names | **Fixed** — the Stop condition names "the existing subtests named AC-2.2 / AC-2.3 (S16-01's labels)" |
 | X-9 | minor | Notes, none blocking | Logged |
 
-## Round 2
+## Round 2 (2026-11-13)
 
-Pending.
+Maintainability: **Fits with changes**, two new blockers in round-1 fix text. Executability: **Ready with changes**, no blocker; all round-1 answers confirmed against the code (Go 1.27 toolchain not available to the reviewer, so no check was run).
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| M-6 | blocker | Next adds pointed S16-22 at unexported `loadSteps`/`forLinks` and S16-24 at an `InputScope` `nodeSource` that records nothing warm | **Fixed** — S16-22 reads the batched `Relationships`; S16-24 follows the map (handles through `InputScope`, pivots from the loaded steps) |
+| M-7 | blocker | D-11 had `loadSteps` inline `eventLinksAt` + `kinEdges` beside `parentEdges` | **Fixed** — D-11: `parentEdges` returns `(atEnd, edges, err)`, the one builder; Codebase fit row |
+| X-10 | major | Merged query-count test shape open | **Fixed** — D-10 names the helper, the two subtests and the ids |
+| X-11 | major | Helpers' graph and `propose` unspecified | **Fixed** — D-8 gives the helper's first line |
+| X-12 | minor | T-2 one flow or two rows | **Fixed** — two rows, fresh world each |
+| X-13 | minor | `filed` helper checks `hasSiblings` | **Fixed** — D-10 |
+| X-14 | minor | Batched edge cases | **Fixed** — D-2 states empty, repeated and short ids |
+| X-15 | minor | Base-fails case and heap noise | **Fixed** — STEP-4 Check and §11: base-failing rule; `kinship-B` ≤ 1.1 × base |
+| X-16 | nit | Map status value | **Fixed** — `Landed #N` |
 
 ## Verdict
 
-Pending round 2.
+Planned. Two rounds; every finding Fixed; no To user item.
