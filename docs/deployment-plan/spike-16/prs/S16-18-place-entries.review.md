@@ -63,3 +63,14 @@
 
 ### M-9 · nit · No `Canon` builder for place links
 **Answer:** Fixed — `Canon.PartOf` in STEP-1.
+
+## Round 2
+
+Maintainability: every round-1 answer holds; the D-16 / D-17 premises hold at `44ac023` (committed association rows give bridge and ends with no new query; a removed association reaches the drop through `Handles` alone; `mergedNeighbors`' `linkRaw`s carry `bridgeKey`).
+
+### M-10 · blocker · `Deps` and `Bridges` are a second way to say what a value was built from, beside `InputKey`
+`InputKey` already means "a handle's values" (`{ID}`) and "the links at this end of this bridge" (`{ID, Bridge, Endpoint}`); the persisted input index and the summary closure use it. Proposed: one `KeyedEntry.Inputs func(id, v) []InputKey`, an index on `(ID, Bridge)`, and the commit's moved inputs as `InputKey`s.
+**Answer:** Fixed — D-5, D-16, D-17, US-4, T-8 – T-10, §6 and STEP-3 / 7 / 9 now use `Inputs`; `placeDeps`, `Bridges` and `linkMove` are gone. The place entry declares `placeInputs` (its row-facing `inputs` plus `FollowKeys` of the other three place hops), and T-8 guards both lists against real reads. Matching is on `(ID, Bridge)`; `Endpoint` is not matched (D-16 says why). The user's answer (exact update in the registry, not a band-aid) is unchanged; only the vocabulary changed.
+
+### M-11 · minor · `Deps` means the opposite of `SummaryDeps`
+**Answer:** Fixed by M-10 (the field is `Inputs`).
