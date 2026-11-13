@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-13 — Per-graph records in the cache registry, and the Sources section reads them
+
+**Landed 2026-11-12** in [#809](https://github.com/mendahu/provenencia/pull/809). A person's Sources section now reads its groups and claims from cached per-graph Subject records, so a person in more than 64 Evidence graphs no longer reloads them on every visit (13 ms cold and 0.2 ms warm at 80 graphs). Cache entries keep their most recently used keys at their cap, and the loaded graphs, matching layers and Promote's candidates are registry entries keyed by graph.
+
 ## S16-06 — Section switches and removals are spoken
 
 **Landed 2026-11-11** in [#785](https://github.com/mendahu/provenencia/pull/785). Choosing a Person page section with ⌘1–⌘5, a click or Space now says "Timeline shown." (and so on), and the keyboard stays on the selected segment of the switcher when it was in the sections or on the switcher; the segmented control's focus handle lands on the selected segment. Unpromoting one of a person's records that keeps the person says "J. Weber unpromoted."; the leave-or-stay choice after a Remove moved out of the Sources section into the shared Unpromote flow (`UnpromotePageOutcome`), where tests reach it. The header counts "7 records" on every Conclusion page, and the Unpromote confirm ends ", and the person stays" (event, place per kind). Version 0.9.1.

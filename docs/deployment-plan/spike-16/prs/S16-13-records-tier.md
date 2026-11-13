@@ -1,6 +1,6 @@
 # S16-13 — Per-graph records in the cache registry, and the Sources section reads them
 
-**Status:** Planned
+**Status:** Landed in [#809](https://github.com/mendahu/provenencia/pull/809) (2026-11-12)
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Sources section shows the same groups, claims and rows; only where the engine reads them from moves)
@@ -27,6 +27,17 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- D-1 was amended at the round-0 stop (user, 2026-11-12): the use-order links live in the item (`BenchmarkCacheSizes` kinship +20% to +35% with `container/list`; now -6.6% and +3.2%).
+- The planning base was measured on `main` in the working tree, not a worktree (the repo rule asks first); only unrelated files had changed since `aeb2773`.
+- `EmptyShortlistForTest` mints a new index generation, so `TestVerifyChecksMatchIndex` still reaches the `promotealign.matchindex` Check (a stale-generation candidates memo is not checked).
+- T-14 `TestVerifyLeavesEntriesAlone` is in `promotealign/memo_test.go`, not `graphfill/records_test.go`: it needs the unexported `candidates` entry.
+- AC-1.6: the wire has no `value_subject_label`; the label is `value_text`, already asserted by `TestListPersonClaims`, so the test gained no case.
+- `budgetLinks80` is `budgetLinksPast` (planning base 113 ms x 1.25 rounds to 200 ms, below it).
+- Measured: `TestClaimsBudgets` cold 13.2 ms, warm 0.18 ms (base 14.7, 13.9); 80-graph record links 93 ms (base 113); `BenchmarkGraphRecords` 648 ms, 17.3 MB; `graphRecords` 0.53 MB; evidence 34.5 / 45.0 MB.
+- Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective
 
