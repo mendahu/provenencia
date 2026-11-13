@@ -117,3 +117,7 @@ Two rounds done. Every blocker Fixed; nothing To user. Plan **Planned**.
 
 **D-15:** `budgetLinks80` is 200 ms (planning base 113 ms x 1.25, rounded up); "no lower than `budgetLinksPast`" is dropped, since a 1.5 s floor could not catch growth. User: "Set 200 ms".
 **CON-2:** `EmptyShortlistForTest` keeps minting an index generation (a §11 test-helper deviation). User: "Keep it". Recorded in the Landed note.
+
+## Amendment — 2026-11-13, CI fix
+
+**D-15:** `budgetLinks80` is 600 ms (CI 414 ms x 1.25, rounded up). `promotealign` `budgetWarm` is 500 ms (CI 383 ms x 1.25) and `budgetComposeAll` 900 ms (CI 679 ms x 1.25; still fails a per-row place graph at about four times the cost). CI run 43364250762. User: "Raise three budgets to the CI runner".
