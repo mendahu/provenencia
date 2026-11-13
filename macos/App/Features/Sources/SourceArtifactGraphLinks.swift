@@ -59,3 +59,15 @@ extension Sequence where Element == CatalogEvidenceGraphUnlinkBlock {
         return hints
     }
 }
+
+/// The muted line under a graph group with no box checked.
+struct SourceArtifactNoGraphLine: View {
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        Text(L10n.Sources.artifactGraphsNone)
+            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+            .foregroundStyle(PVColor.textMuted)
+            .accessibilityIdentifier(accessibilityIdentifier)
+    }
+}

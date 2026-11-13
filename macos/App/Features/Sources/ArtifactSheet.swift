@@ -32,7 +32,8 @@ private struct ArtifactSheetModifier: ViewModifier {
             confirmDisabled: !(model?.canSave ?? false),
             accessibilityIdentifierPrefix: "sources.page.artifactSheet",
             scrollsBody: true,
-            scrollTarget: model.flatMap { $0.opensAt == .top ? nil : AnyHashable($0.opensAt) },
+            scrollTarget: model?.scrollTarget.map { AnyHashable($0) },
+            scrollRequest: model.map { AnyHashable($0.scrollRequest) },
             onConfirm: { await $0.save() },
             form: { current in ArtifactSheetForm(model: current) }
         )
@@ -49,18 +50,20 @@ private struct ArtifactSheetForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            if let saveError = model.saveError {
-                PVCallout(
-                    tone: .danger,
-                    title: L10n.Sources.artifactCardSaveErrorTitle,
-                    message: saveError,
-                    announces: true
-                )
-                .accessibilityIdentifier("\(prefix).saveError")
+            VStack(alignment: .leading, spacing: PVSpacing.space6) {
+                if let saveError = model.saveError {
+                    PVCallout(
+                        tone: .danger,
+                        title: L10n.Sources.artifactCardSaveErrorTitle,
+                        message: saveError,
+                        announces: true
+                    )
+                    .accessibilityIdentifier("\(prefix).saveError")
+                }
+                fields
+                    .disabled(model.isSaving)
             }
-            fields
-                .id(ArtifactSheetModel.Section.top)
-                .disabled(model.isSaving)
+            .id(ArtifactSheetModel.Section.top)
             graphLinks
                 .id(ArtifactSheetModel.Section.graphs)
             copyDetails
@@ -141,10 +144,7 @@ private struct ArtifactSheetForm: View {
                         )
                     }
                     if model.inNoGraph {
-                        Text(L10n.Sources.artifactGraphsNone)
-                            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                            .foregroundStyle(PVColor.textMuted)
-                            .accessibilityIdentifier("\(prefix).graphs.none")
+                        SourceArtifactNoGraphLine(accessibilityIdentifier: "\(prefix).graphs.none")
                     }
                 }
             }

@@ -96,6 +96,9 @@ struct PVFormDialogContent<Form: View>: View {
     let scrollsBody: Bool
     /// The `.id` of the section the scrolling body opens at the top of.
     let scrollTarget: AnyHashable?
+    /// A token the caller changes to scroll the body to `scrollTarget` again
+    /// (a refusal that sits at the top, say).
+    let scrollRequest: AnyHashable?
 
     /// Tallest the scrolling body grows before it scrolls.
     static var maxScrollingBodyHeight: CGFloat { 560 }
@@ -112,12 +115,14 @@ struct PVFormDialogContent<Form: View>: View {
         accessibilityIdentifierPrefix: String? = nil,
         scrollsBody: Bool = false,
         scrollTarget: AnyHashable? = nil,
+        scrollRequest: AnyHashable? = nil,
         onConfirm: @escaping () -> Void,
         onCancel: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) {
         self.scrollsBody = scrollsBody
         self.scrollTarget = scrollTarget
+        self.scrollRequest = scrollRequest
         self.copy = copy
         self.width = width
         self.isRunning = isRunning
@@ -170,6 +175,12 @@ struct PVFormDialogContent<Form: View>: View {
     }
 }
 
+/// What asks the scrolling body to scroll: its first measured height, or the caller's token.
+private struct BodyScrollRequest: Hashable {
+    let measured: Bool
+    let caller: AnyHashable?
+}
+
 extension PVFormDialogContent {
     @ViewBuilder
     fileprivate var formBody: some View {
@@ -180,7 +191,14 @@ extension PVFormDialogContent {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bodyHeight = $0 }
             }
             .frame(height: min(bodyHeight, Self.maxScrollingBodyHeight))
-            .pvScrollsRowIntoView(scrollTarget, anchor: .top, animated: false, scrollsOnAppear: true)
+            // The first scroll waits for the body's first measured height: before
+            // it the scroll view is 0pt tall and a scroll lands nowhere.
+            .pvScrollsRowIntoView(
+                scrollTarget,
+                anchor: .top,
+                animated: false,
+                whenRequested: AnyHashable(BodyScrollRequest(measured: bodyHeight > 0, caller: scrollRequest))
+            )
         } else {
             form()
         }
@@ -234,6 +252,7 @@ extension View {
         accessibilityIdentifierPrefix: String? = nil,
         scrollsBody: Bool = false,
         scrollTarget: AnyHashable? = nil,
+        scrollRequest: AnyHashable? = nil,
         onConfirm: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) -> some View {
@@ -251,6 +270,7 @@ extension View {
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 scrollsBody: scrollsBody,
                 scrollTarget: scrollTarget,
+                scrollRequest: scrollRequest,
                 onConfirm: onConfirm,
                 onCancel: { isPresented.wrappedValue = false },
                 form: form
@@ -276,6 +296,7 @@ extension View {
         accessibilityIdentifierPrefix: String? = nil,
         scrollsBody: Bool = false,
         scrollTarget: AnyHashable? = nil,
+        scrollRequest: AnyHashable? = nil,
         onConfirm: @escaping @MainActor (Model) async -> Bool,
         @ViewBuilder form: @escaping (Model) -> Form
     ) -> some View {
@@ -294,6 +315,7 @@ extension View {
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             scrollsBody: scrollsBody,
             scrollTarget: scrollTarget,
+            scrollRequest: scrollRequest,
             onConfirm: {
                 guard let current = item.wrappedValue else { return }
                 Task { @MainActor in

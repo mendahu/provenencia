@@ -21,10 +21,7 @@ final class SourceGraphsSection {
 
     /// The Source's graphs in list order (sorted by name); `nil` while the
     /// graph list has no value.
-    var rows: [CatalogEvidenceGraph]? {
-        guard case .loaded(let graphs) = context.session.evidenceGraphsRead(sourceID: context.sourceID) else { return nil }
-        return graphs
-    }
+    var rows: [CatalogEvidenceGraph]? { context.evidenceGraphs }
 
     /// The graph list's error while it has no value to show.
     var loadError: Error? {

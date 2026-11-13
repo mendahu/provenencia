@@ -35,6 +35,11 @@ final class ArtifactSheetModel {
     /// Why the last Save stopped, shown at the top of the sheet; nil otherwise.
     var saveError: String?
     private(set) var isSaving = false
+    /// The section the scrolling body is asked to scroll to: where the sheet
+    /// opened (nil at the top), then the top when a Save stops with a message.
+    private(set) var scrollTarget: Section?
+    /// Changes each time a Save asks the body to scroll to `scrollTarget` again.
+    private(set) var scrollRequest = 0
 
     // MARK: Evidence graph links
 
@@ -45,8 +50,8 @@ final class ArtifactSheetModel {
     var excludedGraphIDs: Set<String> = []
     /// The engine's refusals to unlink this Artifact, from its preflight. Each
     /// locks its graph; Swift decides no lock.
-    private(set) var blocks: [CatalogEvidenceGraphUnlinkBlock] = []
-    private(set) var linkLoadState: SourceFormLoadState = .loading
+    private let locks = UnlinkLocks()
+    var linkLoadState: SourceFormLoadState { locks.state }
     /// The graph link read, so a test can await it.
     @ObservationIgnored var linkLoadTask: Task<Void, Never>?
 
@@ -67,6 +72,7 @@ final class ArtifactSheetModel {
         self.context = context
         self.mode = mode
         self.opensAt = opensAt
+        scrollTarget = opensAt == .top ? nil : opensAt
         self.onSaved = onSaved
         switch mode {
         case .edit(let artifact):
@@ -94,21 +100,12 @@ final class ArtifactSheetModel {
 
     // MARK: Graphs
 
-    /// The Source's Evidence graphs in the session's name order when the
-    /// session has them; nil otherwise (the list is loading, failed, or not
-    /// refreshed), so no group shows.
-    var visibleGraphs: [CatalogEvidenceGraph]? {
-        guard case .loaded(let graphs) = context.session.evidenceGraphsRead(sourceID: context.sourceID)
-        else { return nil }
-        return graphs
-    }
+    /// The Source's Evidence graphs when the session has them; nil otherwise,
+    /// so no group shows.
+    var visibleGraphs: [CatalogEvidenceGraph]? { context.evidenceGraphs }
 
     /// True while the graph list has not arrived, so the group shows its loading state.
-    var awaitingGraphs: Bool {
-        guard graphIDs == nil else { return false }
-        if case .loading = context.session.evidenceGraphsRead(sourceID: context.sourceID) { return true }
-        return false
-    }
+    var awaitingGraphs: Bool { graphIDs == nil && context.evidenceGraphsLoading }
 
     /// The graph list changed: a sheet opened before it arrived gets its group
     /// now. Sets the graph choices and starts the lock read, once.
@@ -135,7 +132,7 @@ final class ArtifactSheetModel {
     /// Graph id to the hint under its locked row: one lock per graph, from the
     /// first block that names it.
     var lockedGraphs: [String: String] {
-        blocks.lockHints(by: \.graphID)
+        locks.locked(by: \.graphID)
     }
 
     /// The checked graph ids in list order; a locked graph is always checked.
@@ -183,23 +180,13 @@ final class ArtifactSheetModel {
             guard context.session.evidenceGraph(id: graphID)?.links(artifactID) == true else { return nil }
             return CatalogEvidenceGraphArtifactPair(graphID: graphID, artifactID: artifactID)
         }
-        if pairs.isEmpty {
-            blocks = []
-            linkLoadState = .ready
-            return
-        }
-        linkLoadState = .loading
-        do {
-            let read = try await context.store.getEvidenceGraphUnlinkImpact(
-                projectDir: context.projectDir,
-                pairs: pairs
-            )
-            blocks = read.filter { $0.artifactID == artifactID }
-            linkLoadState = .ready
-        } catch {
-            guard let message = context.fail(error) else { return }
-            linkLoadState = .failed(message)
-        }
+        await locks.load(
+            store: context.store,
+            projectDir: context.projectDir,
+            pairs: pairs,
+            include: { $0.artifactID == artifactID },
+            onError: { context.fail($0) }
+        )
     }
 
     // MARK: Dirty and Save
@@ -230,12 +217,14 @@ final class ArtifactSheetModel {
         labelError = nil
         if board.hasUnconfirmedInput {
             saveError = L10n.string(L10n.Sources.artifactSheetFinishOpenField)
+            scrollToTop()
             return false
         }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
         if label.isEmpty {
             labelError = L10n.string(L10n.Sources.artifactLabelRequired)
+            scrollToTop()
             return false
         }
         if graphIDs != nil, linkLoadState != .ready { return false }
@@ -264,8 +253,15 @@ final class ArtifactSheetModel {
             // since the sheet opened, and the engine's preflight says which graph keeps it.
             if graphIDs != nil { await loadLinkLocks() }
             saveError = saveErrorBody(message)
+            scrollToTop()
             return false
         }
+    }
+
+    /// A message sits at the top of the body (the save error, the label's error): ask for it.
+    private func scrollToTop() {
+        scrollTarget = .top
+        scrollRequest += 1
     }
 
     /// The save-error body. Nothing was written, so it never speaks of a partial

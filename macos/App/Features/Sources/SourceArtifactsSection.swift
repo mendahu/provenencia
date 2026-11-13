@@ -54,14 +54,9 @@ final class SourceArtifactsSection {
 
     var items: [CatalogArtifact] { context.workspace?.artifacts ?? [] }
 
-    /// The Source's Evidence graphs in the session's name order when the
-    /// session has them (the link checkboxes show); nil otherwise (the list is
-    /// loading, failed, or not refreshed), so no group shows.
-    var visibleGraphs: [CatalogEvidenceGraph]? {
-        guard case .loaded(let graphs) = context.session.evidenceGraphsRead(sourceID: context.sourceID)
-        else { return nil }
-        return graphs
-    }
+    /// The Source's Evidence graphs when the session has them (the link
+    /// checkboxes show); nil otherwise, so no group shows.
+    var visibleGraphs: [CatalogEvidenceGraph]? { context.evidenceGraphs }
 
     /// The graph ids the Add dialog links: the checked ones in list order,
     /// possibly none. Nil when the group is hidden (the engine links every graph).

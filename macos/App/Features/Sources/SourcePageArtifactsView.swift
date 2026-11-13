@@ -93,7 +93,7 @@ struct SourcePageArtifactsView: View {
                         accessibilityIdentifierPrefix: "sources.page.addArtifact.graphs"
                     )
                     if model.artifacts.draftInNoGraph {
-                        noGraphLine(identifier: "sources.page.addArtifact.graphs.none")
+                        SourceArtifactNoGraphLine(accessibilityIdentifier: "sources.page.addArtifact.graphs.none")
                     }
                 }
             }
@@ -113,14 +113,6 @@ struct SourcePageArtifactsView: View {
                 }
             }
         }
-    }
-
-    /// The muted line under a graph group with no box checked.
-    private func noGraphLine(identifier: String) -> some View {
-        Text(L10n.Sources.artifactGraphsNone)
-            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-            .foregroundStyle(PVColor.textMuted)
-            .accessibilityIdentifier(identifier)
     }
 
     /// Form for the first-attach Add File dialog.
@@ -229,28 +221,26 @@ struct SourcePageArtifactsView: View {
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
             }
             Spacer(minLength: 0)
-            do {
-                HStack(spacing: PVSpacing.space2) {
-                    PVIconButton(
-                        .penLine,
-                        label: L10n.Sources.editArtifactLabel(ref: art.ref),
-                        size: .sm
-                    ) {
-                        model.artifacts.openSheet(artifactID: art.id)
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
-                    PVIconButton(
-                        .trash,
-                        label: L10n.Sources.deleteArtifact,
-                        size: .sm,
-                        tone: .danger
-                    ) {
-                        Task { await model.askDeleteArtifact(id: art.id) }
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
+            HStack(spacing: PVSpacing.space2) {
+                PVIconButton(
+                    .penLine,
+                    label: L10n.Sources.editArtifactLabel(ref: art.ref),
+                    size: .sm
+                ) {
+                    model.artifacts.openSheet(artifactID: art.id)
                 }
-                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
+                PVIconButton(
+                    .trash,
+                    label: L10n.Sources.deleteArtifact,
+                    size: .sm,
+                    tone: .danger
+                ) {
+                    Task { await model.askDeleteArtifact(id: art.id) }
+                }
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .frame(minHeight: 28)
     }

@@ -1737,6 +1737,23 @@ struct SourcePageModelTests {
         #expect(sheet.saveError == nil)
     }
 
+    @Test func sheetSaveErrorAsksToScrollToTop() async {
+        let (model, _, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3", at: .copyDetails)
+        #expect(sheet.scrollTarget == .copyDetails)
+        let opened = sheet.scrollRequest
+        sheet.board.setTyped(true, fieldID: "image")
+        #expect(await sheet.save() == false)
+        #expect(sheet.scrollTarget == .top)
+        #expect(sheet.scrollRequest != opened)
+        let afterUnconfirmed = sheet.scrollRequest
+        sheet.board.setTyped(false, fieldID: "image")
+        sheet.draft.label = "   "
+        #expect(await sheet.save() == false)
+        #expect(sheet.scrollTarget == .top)
+        #expect(sheet.scrollRequest != afterUnconfirmed)
+    }
+
     @Test func sheetSaveWithNothingChangedWritesNothing() async {
         let (model, store, _) = await makeCensus()
         let sheet = await openSheet(model, "P3", at: .top)
@@ -1747,18 +1764,29 @@ struct SourcePageModelTests {
     @Test func sheetSaveIsOneWriteWithTheDraft() async throws {
         let provider = catalogMetadataField("provider", label: "Provider")
         let url = catalogMetadataField("url", label: "URL")
+        let image = catalogMetadataField("image", label: "Image")
+        let film = catalogMetadataField("film", label: "Film")
         let owner = MetadataOwner(level: .artifact, id: "P3")
         let (model, store, _) = await makeCensus(
-            fields: [provider, url],
+            fields: [provider, url, image, film],
             artifactMetadata: ["P3": [
                 catalogMetadataEntry(provider, "Ancestry", order: 0),
                 catalogMetadataEntry(url, "https://example.org/p3", order: 1),
+                catalogMetadataEntry(image, suggested: true, order: 2),
             ]]
         )
         let sheet = await openSheet(model, "P3", at: .top)
         sheet.draft.label = "Page P3, recto"
         sheet.board.drafts["provider"] = "FamilySearch"
         await sheet.board.save(fieldID: "provider")
+        // A suggested field filled, a field added in the add row, and the URL dragged above Provider.
+        sheet.board.drafts["image"] = "p3.png"
+        await sheet.board.save(fieldID: "image")
+        sheet.board.openAddRow()
+        sheet.board.pickAddRowField("film")
+        sheet.board.setAddRowValue("F-7")
+        await sheet.board.confirmAddRow()
+        #expect(sheet.board.addRow == nil)
         await sheet.board.moveSaved(from: IndexSet(integer: 1), to: 0)
         store.metadataWriteResults[owner] = sheet.host.entries
         let getBefore = store.recordedCalls.filter { $0.contains("getSourceWorkspace") }.count
@@ -1768,10 +1796,10 @@ struct SourcePageModelTests {
         #expect(store.updateArtifactCalls == 1)
         #expect(store.updateArtifactGraphIDs.first! == nil)
         let draft = try #require(store.updateArtifactMetadata.first ?? nil)
-        #expect(draft.values.map(\.fieldID) == ["url", "provider"])
-        #expect(draft.values.map(\.valueText) == ["https://example.org/p3", "FamilySearch"])
+        #expect(draft.values.map(\.fieldID) == ["url", "provider", "image", "film"])
+        #expect(draft.values.map(\.valueText) == ["https://example.org/p3", "FamilySearch", "p3.png", "F-7"])
         #expect(model.artifacts.items.first { $0.id == "P3" }?.label == "Page P3, recto")
-        #expect(model.artifacts.copyDetails(for: "P3").map(\.field.id) == ["url", "provider"])
+        #expect(model.artifacts.copyDetails(for: "P3").map(\.field.id) == ["url", "provider", "image", "film"])
         #expect(store.recordedCalls.filter { $0.contains("getSourceWorkspace") }.count == getBefore)
     }
 

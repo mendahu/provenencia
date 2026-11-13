@@ -29,9 +29,10 @@ final class SourceGraphFormModel {
     var nameError: String?
     var saveError: String?
     private(set) var isSaving = false
-    private(set) var loadState: SourceFormLoadState
     /// The linked Artifacts the engine refuses to unlink, with why.
-    private(set) var blocks: [CatalogEvidenceGraphUnlinkBlock] = []
+    private let locks: UnlinkLocks
+    var loadState: SourceFormLoadState { locks.state }
+    var blocks: [CatalogEvidenceGraphUnlinkBlock] { locks.blocks }
 
     private let context: SourcePageContext
 
@@ -50,7 +51,7 @@ final class SourceGraphFormModel {
                 excluded = Set(artifactIDs.filter { !none.contains($0) })
             }
             prefill = SourceGraphFormDraft(excludedArtifactIDs: excluded)
-            loadState = .ready
+            locks = UnlinkLocks(state: .ready)
         case .edit(let graph):
             let linked = Set(graph.artifactIDs)
             prefill = SourceGraphFormDraft(
@@ -58,7 +59,7 @@ final class SourceGraphFormModel {
                 description: graph.description,
                 excludedArtifactIDs: Set(artifactIDs.filter { !linked.contains($0) })
             )
-            loadState = graph.hasArtifact ? .loading : .ready
+            locks = UnlinkLocks(state: graph.hasArtifact ? .loading : .ready)
         }
         draft = prefill
     }
@@ -82,7 +83,7 @@ final class SourceGraphFormModel {
 
     /// Artifact id to the hint under its locked row; see `lockHints(by:)` in
     /// `SourceArtifactGraphLinks.swift`.
-    var locked: [String: String] { blocks.lockHints(by: \.artifactID) }
+    var locked: [String: String] { locks.locked(by: \.artifactID) }
 
     /// The locked Artifacts that Citations need, with those Citations, in page
     /// order: the Kept linked group lists Citations, so a lock with none (the
@@ -117,19 +118,14 @@ final class SourceGraphFormModel {
     /// to read. Read again calls this too.
     func loadKeptLinks() async {
         guard let graph, graph.hasArtifact else { return }
-        loadState = .loading
-        do {
-            let read = try await context.store.getEvidenceGraphUnlinkImpact(
-                projectDir: context.projectDir,
-                pairs: graph.artifactIDs.map {
-                    CatalogEvidenceGraphArtifactPair(graphID: graph.id, artifactID: $0)
-                }
-            )
-            blocks = read
-            loadState = .ready
-        } catch {
-            loadState = .failed(L10n.Errors.message(for: error))
-        }
+        await locks.load(
+            store: context.store,
+            projectDir: context.projectDir,
+            pairs: graph.artifactIDs.map {
+                CatalogEvidenceGraphArtifactPair(graphID: graph.id, artifactID: $0)
+            },
+            onError: { L10n.Errors.message(for: $0) }
+        )
     }
 
     /// One write. On success returns true for the host to close the form; on
