@@ -1,4 +1,4 @@
-package graphprogress
+package evidencegraphs_test
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -118,13 +119,13 @@ func TestGraphProgress(t *testing.T) {
 		return seed{c: c, worked: worked, empty: empty, person: person, place: place, toponym: toponym}
 	}
 
-	find := func(rows []Progress, graphID []byte) (Progress, bool) {
+	find := func(rows []evidencegraphs.Progress, graphID []byte) (evidencegraphs.Progress, bool) {
 		for _, p := range rows {
 			if bytes.Equal(p.GraphID, graphID) {
 				return p, true
 			}
 		}
-		return Progress{}, false
+		return evidencegraphs.Progress{}, false
 	}
 
 	t.Run("migration creates observation subject index", func(t *testing.T) {
@@ -155,7 +156,7 @@ func TestGraphProgress(t *testing.T) {
 
 	t.Run("list omits empty and excludes source type", func(t *testing.T) {
 		s := mustSeed(t)
-		rows, err := List(s.c)
+		rows, err := evidencegraphs.ListProgress(s.c)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -174,7 +175,7 @@ func TestGraphProgress(t *testing.T) {
 	t.Run("get zeros for empty source", func(t *testing.T) {
 		s := mustSeed(t)
 		graphID := evidencegraphstest.SoleGraph(t, s.c, s.empty.ID).ID
-		got, err := Get(s.c, graphID)
+		got, err := evidencegraphs.GetProgress(s.c, graphID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -188,7 +189,7 @@ func TestGraphProgress(t *testing.T) {
 
 	t.Run("get matches list for worked source", func(t *testing.T) {
 		s := mustSeed(t)
-		got, err := Get(s.c, evidencegraphstest.SoleGraph(t, s.c, s.worked.ID).ID)
+		got, err := evidencegraphs.GetProgress(s.c, evidencegraphstest.SoleGraph(t, s.c, s.worked.ID).ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -231,46 +232,46 @@ func TestGraphProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wantDef := Progress{GraphID: def.ID, SubjectCount: 2, FiledCount: 1, ObservationCount: 1}
-		wantJones := Progress{GraphID: jones.ID, SubjectCount: 1, FiledCount: 0, ObservationCount: 0}
-		rows, err := List(s.c)
+		wantDef := evidencegraphs.Progress{GraphID: def.ID, SubjectCount: 2, FiledCount: 1, ObservationCount: 1}
+		wantJones := evidencegraphs.Progress{GraphID: jones.ID, SubjectCount: 1, FiledCount: 0, ObservationCount: 0}
+		rows, err := evidencegraphs.ListProgress(s.c)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var got []Progress
+		var got []evidencegraphs.Progress
 		for _, p := range rows {
 			if bytes.Equal(p.GraphID, def.ID) || bytes.Equal(p.GraphID, jones.ID) {
 				got = append(got, p)
 			}
 		}
 		sort.Slice(got, func(i, j int) bool { return bytes.Compare(got[i].GraphID, got[j].GraphID) < 0 })
-		want := []Progress{wantDef, wantJones}
+		want := []evidencegraphs.Progress{wantDef, wantJones}
 		sort.Slice(want, func(i, j int) bool { return bytes.Compare(want[i].GraphID, want[j].GraphID) < 0 })
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("list rows %+v, want %+v", got, want)
 		}
-		one, err := Get(s.c, jones.ID)
+		one, err := evidencegraphs.GetProgress(s.c, jones.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if wantOne := (Progress{GraphID: jones.ID, SubjectCount: 1}); !reflect.DeepEqual(one, wantOne) {
+		if wantOne := (evidencegraphs.Progress{GraphID: jones.ID, SubjectCount: 1}); !reflect.DeepEqual(one, wantOne) {
 			t.Fatalf("Get(Jones) %+v, want %+v", one, wantOne)
 		}
 		unknown := make([]byte, 16)
 		unknown[0] = 7
-		zero, err := Get(s.c, unknown)
+		zero, err := evidencegraphs.GetProgress(s.c, unknown)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if wantZero := (Progress{GraphID: unknown}); !reflect.DeepEqual(zero, wantZero) {
+		if wantZero := (evidencegraphs.Progress{GraphID: unknown}); !reflect.DeepEqual(zero, wantZero) {
 			t.Fatalf("Get(unknown) %+v, want zeros", zero)
 		}
 	})
 
 	t.Run("rejects short graph id", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := Get(s.c, []byte{1})
-		if !errors.Is(err, ErrInvalid) {
+		_, err := evidencegraphs.GetProgress(s.c, []byte{1})
+		if !errors.Is(err, evidencegraphs.ErrInvalid) {
 			t.Fatalf("got %v", err)
 		}
 		if code := apperr.From(err).Code(); code != "evidencegraphs.invalid" {
@@ -281,10 +282,10 @@ func TestGraphProgress(t *testing.T) {
 	t.Run("rejects closed catalog", func(t *testing.T) {
 		s := mustSeed(t)
 		s.c.Close()
-		if _, err := List(s.c); !errors.Is(err, database.ErrClosed) {
+		if _, err := evidencegraphs.ListProgress(s.c); !errors.Is(err, database.ErrClosed) {
 			t.Fatalf("list %v", err)
 		}
-		if _, err := Get(s.c, make([]byte, 16)); !errors.Is(err, database.ErrClosed) {
+		if _, err := evidencegraphs.GetProgress(s.c, make([]byte, 16)); !errors.Is(err, database.ErrClosed) {
 			t.Fatalf("get %v", err)
 		}
 	})
@@ -363,7 +364,7 @@ func TestFiledCounts(t *testing.T) {
 	reifyOnly := newSource("Reify")
 	newSubject(reifyOnly, "source", "Reify")
 
-	want := map[string]Progress{
+	want := map[string]evidencegraphs.Progress{
 		"Unfiled":     {SubjectCount: 1, FiledCount: 0},
 		"Filed":       {SubjectCount: 1, FiledCount: 1},
 		"Provisional": {SubjectCount: 1, FiledCount: 0},
@@ -374,7 +375,7 @@ func TestFiledCounts(t *testing.T) {
 		"Unfiled": unfiled, "Filed": filed, "Provisional": provisional,
 		"Bridge": bridgeOnly, "Mixed": mixed,
 	}
-	rows, err := List(c)
+	rows, err := evidencegraphs.ListProgress(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +384,7 @@ func TestFiledCounts(t *testing.T) {
 	}
 	for name, w := range want {
 		src := srcs[name]
-		var got *Progress
+		var got *evidencegraphs.Progress
 		for i := range rows {
 			if bytes.Equal(rows[i].GraphID, evidencegraphstest.SoleGraph(t, c, src.ID).ID) {
 				got = &rows[i]
@@ -395,7 +396,7 @@ func TestFiledCounts(t *testing.T) {
 		if got.SubjectCount != w.SubjectCount || got.FiledCount != w.FiledCount {
 			t.Fatalf("%s list %+v want %+v", name, *got, w)
 		}
-		one, err := Get(c, got.GraphID)
+		one, err := evidencegraphs.GetProgress(c, got.GraphID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -411,7 +412,7 @@ func TestFiledCounts(t *testing.T) {
 				t.Fatalf("source %s should be absent from list", src.Title)
 			}
 		}
-		got, err := Get(c, evidencegraphstest.SoleGraph(t, c, src.ID).ID)
+		got, err := evidencegraphs.GetProgress(c, evidencegraphstest.SoleGraph(t, c, src.ID).ID)
 		if err != nil {
 			t.Fatal(err)
 		}
