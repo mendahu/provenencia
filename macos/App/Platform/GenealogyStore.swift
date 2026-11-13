@@ -1263,6 +1263,38 @@ struct CatalogSourceWorkspace: Sendable, Equatable {
     var artifacts: [CatalogArtifact]
     /// Nil when no assessment row (UI may display Standard without a row).
     var credibility: CatalogCredibilityAssessment?
+    /// Each Artifact's copy details, keyed by Artifact id.
+    var artifactMetadata: [String: [CatalogMetadataEntry]] = [:]
+
+    /// The rows an owner's board shows from this workspace, or nil when the
+    /// workspace holds no board for that owner (another Source, an Artifact not
+    /// on this Source, an Evidence graph).
+    func metadataRows(for owner: MetadataOwner) -> [CatalogMetadataEntry]? {
+        switch owner.level {
+        case .source:
+            return owner.id == source.id ? metadata : nil
+        case .artifact:
+            return artifacts.contains { $0.id == owner.id } ? (artifactMetadata[owner.id] ?? []) : nil
+        case .graph, .citation:
+            return nil
+        }
+    }
+
+    /// Replaces an owner's rows. Returns false and writes nothing when the
+    /// workspace holds no board for that owner.
+    @discardableResult
+    mutating func setMetadataRows(_ rows: [CatalogMetadataEntry], for owner: MetadataOwner) -> Bool {
+        guard metadataRows(for: owner) != nil else { return false }
+        switch owner.level {
+        case .source:
+            metadata = rows
+        case .artifact:
+            artifactMetadata[owner.id] = rows
+        case .graph, .citation:
+            return false
+        }
+        return true
+    }
 }
 
 struct CatalogDateValueInput: Sendable, Equatable {

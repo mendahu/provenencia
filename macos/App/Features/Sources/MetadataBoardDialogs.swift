@@ -23,7 +23,7 @@ struct MetadataBoardDeleteItem: Identifiable, Equatable {
 }
 
 /// A page's one Add-metadata dialog and one clear confirm. Each targets the
-/// board that asked, so a page with many boards still has one of each.
+/// board that asked.
 @MainActor
 @Observable
 final class MetadataBoardDialogs {

@@ -131,8 +131,7 @@ func TestScopeThroughDeletedParent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := &walk{q: db, ch: tt.change, ghosts: ghostsFrom(append([]rowchange.Change{tt.change}, tt.parents...)), table: tt.table}
-			got, err := appendPath(w, tt.table, registry[tt.table].SourceScope, nil)
+			got, err := SourceScopeOfChange(db, append([]rowchange.Change{tt.change}, tt.parents...), 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -140,8 +139,7 @@ func TestScopeThroughDeletedParent(t *testing.T) {
 				t.Fatalf("scope = %x, want the Source %x", got, id(7))
 			}
 			// Without the parent's delete change nothing resolves.
-			w.ghosts = ghostsFrom([]rowchange.Change{tt.change})
-			if got, err := appendPath(w, tt.table, registry[tt.table].SourceScope, nil); err != nil || len(got) != 0 {
+			if got, err := SourceScopeOfChange(db, []rowchange.Change{tt.change}, 0); err != nil || len(got) != 0 {
 				t.Fatalf("scope without the parent change = %x, %v; want none", got, err)
 			}
 		})

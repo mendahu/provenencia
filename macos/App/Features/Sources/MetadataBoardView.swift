@@ -49,7 +49,7 @@ struct MetadataBoardView: View {
                             .padding(.top, board.saved.isEmpty ? 0 : PVSpacing.space7)
 
                         ForEach(board.suggested) { entry in
-                            SourcePageMetadataSuggestionRow(
+                            MetadataBoardSuggestionRow(
                                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                                 entry: entry,
                                 isSaving: board.savingFieldID == entry.field.id,
@@ -73,16 +73,16 @@ struct MetadataBoardView: View {
     }
 
     private func savedRow(_ entry: CatalogMetadataEntry) -> some View {
-        HStack(alignment: .top, spacing: SourcePageLayout.metadataColumnSpacing) {
+        HStack(alignment: .top, spacing: PVSpacing.space5) {
             PVReorderHandle()
                 .padding(.top, 6)
-            SourcePageMetadataLabel(
+            MetadataBoardLabel(
                 text: entry.field.label,
                 topPadding: 6,
                 emphasized: true
             )
 
-            SourcePageMetadataTextEditor(
+            MetadataBoardTextEditor(
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 entry: entry,
                 isEditing: board.editingFieldID == entry.field.id,
@@ -153,7 +153,7 @@ struct MetadataBoardAddForm: View {
 }
 
 /// Suggestion quick-add row with a local draft.
-private struct SourcePageMetadataSuggestionRow: View {
+private struct MetadataBoardSuggestionRow: View {
     let accessibilityIdentifierPrefix: String
     let entry: CatalogMetadataEntry
     let isSaving: Bool
@@ -167,8 +167,11 @@ private struct SourcePageMetadataSuggestionRow: View {
         let fieldID = entry.field.id
         return PVCard(border: .dashed, cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                HStack(spacing: SourcePageLayout.metadataColumnSpacing) {
-                    SourcePageMetadataLabel(text: entry.field.label, alignWithReorderHandle: true)
+                HStack(spacing: PVSpacing.space5) {
+                    MetadataBoardLabel(
+                        text: entry.field.label,
+                        leadingInset: PVReorderHandle.width
+                    )
                     PVInput(
                         text: $draft,
                         size: .sm,
@@ -177,6 +180,7 @@ private struct SourcePageMetadataSuggestionRow: View {
                         isInvalid: error != nil
                     )
                     .onSubmit { onSave(draft) }
+                    .accessibilityLabel(entry.field.label)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
 
                     PVButton(
@@ -190,7 +194,11 @@ private struct SourcePageMetadataSuggestionRow: View {
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).save")
 
-                    PVIconButton(.dismiss, label: L10n.Sources.dismissMetadataSuggestion, size: .sm) {
+                    PVIconButton(
+                        .dismiss,
+                        label: L10n.Sources.dismissMetadataSuggestionLabel(field: entry.field.label),
+                        size: .sm
+                    ) {
                         onDismiss()
                     }
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).dismiss")
@@ -208,7 +216,7 @@ private struct SourcePageMetadataSuggestionRow: View {
 /// Text metadata row editor with a **local** draft so keystrokes do not rewrite
 /// `MetadataBoardModel.drafts` (and rebuild the reorderable `List`) on every
 /// character — that was dropping TextField focus and feeling multi-second laggy.
-private struct SourcePageMetadataTextEditor: View {
+private struct MetadataBoardTextEditor: View {
     let accessibilityIdentifierPrefix: String
     let entry: CatalogMetadataEntry
     let isEditing: Bool
@@ -222,6 +230,11 @@ private struct SourcePageMetadataTextEditor: View {
     @Environment(\.openURL) private var openURL
     @State private var draft = ""
 
+    private func beginEdit() {
+        draft = entry.valueText
+        onBeginEdit()
+    }
+
     var body: some View {
         let fieldID = entry.field.id
         return PVInlineEdit(
@@ -230,15 +243,12 @@ private struct SourcePageMetadataTextEditor: View {
             error: error,
             saveLabel: L10n.Sources.saveMetadataValue,
             cancelLabel: L10n.Sources.cancelEdit,
-            editLabel: L10n.Sources.editMetadataValue,
+            editLabel: L10n.Sources.editMetadataValueLabel(field: entry.field.label),
             saveDisabled: draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             axis: .horizontal,
             actionsStyle: .iconStack,
             accessibilityIdentifierPrefix: "\(accessibilityIdentifierPrefix).\(fieldID)",
-            onEdit: {
-                draft = entry.valueText
-                onBeginEdit()
-            },
+            onEdit: beginEdit,
             onSave: { onSave(draft) },
             onCancel: {
                 draft = entry.valueText
@@ -260,7 +270,7 @@ private struct SourcePageMetadataTextEditor: View {
             restingTrailing: {
                 PVIconButton(
                     .trash,
-                    label: L10n.Sources.deleteMetadataValue,
+                    label: L10n.Sources.deleteMetadataValueLabel(field: entry.field.label),
                     size: .sm,
                     tone: .danger,
                     action: onClear
@@ -269,7 +279,7 @@ private struct SourcePageMetadataTextEditor: View {
             },
             editingTrailing: { EmptyView() }
         )
-        .onChange(of: isEditing) { _, editing in
+        .onChange(of: isEditing, initial: true) { _, editing in
             if editing {
                 draft = entry.valueText
             }
@@ -290,7 +300,7 @@ private struct SourcePageMetadataTextEditor: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .buttonStyle(.plain)
-            .sourcePageMetadataValueChrome()
+            .metadataBoardValueChrome()
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
             .help(L10n.string(L10n.Sources.openMetadataURL))
         } else {
@@ -298,8 +308,54 @@ private struct SourcePageMetadataTextEditor: View {
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .sourcePageMetadataValueChrome()
+                .metadataBoardValueChrome()
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
         }
+    }
+}
+
+/// Resting metadata value chrome that matches `PVTextArea` `.mono` insets so
+/// entering inline edit does not shift the glyphs when the border appears.
+private struct MetadataBoardValueChrome: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, PVInputChrome.horizontalInset)
+            .padding(.vertical, PVTextArea.Typography.mono.verticalPadding)
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(Color.clear, lineWidth: 1)
+            )
+    }
+}
+
+private extension View {
+    func metadataBoardValueChrome() -> some View {
+        modifier(MetadataBoardValueChrome())
+    }
+}
+
+/// Label column used by metadata saved / suggestion rows.
+private struct MetadataBoardLabel: View {
+    static let width: CGFloat = 132
+
+    let text: String
+    /// Leading inset so suggestion labels align with saved-row labels.
+    var leadingInset: CGFloat = 0
+    var topPadding: CGFloat = 0
+    /// Saved rows use a stronger field name; suggestions stay a muted caption.
+    var emphasized: Bool = false
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(
+                emphasized
+                    ? PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold)
+                    : PVFont.body(size: PVTypeScale.caption)
+            )
+            .foregroundStyle(emphasized ? PVColor.textPrimary : PVColor.textMuted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: Self.width, alignment: .leading)
+            .padding(.leading, leadingInset)
+            .padding(.top, topPadding)
     }
 }

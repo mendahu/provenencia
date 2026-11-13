@@ -6,6 +6,7 @@ import Testing
 @MainActor
 struct CatalogQueryRegistryTests {
     private let projectDir = "/tmp/catalog-query-registry.provenencia"
+    private let author = catalogMetadataField("f1", label: "Author")
 
     private func makeSession(store: FakeStore = FakeStore()) -> WorkspaceSession {
         WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
@@ -652,6 +653,62 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == nil)
     }
 
+    /// T-2: a board write puts the owner's rows on the cached page and reloads nothing.
+    @Test func metadataBoardWritePatchesTheWorkspace() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
+        )
+        store.artifactsBySource["s1"] = [catalogArtifact("a1"), catalogArtifact("a2")]
+        store.metadataByOwner[MetadataOwner(level: .artifact, id: "a1")] = [catalogMetadataEntry(author, "old")]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let first: QueryHandle<CatalogSourceWorkspace> = session.query(.sourceWorkspace(project: project, sourceId: "s1"))
+        let second: QueryHandle<CatalogSourceWorkspace> = session.query(.sourceWorkspace(project: project, sourceId: "s2"))
+        await waitForQuery(first)
+        await waitForQuery(second)
+        let calls = store.getSourceWorkspaceCalls
+        let x = [catalogMetadataEntry(author, "new")]
+
+        session.apply(
+            .empty, .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .artifact, id: "a1"), entries: x)
+        )
+        await session.settleWrites()
+        #expect(first.value?.artifactMetadata["a1"] == x)
+        #expect(first.value?.metadata.isEmpty == true)
+        #expect(first.value?.artifactMetadata["a2"] == [])
+        #expect(second.value?.artifactMetadata.isEmpty == true)
+
+        session.apply(
+            .empty, .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .source, id: "s1"), entries: x)
+        )
+        await session.settleWrites()
+        #expect(first.value?.metadata == x)
+        #expect(store.getSourceWorkspaceCalls == calls)
+    }
+
+    /// T-3: an owner the page cannot place changes nothing and invalidates nothing.
+    @Test func metadataBoardPatchIgnoresOwnersItCannotPlace() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.artifactsBySource["s1"] = [catalogArtifact("a1")]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(.sourceWorkspace(project: project, sourceId: "s1"))
+        await waitForQuery(handle)
+        let before = handle.value
+        for owner in [MetadataOwner(level: .graph, id: "g1"), MetadataOwner(level: .artifact, id: "a9")] {
+            let mutation = CatalogMutation.wroteMetadataBoard(
+                sourceId: "s1", owner: owner, entries: [catalogMetadataEntry(author, "x")]
+            )
+            session.apply(.empty, mutation)
+            await session.settleWrites()
+            #expect(handle.value == before)
+            #expect(CatalogQueryRegistry.standard.invalidations(by: mutation, project: project).isEmpty)
+        }
+    }
+
     @Test func applyCreatedSourceInsertsRow() async {
         let store = FakeStore()
         seedStore(store)
@@ -935,6 +992,7 @@ struct CatalogQueryRegistryTests {
             .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"),
+            .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .source, id: "s1"), entries: []),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
@@ -1018,8 +1076,12 @@ struct CatalogQueryRegistryTests {
         store.sourcesByProject[projectDir]?.append(
             CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
         )
-        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [suggestedAuthorEntry(label: "Author")]
-        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [suggestedAuthorEntry(label: "Author")]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
+            catalogMetadataEntry(catalogMetadataField("f1", label: "Author", key: "author"), suggested: true),
+        ]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [
+            catalogMetadataEntry(catalogMetadataField("f1", label: "Author", key: "author"), suggested: true),
+        ]
         let session = makeSession(store: store)
         let project = session.projectKey
         let firstKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
@@ -1030,8 +1092,12 @@ struct CatalogQueryRegistryTests {
         await waitForQuery(firstHandle)
         await waitForQuery(secondHandle)
 
-        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [suggestedAuthorEntry(label: "Author name")]
-        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [suggestedAuthorEntry(label: "Author name")]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
+            catalogMetadataEntry(catalogMetadataField("f1", label: "Author name", key: "author"), suggested: true),
+        ]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [
+            catalogMetadataEntry(catalogMetadataField("f1", label: "Author name", key: "author"), suggested: true),
+        ]
         session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]), .updatedMetadataField(id: "f1"))
 
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
@@ -1040,16 +1106,6 @@ struct CatalogQueryRegistryTests {
         await waitForQuery(secondHandle)
         #expect(firstHandle.value?.metadata.first?.field.label == "Author name")
         #expect(secondHandle.value?.metadata.first?.field.label == "Author name")
-    }
-
-    private func suggestedAuthorEntry(label: String) -> CatalogMetadataEntry {
-        CatalogMetadataEntry(
-            field: CatalogMetadataField(
-                id: "f1", key: "author", origin: "user", label: label,
-                dataType: "text", description: ""
-            ),
-            valueText: "", hasValue: false, suggested: true, sortOrder: 0
-        )
     }
 
     /// Suggestions embed a whole field row, so a relabel reaches types the edit
@@ -1151,13 +1207,7 @@ struct CatalogQueryRegistryTests {
         )
         store.sourcesByProject[projectDir] = [moved]
         store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
-            CatalogMetadataEntry(
-                field: CatalogMetadataField(
-                    id: "f1", key: "author", origin: "user", label: "Author",
-                    dataType: "text", description: ""
-                ),
-                valueText: "", hasValue: false, suggested: true, sortOrder: 0
-            ),
+            catalogMetadataEntry(author, suggested: true),
         ]
         session.apply(.changedSourceType(moved))
 
@@ -1393,6 +1443,7 @@ struct CatalogQueryRegistryTests {
             .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"),
+            .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .source, id: "s1"), entries: []),
         ]
         for mutation in mutations {
             for invalidation in registry.invalidations(by: mutation, project: project) {

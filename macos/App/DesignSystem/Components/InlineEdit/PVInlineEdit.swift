@@ -46,7 +46,7 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
     var error: String? = nil
     var saveLabel: LocalizedStringResource
     var cancelLabel: LocalizedStringResource
-    var editLabel: LocalizedStringResource
+    var editLabel: any PVCopy
     var saveDisabled: Bool = false
     /// When false, the resting pencil is omitted (caller hosts Edit elsewhere).
     var showsEditControl: Bool = true
@@ -176,7 +176,7 @@ extension PVInlineEdit where RestingTrailing == EmptyView, EditingTrailing == Em
         error: String? = nil,
         saveLabel: LocalizedStringResource,
         cancelLabel: LocalizedStringResource,
-        editLabel: LocalizedStringResource,
+        editLabel: any PVCopy,
         saveDisabled: Bool = false,
         showsEditControl: Bool = true,
         expandsContent: Bool = true,

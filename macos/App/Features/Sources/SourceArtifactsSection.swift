@@ -747,14 +747,25 @@ final class SourceArtifactsSection {
         }
     }
 
+    /// Changes the page's Artifact list and writes the result to the cached
+    /// workspace too, so a later patch of that cache (a metadata board write)
+    /// starts from what the page shows.
+    private func patchArtifacts(_ change: (inout [CatalogArtifact]) -> Void) {
+        guard var workspace = context.workspace else { return }
+        change(&workspace.artifacts)
+        context.setWorkspace(workspace)
+    }
+
     /// Puts a written Artifact on the page, appended when new. The list is
     /// patched here, so only the effects apply: the Source's row moves and
     /// its graph reads follow.
     private func show(_ art: CatalogArtifact, effects: CatalogWriteEffects) {
-        if let idx = context.workspace?.artifacts.firstIndex(where: { $0.id == art.id }) {
-            context.workspace?.artifacts[idx] = art
-        } else {
-            context.workspace?.artifacts.append(art)
+        patchArtifacts { artifacts in
+            if let idx = artifacts.firstIndex(where: { $0.id == art.id }) {
+                artifacts[idx] = art
+            } else {
+                artifacts.append(art)
+            }
         }
         labels[art.id] = art.label
         descriptions[art.id] = art.description
@@ -762,8 +773,10 @@ final class SourceArtifactsSection {
     }
 
     private func replace(_ updated: CatalogArtifact, effects: CatalogWriteEffects) {
-        if let idx = context.workspace?.artifacts.firstIndex(where: { $0.id == updated.id }) {
-            context.workspace?.artifacts[idx] = updated
+        patchArtifacts { artifacts in
+            if let idx = artifacts.firstIndex(where: { $0.id == updated.id }) {
+                artifacts[idx] = updated
+            }
         }
         labels[updated.id] = updated.label
         descriptions[updated.id] = updated.description

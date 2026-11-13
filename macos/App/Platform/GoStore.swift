@@ -147,7 +147,11 @@ struct GoStore: GenealogyStore {
             notes: resp.notes.map(Self.mapNote),
             metadata: resp.metadata.map(Self.mapMetadataEntry),
             artifacts: resp.artifacts.map(Self.mapArtifact),
-            credibility: resp.hasCredibility ? Self.mapCredibility(resp.credibility) : nil
+            credibility: resp.hasCredibility ? Self.mapCredibility(resp.credibility) : nil,
+            artifactMetadata: Dictionary(
+                resp.artifactMetadata.map { ($0.ownerID, $0.entries.map(Self.mapMetadataEntry)) },
+                uniquingKeysWith: { _, last in last }
+            )
         )
     }
 

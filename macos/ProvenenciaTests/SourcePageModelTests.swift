@@ -1682,18 +1682,14 @@ struct SourcePageModelTests {
         evidenceGraph(id, sourceID: sourceID, name: name, artifactIDs: artifactIDs)
     }
 
-    private func page(_ id: String) -> CatalogArtifact {
-        CatalogArtifact(
-            id: id, ref: "ART-\(id)", sourceID: sourceID, fileID: "", label: "Page \(id)", description: ""
-        )
-    }
-
     /// The census: Brown (`g-b`, P9), Jones (`g-j`, P3 P4), Smith (`g-s`, P3 P6), with the
     /// page location applied so the graph list is a visible key and graph writes refresh it.
     private func makeCensus(
         graphs: [CatalogEvidenceGraph]? = nil
     ) async -> (model: SourcePageModel, store: FakeStore, session: WorkspaceSession) {
-        let artifacts = ["P3", "P4", "P6", "P9"].map(page)
+        let artifacts = ["P3", "P4", "P6", "P9"].map {
+            catalogArtifact($0, sourceID: sourceID, label: "Page \($0)")
+        }
         let store = makeStore(artifacts: artifacts)
         store.evidenceGraphsByProject[projectDir] = graphs ?? [
             graph("g-b", "Brown household", ["P9"]),
@@ -2408,5 +2404,74 @@ struct SourcePageModelTests {
             model.goneNotice(read: .failed(FakeStore.sourceNotFound))
                 == L10n.Sources.sourceDeletedNotice(title: "Family album")
         )
+    }
+
+    // MARK: Board writes and the cached workspace
+
+    private func workspaceHandle(_ session: WorkspaceSession) -> QueryHandle<CatalogSourceWorkspace> {
+        let handle: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(
+            .sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+        )
+        return handle!
+    }
+
+    /// An edit begun on the Source's board survives its own save and a note save.
+    @Test func boardWriteKeepsAnEditBegunElsewhere() async throws {
+        let a = authorField()
+        let b = repositoryField()
+        let sourceOwner = MetadataOwner(level: .source, id: sourceID)
+        let store = makeStore(
+            metadata: [catalogMetadataEntry(a, "A", order: 0), catalogMetadataEntry(b, "B", order: 1)],
+            fields: [a, b]
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
+        await model.warmFromSession()
+        let handle = workspaceHandle(session)
+
+        store.metadataWriteResults[sourceOwner] = [
+            catalogMetadataEntry(a, "A2", order: 0), catalogMetadataEntry(b, "B", order: 1),
+        ]
+        let loadsBefore = store.getSourceWorkspaceCalls
+        model.metadata.beginEdit(fieldID: a.id)
+        model.metadata.drafts[a.id] = "A2"
+        await model.metadata.save(fieldID: a.id)
+        await session.settleWrites()
+        #expect(store.getSourceWorkspaceCalls == loadsBefore)
+        model.metadata.beginEdit(fieldID: b.id)
+        model.sync(from: handle)
+        #expect(model.metadata.editingFieldID == b.id)
+
+        model.notes.draft = "A note"
+        await model.notes.add()
+        await session.settleWrites()
+        model.sync(from: handle)
+        #expect(model.metadata.editingFieldID == b.id)
+    }
+
+    @Test func aBoardWriteKeepsAnArtifactShownOnlyOnThePage() async throws {
+        let author = authorField()
+        let store = makeStore(fields: [author])
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Scan"
+        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        await model.artifacts.create()
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+
+        let sourceOwner = MetadataOwner(level: .source, id: sourceID)
+        store.metadataWriteResults[sourceOwner] = [catalogMetadataEntry(author, "Eliza")]
+        model.metadata.beginEdit(fieldID: author.id)
+        model.metadata.drafts[author.id] = "Eliza"
+        await model.metadata.save(fieldID: author.id)
+        await session.settleWrites()
+        model.sync(from: workspaceHandle(session))
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
     }
 }

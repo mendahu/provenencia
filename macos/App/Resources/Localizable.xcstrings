@@ -4171,7 +4171,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Invalid source metadata."
+            "value": "This metadata change can't be saved."
           }
         }
       }
@@ -8736,6 +8736,42 @@
         }
       }
     },
+    "sources.page.deleteMetadataValueLabel": {
+      "comment": "VoiceOver label for trash on a saved metadata row; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@"
+          }
+        }
+      }
+    },
+    "sources.page.dismissMetadataSuggestionLabel": {
+      "comment": "VoiceOver label for dismissing a type metadata suggestion; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss the suggestion for %@"
+          }
+        }
+      }
+    },
+    "sources.page.editMetadataValueLabel": {
+      "comment": "VoiceOver label for the pencil on a saved metadata row; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %@"
+          }
+        }
+      }
+    },
     "sources.page.sourceDate.add": {
       "comment": "Button in the Source page header: open the published date dialog for an undated Source",
       "extractionState": "manual",
@@ -9456,18 +9492,6 @@
         }
       }
     },
-    "sources.page.deleteMetadataValue": {
-      "comment": "Accessibility label for trash on a saved metadata row",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete value"
-          }
-        }
-      }
-    },
     "sources.page.deleteNote": {
       "comment": "Accessibility label for deleting a Source note",
       "extractionState": "manual",
@@ -9528,18 +9552,6 @@
         }
       }
     },
-    "sources.page.dismissMetadataSuggestion": {
-      "comment": "Accessibility label for dismissing a type metadata suggestion",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dismiss this suggestion"
-          }
-        }
-      }
-    },
     "sources.page.dropHint": {
       "comment": "Status shown while a file is dragged over the Source page",
       "extractionState": "manual",
@@ -9572,18 +9584,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit"
-          }
-        }
-      }
-    },
-    "sources.page.editMetadataValue": {
-      "comment": "Accessibility label for pencil to edit a saved text metadata value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit value"
           }
         }
       }

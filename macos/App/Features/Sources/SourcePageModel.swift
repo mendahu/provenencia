@@ -55,7 +55,7 @@ final class SourcePageModel {
         self.sessionDisplayName = sessionDisplayName
         identity = SourceIdentitySection(context: context)
         credibility = SourceCredibilitySection(context: context)
-        metadata = MetadataBoardModel(host: SourcePageMetadataHost.source(context: context))
+        metadata = MetadataBoardModel(host: SourcePageMetadataHost(context: context))
         notes = SourceNotesSection(context: context)
         artifacts = SourceArtifactsSection(context: context)
         graphs = SourceGraphsSection(context: context)
@@ -150,15 +150,19 @@ final class SourcePageModel {
 
     private func apply(_ workspace: CatalogSourceWorkspace) {
         let previous = appliedWorkspace
+        // The board writes its rows into `context.workspace` itself, so
+        // "differs from what the board shows" is read from it, not from `previous`.
+        let shown = context.workspace
         context.workspace = workspace
         context.clearPageError()
         identity.resetIfChanged(from: previous?.source, to: workspace.source)
         if previous?.credibility != workspace.credibility {
             credibility.resetDrafts()
         }
-        if previous?.metadata != workspace.metadata {
-            metadata.resetDrafts()
-        }
+        let sourceOwner = MetadataOwner(level: .source, id: context.sourceID)
+        metadata.resetIfChanged(
+            from: shown?.metadataRows(for: sourceOwner), to: workspace.metadataRows(for: sourceOwner)
+        )
         if previous?.notes != workspace.notes {
             notes.reset()
         }
@@ -217,13 +221,7 @@ final class SourcePageModel {
                 if var workspace = context.workspace {
                     workspace.artifacts.removeAll { $0.id == target.id }
                     apply(workspace)
-                    context.session.setQueryValue(
-                        CatalogQueryKey.sourceWorkspace(
-                            project: context.session.projectKey,
-                            sourceId: context.sourceID
-                        ),
-                        value: workspace
-                    )
+                    context.setWorkspace(workspace)
                 }
                 context.toast = VocabularyToast(
                     title: L10n.string(L10n.Sources.toastArtifactDeletedTitle),

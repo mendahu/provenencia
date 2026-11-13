@@ -255,7 +255,7 @@ extension CatalogQueryKey.Kind {
                         return .allCached(.sourceWorkspace)
                     }
                 },
-                patches: [.updatedSourceShell()],
+                patches: [.updatedSourceShell(), .metadataBoard()],
                 load: { key, store in
                     guard case .sourceWorkspace(let project, let sourceId) = key else {
                         mismatchedCatalogKey(key, .sourceWorkspace)

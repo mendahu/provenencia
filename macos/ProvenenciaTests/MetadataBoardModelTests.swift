@@ -12,20 +12,9 @@ struct MetadataBoardModelTests {
     )
     private let boom = CoreInvokeError.failed(status: 2)
 
-    private func entry(
-        _ id: String, label: String, value: String = "", suggested: Bool = false, order: Int32 = 0
-    ) -> CatalogMetadataEntry {
-        CatalogMetadataEntry(
-            field: CatalogMetadataField(
-                id: id, key: label.lowercased(), origin: "user", label: label, dataType: "text", description: ""
-            ),
-            valueText: value, hasValue: !value.isEmpty, suggested: suggested, sortOrder: order
-        )
-    }
-
     @Test func saveFillsSuggestionThenReportsWrite() async {
-        let host = TestMetadataBoardHost(entries: [entry("f-author", label: "Author", suggested: true)])
-        let saved = entry("f-author", label: "Author", value: "Mary Robins", suggested: true)
+        let host = TestMetadataBoardHost(entries: [catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), suggested: true)])
+        let saved = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Mary Robins", suggested: true)
         host.setResult = [saved]
         let board = MetadataBoardModel(host: host)
         board.drafts["f-author"] = "Mary Robins"
@@ -41,8 +30,8 @@ struct MetadataBoardModelTests {
     }
 
     @Test func reorderFailureRevertsAndShowsFailure() async {
-        let a = entry("f-a", label: "A", value: "1", order: 0)
-        let b = entry("f-b", label: "B", value: "2", order: 1)
+        let a = catalogMetadataEntry(catalogMetadataField("f-a", label: "A"), "1", order: 0)
+        let b = catalogMetadataEntry(catalogMetadataField("f-b", label: "B"), "2", order: 1)
         let host = TestMetadataBoardHost(entries: [a, b])
         host.reorderError = boom
         host.failureText = "Boom"
@@ -56,8 +45,8 @@ struct MetadataBoardModelTests {
     }
 
     @Test func goneOwnerWritesNoState() async {
-        let author = entry("f-author", label: "Author", suggested: true)
-        let repo = entry("f-repo", label: "Repository", value: "NRO")
+        let author = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), suggested: true)
+        let repo = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
         let host = TestMetadataBoardHost(entries: [author, repo])
         host.failureText = nil
         let board = MetadataBoardModel(host: host)
@@ -79,9 +68,9 @@ struct MetadataBoardModelTests {
     }
 
     @Test func clearTakesTheHostsRows() async {
-        let saved = entry("f-author", label: "Author", value: "Mary", suggested: true)
+        let saved = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Mary", suggested: true)
         let host = TestMetadataBoardHost(entries: [saved])
-        let emptied = entry("f-author", label: "Author", suggested: true)
+        let emptied = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), suggested: true)
         host.clearResult = [emptied]
         let board = MetadataBoardModel(host: host)
 
@@ -96,7 +85,7 @@ struct MetadataBoardModelTests {
     @Test func addDialogWritesToItsTargetBoard() async {
         let hostA = TestMetadataBoardHost(entries: [])
         let hostB = TestMetadataBoardHost(entries: [])
-        hostB.setResult = [entry("f-author", label: "Author", value: "Ancestry")]
+        hostB.setResult = [catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Ancestry")]
         let boardA = MetadataBoardModel(host: hostA)
         let boardB = MetadataBoardModel(host: hostB)
         let dialogs = MetadataBoardDialogs()
@@ -114,7 +103,7 @@ struct MetadataBoardModelTests {
     }
 
     @Test func clearConfirmTargetsItsBoard() async {
-        let saved = entry("f-author", label: "Author", value: "Mary")
+        let saved = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Mary")
         let hostA = TestMetadataBoardHost(entries: [saved])
         let hostB = TestMetadataBoardHost(entries: [saved])
         let boardA = MetadataBoardModel(host: hostA)
@@ -138,7 +127,7 @@ struct MetadataBoardModelTests {
     }
 
     @Test func invalidValueStaysOnTheFieldOrDialog() async {
-        let repo = entry("f-repo", label: "Repository", value: "NRO")
+        let repo = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
         let host = TestMetadataBoardHost(entries: [repo])
         host.setError = invalid
         host.failureText = "Bad"

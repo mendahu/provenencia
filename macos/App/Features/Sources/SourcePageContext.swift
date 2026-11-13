@@ -136,16 +136,22 @@ final class SourcePageContext {
         session.apply(effects, .mutatedSourceWorkspace(sourceId: sourceID))
     }
 
+    /// Sets this page's workspace and writes the same value to the cached
+    /// workspace, so a later patch of that cache starts from what the page shows.
+    func setWorkspace(_ ws: CatalogSourceWorkspace) {
+        workspace = ws
+        session.setQueryValue(
+            CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID),
+            value: ws
+        )
+    }
+
     /// Reloads Source cover fields after Artifact create/ingest (raster may appear).
     func refreshCoverFromStore() async {
         clearPageError()
         do {
             let ws = try await store.getSourceWorkspace(projectDir: projectDir, sourceID: sourceID)
-            workspace = ws
-            session.setQueryValue(
-                CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID),
-                value: ws
-            )
+            setWorkspace(ws)
             session.apply(.updatedSource(ws.source))
         } catch {
             showFailure(error)

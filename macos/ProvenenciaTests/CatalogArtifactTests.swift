@@ -4,19 +4,12 @@ import Testing
 
 @Suite
 struct CatalogArtifactTests {
-    private func artifact(label: String, file: CatalogFileRef? = nil, fileID: String = "") -> CatalogArtifact {
-        CatalogArtifact(
-            id: "a1", ref: "ART-0001", sourceID: "s1", fileID: fileID,
-            label: label, description: "", file: file
-        )
-    }
-
     @Test func displayTitleAndIcon() {
-        let labelled = artifact(label: " Scan ")
+        let labelled = catalogArtifact("a1", ref: "ART-0001", label: " Scan ")
         #expect(labelled.displayTitle == "Scan")
         #expect(labelled.hasDisplayLabel)
 
-        let blank = artifact(label: "  ")
+        let blank = catalogArtifact("a1", ref: "ART-0001", label: "  ")
         #expect(blank.displayTitle == "ART-0001")
         #expect(!blank.hasDisplayLabel)
 
@@ -25,7 +18,7 @@ struct CatalogArtifactTests {
         let file = CatalogFileRef(
             id: "f1", relPath: "objects/a", originalFilename: "a.png", mediaType: "image/png", byteSize: 1
         )
-        let withFile = artifact(label: "", file: file, fileID: "f1")
+        let withFile = catalogArtifact("a1", ref: "ART-0001", label: "", fileID: "f1", file: file)
         #expect(withFile.hasFile)
         #expect(withFile.thumbnailTypeIconKey(sourceTypeIconKey: "k") == nil)
     }
@@ -49,7 +42,9 @@ struct CatalogArtifactTests {
         let file = CatalogFileRef(
             id: "f1", relPath: "objects/aa/bb/aabb.png", originalFilename: "scan.png", mediaType: "image/png", byteSize: 1
         )
-        #expect(artifact(label: "Scan", file: file, fileID: "f1").fileDisplayName == "scan.png")
-        #expect(artifact(label: "Scan").fileDisplayName == "ART-0001")
+        #expect(
+            catalogArtifact("a1", ref: "ART-0001", label: "Scan", fileID: "f1", file: file).fileDisplayName == "scan.png"
+        )
+        #expect(catalogArtifact("a1", ref: "ART-0001", label: "Scan").fileDisplayName == "ART-0001")
     }
 }

@@ -138,3 +138,59 @@ Fresh reviewer, slice 8 only. Writer's call to note: the rule "Citations render 
 
 ### K-35 · nit · `leadOutcomes` will be gone
 **Answer:** Fixed — S15-28 says each `PictureTile.Record` keeps its outcome.
+
+## Re-cut after S15-09's review (2026-11-12)
+
+The user rejected S15-09's Copy details on each Artifact card (the cards grow too tall) and asked for a list that shows copy details read-only, editing in a sheet, and sharper thumbnails. The map gained S15-33 – S15-36 and S15-D14; S15-10 was reshaped and S15-D4 folded into S15-D14. One maintainability reviewer (Opus), fresh context, one round; findings renumbered from the reviewer's K-1 – K-11 to K-36 – K-46.
+
+**To user (answered 2026-11-12):** trim #802 before merge (yes: K-41); the draft board as its own preparatory PR (yes: K-38); square thumbnail crop (yes); Add field as an inline row on every board (user's choice over a dialog on the sheet).
+
+### K-36 · blocker · S15-33 should return the Artifact's saved rows so a sheet Save patches the cache
+**Answer:** Fixed — S15-33 adds `metadata` to `UpdateArtifactResponse` and `CreateArtifactResponse`; S15-34 applies `.wroteMetadataBoard` from it, never `.mutatedSourceWorkspace`; the rule "An Artifact is added and edited in one sheet" says so.
+
+### K-37 · major · The S15-34 / S15-35 cut leaves no way to see copy details between them
+**Answer:** Fixed — S15-34 ships SA-4 (read-only copy details on today's cards); S15-35 changes only the layout.
+
+### K-38 · major · The draft host should be its own preparatory PR
+**Answer:** To user → yes. New S15-36 "A metadata board can hold a draft" (no chrome); S15-34, S15-10 and S15-11 depend on it. S15-11 still depends on S15-34 for the inline Add field row and the scrolling form dialog.
+
+### K-39 · major · Read-only copy details would be a second way to draw a value
+**Answer:** Fixed — S15-34 pulls one value view out of `MetadataBoardView.displayValue`; the URL is `PVButton(.link)` (also brief M-6).
+
+### K-40 · major · S15-34's "goes" list is incomplete, including the compact style
+**Answer:** Fixed — the trim of #802 (K-41) removes the disclosure, the per-Artifact boards and `.compact`; S15-34's scope names the card-edit state that goes, and the sheet's model follows `SourceGraphFormModel`.
+
+### K-41 · major · S15-09 is marked Landed while its chrome is about to be deleted
+**Answer:** To user → trim #802 before merge. The S15-09 row and scope entry record the trim.
+
+### K-42 · minor · Docs and plans the new PRs make false
+**Answer:** Fixed — S15-34's Context names `add-workspace-place`, `macos-client-patterns.md`, `DesignSystem/README.md` and the two plans' **Next adds**.
+
+### K-43 · minor · Scale fan-out missing on S15-33, S15-34, S15-10
+**Answer:** Fixed — each scope entry states one write per Save (S15-10: create then ingest) and no reload.
+
+### K-44 · minor · Where the sheet's Add field and Clear live
+**Answer:** Fixed — new rule "A board adds a field in an inline row" (user); a draft clears with no confirm (S15-36).
+
+### K-45 · minor · Add mode is not one transaction
+**Answer:** Fixed — the rule and S15-10 say the file ingests as its own write, and the retry sends the draft on `UpdateArtifact`.
+
+### K-46 · nit · Two loaders for graph-unlink locks
+Logged.
+
+### Round 2 (fresh maintainability reviewer, Opus)
+
+### K2-1 · blocker · The rule promises a sharp 128pt square with no derivative change
+**Answer:** Fixed — 80pt in the rule and S15-35.
+
+### K2-2 · blocker · No place for the sheet's Escape and Return order
+**Answer:** Fixed — S15-34 scope (`PVSheet` yields to an inner edit).
+
+### K2-3 · blocker · "The Add dialog goes" names no replacement per caller
+**Answer:** Fixed — S15-36 holds the add row's state for every host, kept across `resetDrafts`; S15-34 lists what goes and what the header and empty-state buttons become.
+
+### K2-4 · blocker · The "goes" list deletes the graph-lock behavior
+**Answer:** Fixed — `LinkEdit`'s preflight, lock load and graph-keeps message move into the sheet's model.
+
+### K2 minors (draft starting rows, returned rows into Swift, S15-09 status, trim keep list, S15-11 reload)
+**Answer:** Fixed — S15-36 scope; S15-09 "In review, trim pending"; keep list names the pencil change; S15-11 says a graph Save reloads.
