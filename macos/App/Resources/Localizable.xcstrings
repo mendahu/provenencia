@@ -8268,18 +8268,6 @@
         }
       }
     },
-    "sources.page.artifactCardLabelRequired": {
-      "comment": "Validation on an artifact card while the label is empty",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An artifact needs a label"
-          }
-        }
-      }
-    },
     "sources.page.artifactDescription": {
       "comment": "Field label for optional Artifact description",
       "extractionState": "manual",
@@ -9529,13 +9517,13 @@
       }
     },
     "sources.page.editArtifactLabel": {
-      "comment": "Tooltip and VoiceOver label for the pencil on an artifact card; argument is the ART- ref",
+      "comment": "Tooltip and VoiceOver label for the pencil on an artifact card, and the Artifact sheet title; argument is the ART- ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Edit label and description of %@"
+            "value": "Edit %@"
           }
         }
       }
@@ -9968,6 +9956,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save artifact"
+          }
+        }
+      }
+    },
+    "sources.page.artifactCopyDetailsMore": {
+      "comment": "Button on an artifact card after its first copy details; argument is how many more it holds",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld more"
+          }
+        }
+      }
+    },
+    "sources.page.artifactCopyDetailsMoreLabel": {
+      "comment": "VoiceOver label of the more button on an artifact card; %1$lld is how many more, %2$@ is the ART- ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld more copy details of %2$@"
+          }
+        }
+      }
+    },
+    "sources.page.toastArtifactGoneBody": {
+      "comment": "Toast body when the Artifact whose sheet is open is gone; argument is its label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” was deleted or moved in another window."
+          }
+        }
+      }
+    },
+    "sources.page.toastArtifactGoneTitle": {
+      "comment": "Toast title when the Artifact whose sheet is open was deleted or moved in another window",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact no longer here"
+          }
+        }
+      }
+    },
+    "sources.page.artifactSheetFinishOpenField": {
+      "comment": "Callout on the Artifact sheet when Save is pressed while a copy-details field holds text not yet confirmed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish the open field first: save its value or clear it."
+          }
+        }
+      }
+    },
+    "sources.page.artifactCopyDetailsLabel": {
+      "comment": "Label of the Copy details section of the Artifact sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy details"
           }
         }
       }
@@ -23096,7 +23156,7 @@
       }
     },
     "sources.page.artifact.saveErrorTitle": {
-      "comment": "Callout title on an artifact card in edit when saving it fails",
+      "comment": "Callout title on the Artifact sheet when saving it fails",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23108,7 +23168,7 @@
       }
     },
     "sources.page.artifact.saveErrorGraphKeeps": {
-      "comment": "Callout message on an artifact card in edit when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text",
+      "comment": "Callout message on the Artifact sheet when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23120,7 +23180,7 @@
       }
     },
     "sources.page.artifact.saveErrorKept": {
-      "comment": "Callout message on an artifact card in edit when saving it fails before anything was written; argument is the error text",
+      "comment": "Callout message on the Artifact sheet when saving it fails before anything was written; argument is the error text",
       "extractionState": "manual",
       "localizations": {
         "en": {

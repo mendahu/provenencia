@@ -6577,14 +6577,14 @@ enum L10n {
         static let artifactCardSaveErrorTitle = LocalizedStringResource(
             "sources.page.artifact.saveErrorTitle",
             defaultValue: "Couldn’t save the artifact",
-            comment: "Callout title on an artifact card in edit when saving it fails"
+            comment: "Callout title on the Artifact sheet when saving it fails"
         )
 
         static func artifactCardSaveErrorKept(_ error: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.saveErrorKept",
                 defaultValue: "Your changes are kept. %@",
-                comment: "Callout message on an artifact card in edit when saving it fails before anything was written; argument is the error text"
+                comment: "Callout message on the Artifact sheet when saving it fails before anything was written; argument is the error text"
             ), error)
         }
 
@@ -6592,7 +6592,7 @@ enum L10n {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.saveErrorGraphKeeps",
                 defaultValue: "%1$@ keeps this artifact. Your changes are kept. %2$@",
-                comment: "Callout message on an artifact card in edit when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text"
+                comment: "Callout message on the Artifact sheet when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text"
             ), graph, error)
         }
 
@@ -6759,12 +6759,6 @@ enum L10n {
             comment: "Validation when Add Artifact is submitted without a label"
         )
 
-        static let artifactCardLabelRequired = LocalizedStringResource(
-            "sources.page.artifactCardLabelRequired",
-            defaultValue: "An artifact needs a label",
-            comment: "Validation on an artifact card while the label is empty"
-        )
-
         static let artifactNoDescription = LocalizedStringResource(
             "sources.page.artifactNoDescription",
             defaultValue: "No description",
@@ -6793,8 +6787,8 @@ enum L10n {
         static func editArtifactLabel(ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.page.editArtifactLabel",
-                defaultValue: "Edit label and description of %@",
-                comment: "Tooltip and VoiceOver label for the pencil on an artifact card; argument is the ART- ref"
+                defaultValue: "Edit %@",
+                comment: "Tooltip and VoiceOver label for the pencil on an artifact card, and the Artifact sheet title; argument is the ART- ref"
             ), ref)
         }
 
@@ -6803,6 +6797,48 @@ enum L10n {
             defaultValue: "Save artifact",
             comment: "Button to save edited Artifact label and description"
         )
+
+        static let artifactCopyDetailsLabel = LocalizedStringResource(
+            "sources.page.artifactCopyDetailsLabel",
+            defaultValue: "Copy details",
+            comment: "Label of the Copy details section of the Artifact sheet"
+        )
+
+        static func artifactCopyDetailsMore(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsMore",
+                defaultValue: "+%lld more",
+                comment: "Button on an artifact card after its first copy details; argument is how many more it holds"
+            ), count)
+        }
+
+        static func artifactCopyDetailsMoreLabel(count: Int, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsMoreLabel",
+                defaultValue: "%1$lld more copy details of %2$@",
+                comment: "VoiceOver label of the more button on an artifact card; %1$lld is how many more, %2$@ is the ART- ref"
+            ), count, ref)
+        }
+
+        static let artifactSheetFinishOpenField = LocalizedStringResource(
+            "sources.page.artifactSheetFinishOpenField",
+            defaultValue: "Finish the open field first: save its value or clear it.",
+            comment: "Callout on the Artifact sheet when Save is pressed while a copy-details field holds text not yet confirmed"
+        )
+
+        static let toastArtifactGoneTitle = LocalizedStringResource(
+            "sources.page.toastArtifactGoneTitle",
+            defaultValue: "Artifact no longer here",
+            comment: "Toast title when the Artifact whose sheet is open was deleted or moved in another window"
+        )
+
+        static func toastArtifactGoneBody(label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.toastArtifactGoneBody",
+                defaultValue: "“%@” was deleted or moved in another window.",
+                comment: "Toast body when the Artifact whose sheet is open is gone; argument is its label"
+            ), label)
+        }
 
         /// VoiceOver label for an artifact preview that has a file. Argument is the file name.
         static func openArtifactFile(name: String) -> String {

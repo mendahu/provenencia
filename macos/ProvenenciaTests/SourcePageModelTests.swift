@@ -939,27 +939,6 @@ struct SourcePageModelTests {
         #expect(model.metadata.entries.isEmpty)
     }
 
-    @Test func cancelArtifactFieldsRestoresDrafts() async throws {
-        let store = makeStore(
-            artifacts: [
-                CatalogArtifact(
-                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
-                    label: "Front", description: "Original", file: nil
-                ),
-            ]
-        )
-        let model = makeModel(store: store)
-        await model.warmFromSession()
-        let artID = try #require(model.artifacts.items.first?.id)
-        model.artifacts.labels[artID] = "Changed"
-        model.artifacts.descriptions[artID] = "Changed desc"
-        #expect(model.artifacts.fieldsDirty(artID))
-        model.artifacts.cancelFields(id: artID)
-        #expect(!model.artifacts.fieldsDirty(artID))
-        #expect(model.artifacts.labels[artID] == "Front")
-        #expect(model.artifacts.descriptions[artID] == "Original")
-    }
-
     private func recordDateField() -> CatalogMetadataField {
         CatalogMetadataField(
             id: "f-date", key: "record_date", origin: "provenencia",
@@ -1156,100 +1135,6 @@ struct SourcePageModelTests {
         #expect(model.metadata.editingFieldID == field.id)
     }
 
-    @Test func editingArtifactIsOneCardAtATime() async {
-        let store = makeStore(
-            artifacts: [
-                CatalogArtifact(
-                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
-                    label: "Front", description: "", file: nil
-                ),
-                CatalogArtifact(
-                    id: "a2", ref: "ART-BBBBB", sourceID: sourceID, fileID: "",
-                    label: "Back", description: "", file: nil
-                ),
-            ]
-        )
-        let model = makeModel(store: store)
-        await model.warmFromSession()
-        model.artifacts.beginEdit("a1")
-        #expect(model.artifacts.editingArtifactID == "a1")
-        model.artifacts.labels["a1"] = "Changed"
-        #expect(model.artifacts.canSaveFields("a1"))
-        model.artifacts.labels["a1"] = "   "
-        #expect(!model.artifacts.canSaveFields("a1"))
-        #expect(
-            model.artifacts.cardLabelError(id: "a1")
-                == L10n.string(L10n.Sources.artifactCardLabelRequired)
-        )
-        model.artifacts.beginEdit("a2")
-        #expect(model.artifacts.editingArtifactID == "a1")
-        model.artifacts.confirmEditSwitch()
-        #expect(model.artifacts.editingArtifactID == "a2")
-        #expect(model.artifacts.labels["a1"] == "Front")
-        model.artifacts.cancelFields(id: "a2")
-        #expect(model.artifacts.editingArtifactID == nil)
-        #expect(!model.artifacts.canSaveFields("a2"))
-    }
-
-    private func twoCardModel() async -> SourcePageModel {
-        let store = makeStore(
-            artifacts: [
-                CatalogArtifact(
-                    id: "ART-1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
-                    label: "Page 1", description: "", file: nil
-                ),
-                CatalogArtifact(
-                    id: "ART-2", ref: "ART-BBBBB", sourceID: sourceID, fileID: "",
-                    label: "Page 2", description: "", file: nil
-                ),
-            ]
-        )
-        let model = makeModel(store: store)
-        await model.warmFromSession()
-        return model
-    }
-
-    @Test func cardSwitchAsksWhenDirty() async {
-        let model = await twoCardModel()
-        model.artifacts.beginEdit("ART-1")
-        model.artifacts.labels["ART-1"] = "Page one"
-        model.artifacts.beginEdit("ART-2")
-        #expect(model.artifacts.pendingEditSwitch != nil)
-        #expect(model.artifacts.editingArtifactID == "ART-1")
-        #expect(model.artifacts.labels["ART-1"] == "Page one")
-        #expect(!model.acceptsArtifactPageDrop)
-    }
-
-    @Test func cardSwitchConfirmMovesEdit() async {
-        let model = await twoCardModel()
-        model.artifacts.beginEdit("ART-1")
-        model.artifacts.labels["ART-1"] = "Page one"
-        model.artifacts.beginEdit("ART-2")
-        model.artifacts.confirmEditSwitch()
-        #expect(model.artifacts.editingArtifactID == "ART-2")
-        #expect(model.artifacts.pendingEditSwitch == nil)
-        #expect(model.artifacts.labels["ART-1"] == "Page 1")
-    }
-
-    @Test func cardSwitchCancelKeepsEdit() async {
-        let model = await twoCardModel()
-        model.artifacts.beginEdit("ART-1")
-        model.artifacts.labels["ART-1"] = "Page one"
-        model.artifacts.beginEdit("ART-2")
-        model.artifacts.cancelEditSwitch()
-        #expect(model.artifacts.pendingEditSwitch == nil)
-        #expect(model.artifacts.editingArtifactID == "ART-1")
-        #expect(model.artifacts.labels["ART-1"] == "Page one")
-    }
-
-    @Test func cardSwitchCleanMovesAtOnce() async {
-        let model = await twoCardModel()
-        model.artifacts.beginEdit("ART-1")
-        model.artifacts.beginEdit("ART-2")
-        #expect(model.artifacts.editingArtifactID == "ART-2")
-        #expect(model.artifacts.pendingEditSwitch == nil)
-    }
-
     @Test func pageDropStagesFileWithoutCreating() async throws {
         let url = try writeTempPNG()
         let store = makeStore(
@@ -1263,12 +1148,8 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         let before = model.artifacts.items.count
-        model.artifacts.beginEdit("a1")
-        model.artifacts.labels["a1"] = "Changed"
         model.artifacts.stagePageDrop([url])
         #expect(model.artifacts.isAdding)
-        #expect(model.artifacts.editingArtifactID == nil)
-        #expect(model.artifacts.labels["a1"] == "Front")
         #expect(model.artifacts.draft.label.isEmpty)
         #expect(model.artifacts.draft.description.isEmpty)
         #expect(model.artifacts.draft.fileName == url.lastPathComponent)
@@ -1698,12 +1579,17 @@ struct SourcePageModelTests {
     /// The census: Brown (`g-b`, P9), Jones (`g-j`, P3 P4), Smith (`g-s`, P3 P6), with the
     /// page location applied so the graph list is a visible key and graph writes refresh it.
     private func makeCensus(
-        graphs: [CatalogEvidenceGraph]? = nil
+        graphs: [CatalogEvidenceGraph]? = nil,
+        fields: [CatalogMetadataField] = [],
+        artifactMetadata: [String: [CatalogMetadataEntry]] = [:]
     ) async -> (model: SourcePageModel, store: FakeStore, session: WorkspaceSession) {
         let artifacts = ["P3", "P4", "P6", "P9"].map {
             catalogArtifact($0, sourceID: sourceID, label: "Page \($0)")
         }
-        let store = makeStore(artifacts: artifacts)
+        let store = makeStore(artifacts: artifacts, fields: fields)
+        for (id, rows) in artifactMetadata {
+            store.metadataByOwner[MetadataOwner(level: .artifact, id: id)] = rows
+        }
         store.evidenceGraphsByProject[projectDir] = graphs ?? [
             graph("g-b", "Brown household", ["P9"]),
             graph("g-j", "Jones household", ["P3", "P4"]),
@@ -1785,34 +1671,175 @@ struct SourcePageModelTests {
         #expect(model.artifacts.addSheetIsDirty)
     }
 
-    @Test func cardEditOnOneGraphShowsTheGroup() async {
+    // MARK: Artifact sheet (S15-34)
+
+    private func openSheet(
+        _ model: SourcePageModel, _ id: String, at section: ArtifactSheetModel.Section = .graphs
+    ) async -> ArtifactSheetModel {
+        model.artifacts.sheet = nil
+        model.artifacts.openSheet(artifactID: id, at: section)
+        guard let sheet = model.artifacts.sheet else { fatalError("the sheet did not open for \(id)") }
+        await sheet.linkLoadTask?.value
+        return sheet
+    }
+
+    @Test func sheetOpensFromTheWorkspace() async {
+        let provider = catalogMetadataField("provider", label: "Provider")
+        let (model, _, _) = await makeCensus(
+            fields: [provider],
+            artifactMetadata: ["P3": [catalogMetadataEntry(provider, "Ancestry", order: 0)]]
+        )
+        model.artifacts.openSheet(artifactID: "P3", at: .copyDetails)
+        let sheet = model.artifacts.sheet
+        #expect(sheet?.opensAt == .copyDetails)
+        #expect(sheet?.draft == ArtifactSheetDraft(label: "Page P3", description: ""))
+        #expect(sheet?.host.entries.map(\.field.id) == ["provider"])
+        #expect(sheet?.subtitle == "SRC-AAAAA · Family album")
+        #expect(sheet?.isDirty == false)
+        // Only one sheet at a time, and none for an Artifact that is not there.
+        model.artifacts.openSheet(artifactID: "P4")
+        #expect(model.artifacts.sheet?.artifact.id == "P3")
+        model.artifacts.sheet = nil
+        model.artifacts.openSheet(artifactID: "nope")
+        #expect(model.artifacts.sheet == nil)
+    }
+
+    @Test func sheetDirtyIgnoresPutBackText() async {
+        let (model, _, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3", at: .top)
+        sheet.draft.label = "Page P3, recto"
+        #expect(sheet.isDirty)
+        sheet.draft.label = "Page P3"
+        #expect(!sheet.isDirty)
+        sheet.draft.description = "  "
+        #expect(!sheet.isDirty)
+    }
+
+    @Test func sheetLabelRequired() async {
+        let (model, store, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3", at: .top)
+        sheet.draft.label = "   "
+        #expect(await sheet.save() == false)
+        #expect(sheet.labelError == "Give the artifact a label.")
+        #expect(store.updateArtifactCalls == 0)
+    }
+
+    @Test func sheetStopsOnUnconfirmedInput() async {
+        let (model, store, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3", at: .top)
+        sheet.board.setTyped(true, fieldID: "image")
+        #expect(sheet.isDirty)
+        #expect(await sheet.save() == false)
+        #expect(sheet.saveError == L10n.string(L10n.Sources.artifactSheetFinishOpenField))
+        #expect(store.updateArtifactCalls == 0)
+        sheet.board.setTyped(false, fieldID: "image")
+        #expect(await sheet.save() == true)
+        #expect(sheet.saveError == nil)
+    }
+
+    @Test func sheetSaveWithNothingChangedWritesNothing() async {
+        let (model, store, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3", at: .top)
+        #expect(await sheet.save() == true)
+        #expect(store.updateArtifactCalls == 0)
+    }
+
+    @Test func sheetSaveIsOneWriteWithTheDraft() async throws {
+        let provider = catalogMetadataField("provider", label: "Provider")
+        let url = catalogMetadataField("url", label: "URL")
+        let owner = MetadataOwner(level: .artifact, id: "P3")
+        let (model, store, _) = await makeCensus(
+            fields: [provider, url],
+            artifactMetadata: ["P3": [
+                catalogMetadataEntry(provider, "Ancestry", order: 0),
+                catalogMetadataEntry(url, "https://example.org/p3", order: 1),
+            ]]
+        )
+        let sheet = await openSheet(model, "P3", at: .top)
+        sheet.draft.label = "Page P3, recto"
+        sheet.board.drafts["provider"] = "FamilySearch"
+        await sheet.board.save(fieldID: "provider")
+        await sheet.board.moveSaved(from: IndexSet(integer: 1), to: 0)
+        store.metadataWriteResults[owner] = sheet.host.entries
+        let getBefore = store.recordedCalls.filter { $0.contains("getSourceWorkspace") }.count
+        #expect(sheet.isDirty)
+        #expect(sheet.canSave)
+        #expect(await sheet.save() == true)
+        #expect(store.updateArtifactCalls == 1)
+        #expect(store.updateArtifactGraphIDs.first! == nil)
+        let draft = try #require(store.updateArtifactMetadata.first ?? nil)
+        #expect(draft.values.map(\.fieldID) == ["url", "provider"])
+        #expect(draft.values.map(\.valueText) == ["https://example.org/p3", "FamilySearch"])
+        #expect(model.artifacts.items.first { $0.id == "P3" }?.label == "Page P3, recto")
+        #expect(model.artifacts.copyDetails(for: "P3").map(\.field.id) == ["url", "provider"])
+        #expect(store.recordedCalls.filter { $0.contains("getSourceWorkspace") }.count == getBefore)
+    }
+
+    @Test func sheetSaveSendsNoLinksWhenOnlyTextChanged() async {
+        let (model, store, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3")
+        sheet.draft.label = "Page 3, front"
+        #expect(await sheet.save() == true)
+        #expect(store.updateArtifactCalls == 1)
+        #expect(store.updateArtifactGraphIDs.first! == nil)
+        #expect(store.updateArtifactMetadata.first! == nil)
+        #expect(model.artifacts.items.first { $0.id == "P3" }?.label == "Page 3, front")
+    }
+
+    @Test func sheetSavePatchesTheCachedWorkspaceRows() async {
+        let provider = catalogMetadataField("provider", label: "Provider")
+        let owner = MetadataOwner(level: .artifact, id: "P3")
+        let (model, store, session) = await makeCensus(fields: [provider])
+        let sheet = await openSheet(model, "P3", at: .copyDetails)
+        _ = await sheet.board.add(fieldID: "provider", valueText: "Ancestry")
+        store.metadataWriteResults[owner] = sheet.host.entries
+        #expect(await sheet.save() == true)
+        let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+        let cached: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(key)
+        #expect(cached?.value?.metadataRows(for: owner)?.map(\.field.id) == ["provider"])
+    }
+
+    @Test func sheetRefusedValueLandsOnItsRow() async {
+        let url = catalogMetadataField("url", label: "URL")
+        let (model, store, _) = await makeCensus(
+            fields: [url],
+            artifactMetadata: ["P3": [catalogMetadataEntry(url, "https://example.org/p3")]]
+        )
+        let sheet = await openSheet(model, "P3", at: .copyDetails)
+        sheet.board.drafts["url"] = "file:/tmp"
+        await sheet.board.save(fieldID: "url")
+        let refusal = catalogMetadataRefusal(params: ["url"])
+        store.updateArtifactError = refusal
+        #expect(await sheet.save() == false)
+        #expect(sheet.board.editingFieldID == "url")
+        #expect(sheet.board.fieldError == L10n.Errors.message(for: refusal))
+        #expect(sheet.saveError == nil)
+    }
+
+    @Test func sheetOnOneGraphShowsTheGroup() async {
         let (model, store, _) = await makeCensus(graphs: [graph("g-1", "Default", ["P3", "P4"])])
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.linkEdit?.loadState == .ready)
-        #expect(model.artifacts.checkedGraphIDs == ["g-1"])
+        let sheet = await openSheet(model, "P3")
+        #expect(sheet.linkLoadState == .ready)
+        #expect(sheet.checkedGraphIDs == ["g-1"])
         #expect(store.getEvidenceGraphUnlinkImpactCalls == 1)
         #expect(store.getEvidenceGraphUnlinkImpactPairs == [
             CatalogEvidenceGraphArtifactPair(graphID: "g-1", artifactID: "P3"),
         ])
-        model.artifacts.linkEdit?.excluded = ["g-1"]
-        await model.artifacts.saveFields(id: "P3")
+        sheet.excludedGraphIDs = ["g-1"]
+        #expect(await sheet.save() == true)
         #expect(store.updateArtifactGraphIDs == [[]])
     }
 
     /// One preflight call covers every graph that links the Artifact. Every block the
     /// engine reports locks its graph, worded by one hint; Swift decides no lock.
-    @Test func cardEditLocksEveryBlock() async {
+    @Test func sheetLocksEveryBlock() async {
         let (model, store, _) = await makeCensus()
         store.unlinkImpactBlocks = [unlinkBlock("P3", graphID: "g-s", citations: 2)]
-        model.artifacts.beginEdit("P3")
-        #expect(model.artifacts.linkEdit?.loadState == .loading || model.artifacts.linkEdit?.loadState == .ready)
-        await model.artifacts.linkLoadTask?.value
-        let edit = model.artifacts.linkEdit
-        #expect(edit?.loadState == .ready)
-        #expect(model.artifacts.lockedGraphs["g-s"] == "2 citations in this graph use this artifact")
-        #expect(model.artifacts.lockedGraphs["g-j"] == nil)
-        #expect(edit?.excluded == ["g-b"])
+        let sheet = await openSheet(model, "P3")
+        #expect(sheet.linkLoadState == .ready)
+        #expect(sheet.lockedGraphs["g-s"] == "2 citations in this graph use this artifact")
+        #expect(sheet.lockedGraphs["g-j"] == nil)
+        #expect(sheet.excludedGraphIDs == ["g-b"])
         #expect(store.getEvidenceGraphUnlinkImpactCalls == 1)
         #expect(store.getEvidenceGraphUnlinkImpactPairs == [
             CatalogEvidenceGraphArtifactPair(graphID: "g-j", artifactID: "P3"),
@@ -1820,60 +1847,55 @@ struct SourcePageModelTests {
         ])
 
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 0, reason: .lastArtifact)]
-        model.artifacts.beginEdit("P9")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.lockedGraphs["g-b"] == L10n.Errors.message(code: "evidencegraphs.last_artifact"))
-        #expect(model.artifacts.lockedGraphs["g-b"] == "An evidence graph needs at least one artifact.")
-        #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
+        let last = await openSheet(model, "P9")
+        #expect(last.lockedGraphs["g-b"] == L10n.Errors.message(code: "evidencegraphs.last_artifact"))
+        #expect(last.lockedGraphs["g-b"] == "An evidence graph needs at least one artifact.")
+        #expect(last.excludedGraphIDs == ["g-j", "g-s"])
 
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
-        model.artifacts.cancelFields(id: "P9")
-        model.artifacts.beginEdit("P9")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.lockedGraphs["g-b"] == "1 citation in this graph uses this artifact")
+        let inUse = await openSheet(model, "P9")
+        #expect(inUse.lockedGraphs["g-b"] == "1 citation in this graph uses this artifact")
 
         // A reason this build does not know locks too, with the engine's wording.
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 0, reason: .unrecognized("x.y"))]
-        model.artifacts.cancelFields(id: "P9")
-        model.artifacts.beginEdit("P9")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.lockedGraphs["g-b"] == L10n.Errors.message(code: "x.y"))
+        let unknown = await openSheet(model, "P9")
+        #expect(unknown.lockedGraphs["g-b"] == L10n.Errors.message(code: "x.y"))
 
         // No graph links the Artifact: no call.
         let calls = store.getEvidenceGraphUnlinkImpactCalls
         let (bare, bareStore, _) = await makeCensus(graphs: [graph("g-1", "Default", ["P3"]), graph("g-2", "Jones", ["P3"])])
-        bare.artifacts.beginEdit("P9")
-        await bare.artifacts.linkLoadTask?.value
-        #expect(bare.artifacts.linkEdit?.loadState == .ready)
-        #expect(bare.artifacts.lockedGraphs.isEmpty)
+        let bareSheet = await openSheet(bare, "P9")
+        #expect(bareSheet.linkLoadState == .ready)
+        #expect(bareSheet.lockedGraphs.isEmpty)
         #expect(bareStore.getEvidenceGraphUnlinkImpactCalls == 0)
         #expect(store.getEvidenceGraphUnlinkImpactCalls == calls)
     }
 
-    /// A card opened in edit before the graph list arrives shows the group's loading
+    /// A sheet opened before the graph list arrives shows the group's loading
     /// state, then gets its group (and lock read) when the list loads.
-    @Test func cardEditBeforeTheListLoadsGetsTheGroup() async {
+    @Test func sheetBeforeTheListLoadsGetsTheGroup() async {
         let (model, store, session) = await makeCensus(graphs: [])
-        model.artifacts.beginEdit("P3")
-        #expect(model.artifacts.linkEdit == nil)
-        #expect(model.artifacts.awaitingGraphs(id: "P3"))
+        model.artifacts.openSheet(artifactID: "P3")
+        guard let sheet = model.artifacts.sheet else { Issue.record("no sheet"); return }
+        #expect(sheet.graphIDs == nil)
+        #expect(sheet.awaitingGraphs)
 
         session.setQueryValue(session.evidenceGraphsKey, value: [
             graph("g-b", "Brown household", ["P9"]),
             graph("g-j", "Jones household", ["P3", "P4"]),
         ])
-        model.artifacts.graphsChanged()
-        #expect(!model.artifacts.awaitingGraphs(id: "P3"))
-        #expect(model.artifacts.linkEdit?.artifactID == "P3")
-        #expect(model.artifacts.linkEdit?.excluded == ["g-b"])
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.linkEdit?.loadState == .ready)
+        sheet.graphsChanged()
+        #expect(!sheet.awaitingGraphs)
+        #expect(sheet.graphIDs == ["g-b", "g-j"])
+        #expect(sheet.excludedGraphIDs == ["g-b"])
+        await sheet.linkLoadTask?.value
+        #expect(sheet.linkLoadState == .ready)
         #expect(store.getEvidenceGraphUnlinkImpactCalls == 1)
     }
 
     /// A cited Artifact moves graphs in two Saves: the lock holds while another box is
     /// checked, and lifts once the engine's preflight no longer blocks.
-    @Test func cardCitationsLockHoldsUntilTheLinkIsSaved() async {
+    @Test func sheetCitationsLockHoldsUntilTheLinkIsSaved() async {
         let graphs = [
             graph("g-b", "Brown household", ["P9", "P4"]),
             graph("g-j", "Jones household", ["P3", "P4"]),
@@ -1881,12 +1903,11 @@ struct SourcePageModelTests {
         ]
         let (model, store, session) = await makeCensus(graphs: graphs)
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
-        model.artifacts.beginEdit("P9")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded.remove("g-j")
-        #expect(model.artifacts.lockedGraphs["g-b"] != nil)
-        #expect(model.artifacts.checkedGraphIDs == ["g-b", "g-j"])
-        await model.artifacts.saveFields(id: "P9")
+        let sheet = await openSheet(model, "P9")
+        sheet.excludedGraphIDs.remove("g-j")
+        #expect(sheet.lockedGraphs["g-b"] != nil)
+        #expect(sheet.checkedGraphIDs == ["g-b", "g-j"])
+        #expect(await sheet.save() == true)
         #expect(store.updateArtifactGraphIDs == [["g-b", "g-j"]])
 
         store.evidenceGraphsByProject[projectDir] = [
@@ -1897,70 +1918,37 @@ struct SourcePageModelTests {
         session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])]))
         await session.settleWrites()
         store.unlinkImpactBlocks = []
-        model.artifacts.beginEdit("P9")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.lockedGraphs.isEmpty)
-        model.artifacts.linkEdit?.excluded.insert("g-b")
-        await model.artifacts.saveFields(id: "P9")
+        let again = await openSheet(model, "P9")
+        #expect(again.lockedGraphs.isEmpty)
+        again.excludedGraphIDs.insert("g-b")
+        #expect(await again.save() == true)
         #expect(store.updateArtifactGraphIDs.last! == ["g-j"])
     }
 
-    @Test func cardSaveIsOneWrite() async {
+    @Test func sheetSaveRefusedNamesTheGraphAndLocksIt() async {
         let (model, store, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        #expect(!model.artifacts.canSaveFields("P3"))
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded = ["g-j"]
-        model.artifacts.labels["P3"] = "Page 3, front"
-        #expect(model.artifacts.checkedGraphIDs == ["g-b", "g-s"])
-        #expect(model.artifacts.canSaveFields("P3"))
-        await model.artifacts.saveFields(id: "P3")
-        #expect(store.updateArtifactCalls == 1)
-        #expect(store.updateArtifactGraphIDs == [["g-b", "g-s"]])
-        #expect(store.recordedCalls.filter { $0.contains("EvidenceGraphArtifact") }.isEmpty)
-        #expect(model.artifacts.items.first { $0.id == "P3" }?.label == "Page 3, front")
-        #expect(model.artifacts.editingArtifactID == nil)
-        #expect(model.artifacts.linkEdit == nil)
-    }
-
-    @Test func cardSaveSendsNoLinksWhenOnlyTextChanged() async {
-        let (model, store, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.labels["P3"] = "Page 3, front"
-        await model.artifacts.saveFields(id: "P3")
-        #expect(store.updateArtifactCalls == 1)
-        #expect(store.updateArtifactGraphIDs.count == 1)
-        #expect(store.updateArtifactGraphIDs.first! == nil)
-        #expect(model.artifacts.items.first { $0.id == "P3" }?.label == "Page 3, front")
-        #expect(model.artifacts.editingArtifactID == nil)
-    }
-
-    @Test func cardSaveRefusedNamesTheGraphAndLocksIt() async {
-        let (model, store, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded = ["g-j"]
-        model.artifacts.labels["P3"] = "Page 3, front"
+        let sheet = await openSheet(model, "P3")
+        sheet.excludedGraphIDs = ["g-j"]
+        sheet.draft.label = "Page 3, front"
         let refusal = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
         store.updateArtifactError = refusal
         store.unlinkImpactBlocks = [unlinkBlock("P3", graphID: "g-j", citations: 1)]
         let impactCalls = store.getEvidenceGraphUnlinkImpactCalls
-        await model.artifacts.saveFields(id: "P3")
+        #expect(await sheet.save() == false)
 
-        #expect(model.artifacts.editingArtifactID == "P3")
+        #expect(model.artifacts.sheet === sheet)
         #expect(model.pageError == nil)
         #expect(store.updateArtifactCalls == 1)
         #expect(store.getEvidenceGraphUnlinkImpactCalls > impactCalls)
-        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorGraphKeeps(
+        #expect(sheet.saveError == L10n.Sources.artifactCardSaveErrorGraphKeeps(
             graph: "Jones household", error: L10n.Errors.message(for: refusal)
         ))
-        #expect(model.artifacts.checkedGraphIDs.contains("g-j"))
-        #expect(model.artifacts.lockedGraphs["g-j"] == "1 citation in this graph uses this artifact")
-        #expect(model.artifacts.linkEdit?.excluded == ["g-j"])
-        #expect(model.artifacts.labels["P3"] == "Page 3, front")
+        #expect(sheet.checkedGraphIDs.contains("g-j"))
+        #expect(sheet.lockedGraphs["g-j"] == "1 citation in this graph uses this artifact")
+        #expect(sheet.excludedGraphIDs == ["g-j"])
+        #expect(sheet.draft.label == "Page 3, front")
 
         // A Citation of the graph is on the Artifact: the engine refuses the unlink.
         let graphs = [
@@ -1969,19 +1957,18 @@ struct SourcePageModelTests {
             graph("g-s", "Smith household", ["P6"]),
         ]
         let (cited, citedStore, _) = await makeCensus(graphs: graphs)
-        cited.artifacts.beginEdit("P9")
-        await cited.artifacts.linkLoadTask?.value
-        #expect(cited.artifacts.lockedGraphs.isEmpty)
-        cited.artifacts.linkEdit?.excluded.insert("g-b")
+        let citedSheet = await openSheet(cited, "P9")
+        #expect(citedSheet.lockedGraphs.isEmpty)
+        citedSheet.excludedGraphIDs.insert("g-b")
         let inUse = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
         citedStore.updateArtifactError = inUse
         citedStore.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
-        await cited.artifacts.saveFields(id: "P9")
-        #expect(cited.artifacts.lockedGraphs["g-b"] != nil)
-        #expect(cited.artifacts.checkedGraphIDs.contains("g-b"))
-        let body = cited.artifacts.cardSaveError
+        #expect(await citedSheet.save() == false)
+        #expect(citedSheet.lockedGraphs["g-b"] != nil)
+        #expect(citedSheet.checkedGraphIDs.contains("g-b"))
+        let body = citedSheet.saveError
         #expect(body == L10n.Sources.artifactCardSaveErrorGraphKeeps(
             graph: "Brown household", error: L10n.Errors.message(for: inUse)
         ))
@@ -1990,18 +1977,16 @@ struct SourcePageModelTests {
 
         // No re-read block locks an unchecked graph: the changes are kept, no graph is named.
         let (plain, plainStore, _) = await makeCensus()
-        plain.artifacts.beginEdit("P3")
-        await plain.artifacts.linkLoadTask?.value
-        plain.artifacts.linkEdit?.excluded = ["g-j"]
+        let plainSheet = await openSheet(plain, "P3")
+        plainSheet.excludedGraphIDs = ["g-j"]
         plainStore.updateArtifactError = refusal
-        await plain.artifacts.saveFields(id: "P3")
-        #expect(plain.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: refusal)))
+        #expect(await plainSheet.save() == false)
+        #expect(plainSheet.saveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: refusal)))
     }
 
-    @Test func cardSaveKeepsAGraphMadeDuringEdit() async throws {
+    @Test func sheetSaveKeepsAGraphMadeDuringEdit() async throws {
         let (model, store, session) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
+        let sheet = await openSheet(model, "P3")
         store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
@@ -2009,83 +1994,154 @@ struct SourcePageModelTests {
         )
         session.apply(effects)
         await session.settleWrites()
-        model.artifacts.linkEdit?.excluded = ["g-b", "g-j"]
-        model.artifacts.labels["P3"] = "Page 3, front"
-        await model.artifacts.saveFields(id: "P3")
+        sheet.excludedGraphIDs = ["g-b", "g-j"]
+        sheet.draft.label = "Page 3, front"
+        #expect(await sheet.save() == true)
         #expect(store.updateArtifactGraphIDs.last! == ["g-s", created.id])
     }
 
-    @Test func cardLinkReadFailsAndReadAgain() async {
+    @Test func sheetLinkReadFailsAndReadAgain() async {
         let (model, store, _) = await makeCensus()
         store.getEvidenceGraphUnlinkImpactError = CoreInvokeError.failed(status: 3)
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        guard case .failed = model.artifacts.linkEdit?.loadState else {
-            Issue.record("expected a failed read, got \(String(describing: model.artifacts.linkEdit?.loadState))")
+        let sheet = await openSheet(model, "P3")
+        guard case .failed = sheet.linkLoadState else {
+            Issue.record("expected a failed read, got \(sheet.linkLoadState)")
             return
         }
-        model.artifacts.labels["P3"] = "Changed"
-        #expect(!model.artifacts.canSaveFields("P3"))
+        sheet.draft.label = "Changed"
+        #expect(!sheet.canSave)
         store.getEvidenceGraphUnlinkImpactError = nil
-        await model.artifacts.loadLinkLocks()
-        #expect(model.artifacts.linkEdit?.loadState == .ready)
-        #expect(model.artifacts.canSaveFields("P3"))
+        await sheet.loadLinkLocks()
+        #expect(sheet.linkLoadState == .ready)
+        #expect(sheet.canSave)
     }
 
-    @Test func cardCancelDropsLinkChanges() async {
-        let (model, store, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded.insert("g-j")
-        #expect(model.artifacts.fieldsDirty("P3"))
-        model.artifacts.cancelFields(id: "P3")
-        #expect(model.artifacts.linkEdit == nil)
-        #expect(store.updateArtifactCalls == 0)
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.checkedGraphIDs.contains("g-j"))
-        #expect(!model.artifacts.fieldsDirty("P3"))
-    }
-
-    @Test func cardFieldsOnlySaveErrorSaysChangesKept() async {
+    @Test func sheetFieldsOnlySaveErrorSaysChangesKept() async {
         let (model, store, _) = await makeCensus(graphs: [graph("g-1", "Default", ["P3"])])
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.labels["P3"] = "Changed"
+        let sheet = await openSheet(model, "P3")
+        sheet.draft.label = "Changed"
         let failure = CoreInvokeError.failed(status: 3)
         store.updateArtifactError = failure
-        await model.artifacts.saveFields(id: "P3")
-        #expect(model.artifacts.editingArtifactID == "P3")
-        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
+        #expect(await sheet.save() == false)
+        #expect(model.artifacts.sheet === sheet)
+        #expect(sheet.saveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
     }
 
-    @Test func cardSaveErrorStaysOnTheCardThatSaved() async {
+    @Test func sheetSavingDisablesSaveAndHoldsTheWrite() async {
         let (model, store, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded = ["g-j"]
-        let failure = CoreInvokeError.coded(
+        let sheet = await openSheet(model, "P3")
+        sheet.draft.label = "Changed"
+        store.updateArtifactHold.isOn = true
+        let save = Task { await sheet.save() }
+        #expect(await waitUntil { store.updateArtifactHold.count == 1 })
+        #expect(sheet.isSaving)
+        #expect(!sheet.canSave)
+        store.updateArtifactHold.release()
+        #expect(await save.value == true)
+        #expect(!sheet.isSaving)
+    }
+
+    @Test func sheetSaveSkipsAGraphDeletedDuringEdit() async throws {
+        let (model, store, session) = await makeCensus()
+        let sheet = await openSheet(model, "P3")
+        sheet.excludedGraphIDs = []
+        #expect(sheet.checkedGraphIDs.contains("g-b"))
+        store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
+        let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
+        session.apply(effects)
+        await session.settleWrites()
+        #expect(session.evidenceGraph(id: "g-b") == nil)
+        #expect(!sheet.checkedGraphIDs.contains("g-b"))
+        sheet.draft.label = "Page 3, front"
+        #expect(await sheet.save() == true)
+        #expect(store.updateArtifactGraphIDs == [nil])
+        #expect(sheet.saveError == nil)
+    }
+
+    @Test func sheetMarksAnArtifactInNoGraph() async {
+        let (model, store, _) = await makeCensus(graphs: [
+            graph("g-j", "Jones household", ["P3", "P4"]),
+            graph("g-s", "Smith household", ["P3", "P9"]),
+        ])
+        let sheet = await openSheet(model, "P6", at: .graphs)
+        #expect(sheet.excludedGraphIDs == ["g-j", "g-s"])
+        #expect(sheet.checkedGraphIDs.isEmpty)
+        #expect(sheet.inNoGraph)
+
+        let linked = await openSheet(model, "P3", at: .graphs)
+        linked.excludedGraphIDs = ["g-j", "g-s"]
+        #expect(linked.checkedGraphIDs.isEmpty)
+        #expect(linked.inNoGraph)
+        #expect(await linked.save() == true)
+        #expect(store.updateArtifactGraphIDs == [[]])
+    }
+
+    @Test func sheetSaveReloadFailureOffersReadAgain() async {
+        let (model, store, _) = await makeCensus()
+        let sheet = await openSheet(model, "P3")
+        sheet.excludedGraphIDs = ["g-j"]
+        let refusal = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
-        store.updateArtifactError = failure
-        store.updateArtifactHold.isOn = true
-        let save = Task { await model.artifacts.saveFields(id: "P3") }
-        #expect(await waitUntil { store.updateArtifactHold.count == 1 })
-        model.artifacts.beginEdit("P4")
-        store.updateArtifactHold.release()
-        await save.value
-        #expect(model.artifacts.editingArtifactID == "P3")
-        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
-        #expect(model.artifacts.pendingEditSwitch == nil)
+        store.updateArtifactError = refusal
+        store.getEvidenceGraphUnlinkImpactError = CoreInvokeError.failed(status: 3)
+        #expect(await sheet.save() == false)
+        guard case .failed = sheet.linkLoadState else {
+            Issue.record("expected a failed read, got \(sheet.linkLoadState)")
+            return
+        }
+        #expect(sheet.saveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: refusal)))
     }
 
-    @Test func beginEditOnTheSameCardKeepsItsEdits() async {
+    @Test func pencilOpensTheSheet() async {
         let (model, _, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        model.artifacts.labels["P3"] = "Page 3, edited"
-        model.artifacts.beginEdit("P3")
-        #expect(model.artifacts.labels["P3"] == "Page 3, edited")
-        #expect(model.artifacts.pendingEditSwitch == nil)
+        model.artifacts.openSheet(artifactID: "P3")
+        #expect(model.artifacts.sheet?.opensAt == .top)
+        #expect(!model.acceptsArtifactPageDrop)
+        // A drop stages nothing while the sheet is up.
+        model.artifacts.stagePageDrop([URL(fileURLWithPath: "/tmp/dropped.png")])
+        #expect(!model.artifacts.isAdding)
+    }
+
+    @Test func linkToAGraphOpensAtGraphs() async {
+        let (model, _, _) = await makeCensus()
+        model.artifacts.openSheet(artifactID: "P6", at: .graphs)
+        #expect(model.artifacts.sheet?.opensAt == .graphs)
+    }
+
+    @Test func artifactGoneClosesTheSheet() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.openSheet(artifactID: "P3")
+        store.artifactsBySource[sourceID] = store.artifactsBySource[sourceID]?.filter { $0.id != "P3" }
+        await model.warmFromSession()
+        #expect(model.artifacts.sheet == nil)
+        #expect(model.toast?.title == "Artifact no longer here")
+        #expect(model.toast?.body == "“Page P3” was deleted or moved in another window.")
+    }
+
+    @Test func copyDetailsShowFourThenMore() {
+        let fields = (0..<8).map { catalogMetadataField("f\($0)", label: "Field \($0)") }
+        func rows(_ n: Int) -> [CatalogMetadataEntry] {
+            (0..<n).map { catalogMetadataEntry(fields[$0], "v\($0)", order: Int32($0)) }
+        }
+        let none = ArtifactCopyDetailsView.shown([])
+        #expect(none.shown.isEmpty && none.more == 0)
+        let three = ArtifactCopyDetailsView.shown(rows(3))
+        #expect(three.shown.count == 3 && three.more == 0)
+        let eight = ArtifactCopyDetailsView.shown(rows(8))
+        #expect(eight.shown.map(\.field.id) == ["f0", "f1", "f2", "f3"] && eight.more == 4)
+        let withSuggestion = ArtifactCopyDetailsView.shown([catalogMetadataEntry(fields[0], suggested: true)] + rows(2).dropFirst())
+        #expect(withSuggestion.shown.map(\.field.id) == ["f1"] && withSuggestion.more == 0)
+    }
+
+    @Test func restingCardMarksAnArtifactInNoGraph() async {
+        let (model, _, _) = await makeCensus(graphs: [
+            graph("g-j", "Jones household", ["P3", "P4"]),
+            graph("g-s", "Smith household", ["P3", "P9"]),
+        ])
+        #expect(model.artifacts.inNoGraph == ["P6"])
+        let (bare, _, _) = await makeCensus(graphs: [])
+        #expect(bare.artifacts.inNoGraph.isEmpty)
     }
 
     @Test func addArtifactRetryIgnoresGraphChoice() async {
@@ -2103,59 +2159,6 @@ struct SourcePageModelTests {
         await model.artifacts.create()
         #expect(!model.artifacts.isAdding)
         #expect(store.createArtifactGraphIDs.count == 1)
-    }
-
-    @Test func cardSaveSkipsAGraphDeletedDuringEdit() async throws {
-        let (model, store, session) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded = []
-        #expect(model.artifacts.checkedGraphIDs.contains("g-b"))
-        store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
-        let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
-        session.apply(effects)
-        await session.settleWrites()
-        #expect(session.evidenceGraph(id: "g-b") == nil)
-        #expect(!model.artifacts.checkedGraphIDs.contains("g-b"))
-        model.artifacts.labels["P3"] = "Page 3, front"
-        await model.artifacts.saveFields(id: "P3")
-        #expect(store.updateArtifactGraphIDs == [nil])
-        #expect(model.artifacts.cardSaveError == nil)
-        #expect(model.artifacts.editingArtifactID == nil)
-    }
-
-    @Test func restingCardMarksAnArtifactInNoGraph() async {
-        let (model, _, _) = await makeCensus(graphs: [
-            graph("g-j", "Jones household", ["P3", "P4"]),
-            graph("g-s", "Smith household", ["P3", "P9"]),
-        ])
-        #expect(model.artifacts.inNoGraph == ["P6"])
-        model.artifacts.beginEdit("P6")
-        await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
-        #expect(model.artifacts.checkedGraphIDs.isEmpty)
-        #expect(model.artifacts.cardInNoGraph(id: "P6"))
-
-        let (bare, _, _) = await makeCensus(graphs: [])
-        #expect(bare.artifacts.inNoGraph.isEmpty)
-    }
-
-    @Test func cardSaveReloadFailureOffersReadAgain() async {
-        let (model, store, _) = await makeCensus()
-        model.artifacts.beginEdit("P3")
-        await model.artifacts.linkLoadTask?.value
-        model.artifacts.linkEdit?.excluded = ["g-j"]
-        let refusal = CoreInvokeError.coded(
-            status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
-        )
-        store.updateArtifactError = refusal
-        store.getEvidenceGraphUnlinkImpactError = CoreInvokeError.failed(status: 3)
-        await model.artifacts.saveFields(id: "P3")
-        guard case .failed = model.artifacts.linkEdit?.loadState else {
-            Issue.record("expected a failed read, got \(String(describing: model.artifacts.linkEdit?.loadState))")
-            return
-        }
-        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: refusal)))
     }
 
     // MARK: Source date, Private and a Source deleted elsewhere (S15-03)

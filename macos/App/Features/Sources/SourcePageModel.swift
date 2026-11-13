@@ -100,7 +100,7 @@ final class SourcePageModel {
             && metadataDialogs.pendingDelete == nil
             && notes.pendingDelete == nil
             && pendingImpact == nil
-            && artifacts.pendingEditSwitch == nil
+            && artifacts.sheet == nil
     }
 
     /// Loads the workspace and page vocabulary, then syncs section state
@@ -166,7 +166,7 @@ final class SourcePageModel {
             notes.reset()
         }
         if previous?.artifacts != workspace.artifacts {
-            artifacts.seedDrafts()
+            artifacts.workspaceChanged()
         }
         appliedWorkspace = workspace
     }

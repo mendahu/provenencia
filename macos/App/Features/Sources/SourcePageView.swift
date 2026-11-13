@@ -163,6 +163,7 @@ private struct SourcePageContent: View {
         }
         .sourceCopyDialog($model.copying)
         .sourceGraphFormDialog($model.graphs.form)
+        .artifactSheet($model.artifacts.sheet)
         .sourceDateDialog($model.identity.dateForm)
         .pvConfirm(
             item: Binding(
@@ -180,18 +181,6 @@ private struct SourcePageContent: View {
             isRunning: model.metadataDialogs.isClearing,
             accessibilityIdentifierPrefix: "sources.page.metadata.delete",
             onConfirm: { Task { await model.metadataDialogs.confirmClear() } }
-        ) { _ in
-            EmptyView()
-        }
-        .pvConfirm(
-            item: Binding(
-                get: { model.artifacts.pendingEditSwitch },
-                set: { if $0 == nil { model.artifacts.cancelEditSwitch() } }
-            ),
-            copy: { _ in .discardChanges },
-            tone: .danger,
-            accessibilityIdentifierPrefix: "sources.page.artifact.discard",
-            onConfirm: { model.artifacts.confirmEditSwitch() }
         ) { _ in
             EmptyView()
         }
