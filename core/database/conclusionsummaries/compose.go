@@ -847,6 +847,11 @@ func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte, rec *input
 	if err != nil {
 		return nil, err
 	}
+	// The composers read each place's own node (eventPlaces); one load keeps
+	// their queries from growing with the places, as the chain build's did.
+	if err := g.Nodes(placeIDs); err != nil {
+		return nil, err
+	}
 	return buildPlaceGraph(g, v, placeIDs, rec)
 }
 
@@ -1278,8 +1283,6 @@ func finishPlaces(g *graphcache.Graph, v vocab, rec *inputBudget, summaries []Pl
 	inputs := make(map[string][]graphcache.InputKey, len(summaries))
 	for i := range summaries {
 		id := summaries[i].Entity.ID
-		pg.byID[string(id)] = summaries[i]
-		pg.period[string(id)] = periodWindow(summaries[i].StartDate, summaries[i].EndDate)
 		at := chainQueryDate(summaries[i], today)
 		summaries[i].Parents, summaries[i].ParentsAreCandidates = pg.ParentChain(id, &at)
 		in := rec.scope(g, id)
@@ -1289,7 +1292,7 @@ func finishPlaces(g *graphcache.Graph, v vocab, rec *inputBudget, summaries []Pl
 	return summaries, inputs, nil
 }
 
-func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte, rec *inputBudget) (*placeGraph, error) {
+func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte, _ *inputBudget) (*placeGraph, error) {
 	pg := newPlaceGraph()
 	seeds = database.UniqueBlobIDs(seeds)
 	if len(seeds) == 0 {
@@ -1300,83 +1303,33 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte, rec *inputBud
 	for _, id := range seeds {
 		seen[string(id)] = true
 	}
-	linked := map[string]bool{}
-	// Each place is read through a scope of its own, so pg.closure can hand a
-	// row the reads of the places its chain reaches.
-	scopes := map[string]*graphcache.InputScope{}
-	scopeOf := func(id []byte) *graphcache.InputScope {
-		in, ok := scopes[string(id)]
-		if !ok {
-			in = rec.scope(g, nil)
-			scopes[string(id)] = in
-		}
-		return in
-	}
 	for round := 0; round < summaryChainDepth && len(frontier) > 0; round++ {
-		if err := g.Nodes(frontier); err != nil {
+		entries, err := placeEntriesOf(g, v, frontier)
+		if err != nil {
 			return nil, err
 		}
-		var assoc, next [][]byte
+		var next [][]byte
 		for _, id := range frontier {
-			in := scopeOf(id)
-			n, err := in.Node(id)
-			if err != nil {
-				return nil, err
-			}
-			if n == nil {
+			e, ok := entries[string(id)]
+			if !ok {
 				continue
 			}
-			shell, err := placeShell(n, v)
-			if err != nil {
-				return nil, err
-			}
-			pg.byID[string(id)] = shell
-			pg.period[string(id)] = periodWindow(shell.StartDate, shell.EndDate)
-			links, err := follow(in, id, hops.ParentsOfPlace)
-			if err != nil {
-				return nil, err
-			}
-			for _, l := range links {
-				assoc = append(assoc, l.Association)
-				if !seen[string(l.Neighbor)] {
-					seen[string(l.Neighbor)] = true
-					next = append(next, l.Neighbor)
-				}
-			}
-		}
-		if err := g.Nodes(assoc); err != nil {
-			return nil, err
-		}
-		for _, id := range frontier {
-			in := scopeOf(id)
-			n, err := in.Node(id)
-			if err != nil {
-				return nil, err
-			}
-			if n == nil {
-				continue
-			}
-			links, err := follow(in, id, hops.ParentsOfPlace)
-			if err != nil {
-				return nil, err
-			}
-			for _, l := range links {
-				if err := rememberPlaceLink(pg, in, v, id, l, true, linked); err != nil {
-					return nil, err
+			pg.places[string(id)] = e
+			for _, l := range e.partFrom {
+				if !seen[string(l.to)] {
+					seen[string(l.to)] = true
+					next = append(next, l.to)
 				}
 			}
 		}
 		frontier = next
 	}
-	for id, in := range scopes {
-		pg.inputs[id] = in.Keys()
-	}
 	return pg, nil
 }
 
-// placeStep follows each hop once from id and keeps those edges. A parent
-// chain climbs; a parts or succession question does not.
-func placeStep(c *database.Catalog, id []byte, hopList ...hops.Hop) (*placeGraph, error) {
+// placeStep reads the entry of id and of each place it links to, which is what
+// the place page and the parts and succession questions need.
+func placeStep(c *database.Catalog, id []byte) (*placeGraph, error) {
 	pg := newPlaceGraph()
 	if c == nil || c.Graph() == nil || len(id) != 16 {
 		return pg, nil
@@ -1386,100 +1339,31 @@ func placeStep(c *database.Catalog, id []byte, hopList ...hops.Hop) (*placeGraph
 	if err != nil {
 		return nil, err
 	}
-	if _, err := g.Node(id); err != nil {
+	own, err := placeEntriesOf(g, v, [][]byte{id})
+	if err != nil {
 		return nil, err
 	}
-	if err := rememberShell(pg, g, v, id); err != nil {
-		return nil, err
+	e, ok := own[string(id)]
+	if !ok {
+		return pg, nil
 	}
-	linked := map[string]bool{}
-	in := g.NoInputs()
-	var neighbors, assocs [][]byte
-	type pending struct {
-		id   []byte
-		l    graphcache.Link
-		part bool
-	}
-	var wait []pending
-	for _, hop := range hopList {
-		links, err := follow(in, id, hop)
-		if err != nil {
-			return nil, err
-		}
-		_, term, filtered := hop.Filter()
-		part := filtered && term == "part_of"
+	pg.places[string(id)] = e
+	var neighbors [][]byte
+	for _, links := range [][]placeLink{e.partFrom, e.partTo, e.succFrom, e.succTo} {
 		for _, l := range links {
-			neighbors = append(neighbors, l.Neighbor)
-			assocs = append(assocs, l.Association)
-			wait = append(wait, pending{id: id, l: l, part: part})
+			neighbors = append(neighbors, l.from, l.to)
 		}
 	}
-	if err := g.Nodes(append(neighbors, assocs...)); err != nil {
+	others, err := placeEntriesOf(g, v, neighbors)
+	if err != nil {
 		return nil, err
 	}
-	for _, n := range neighbors {
-		if err := rememberShell(pg, g, v, n); err != nil {
-			return nil, err
-		}
-	}
-	for _, p := range wait {
-		if err := rememberPlaceLink(pg, in, v, p.id, p.l, p.part, linked); err != nil {
-			return nil, err
+	for k, o := range others {
+		if k != string(id) {
+			pg.places[k] = o
 		}
 	}
 	return pg, nil
-}
-
-func rememberShell(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte) error {
-	n, err := g.Node(id)
-	if err != nil {
-		return err
-	}
-	if n == nil {
-		return nil
-	}
-	shell, err := placeShell(n, v)
-	if err != nil {
-		return err
-	}
-	pg.byID[string(id)] = shell
-	pg.period[string(id)] = periodWindow(shell.StartDate, shell.EndDate)
-	return nil
-}
-
-func rememberPlaceLink(pg *placeGraph, in *graphcache.InputScope, v vocab, id []byte, l graphcache.Link, part bool, linked map[string]bool) error {
-	from, to := id, l.Neighbor
-	if !l.FromEnd {
-		from, to = l.Neighbor, id
-	}
-	key := string(from) + "\x00" + string(to) + "\x00" + string(l.Association)
-	if linked[key] {
-		return nil
-	}
-	linked[key] = true
-	assoc, err := in.Node(l.Association)
-	if err != nil {
-		return err
-	}
-	if assoc == nil {
-		return fmt.Errorf("conclusionsummaries: association %x is missing", l.Association)
-	}
-	d, err := assocDatesOf(v, assoc)
-	if err != nil {
-		return err
-	}
-	link := placeLink{
-		from: append([]byte(nil), from...), to: append([]byte(nil), to...),
-		association: append([]byte(nil), l.Association...), start: d.start, end: d.end,
-	}
-	if part {
-		pg.partFrom[string(from)] = append(pg.partFrom[string(from)], link)
-		pg.partTo[string(to)] = append(pg.partTo[string(to)], link)
-		return nil
-	}
-	pg.succFrom[string(from)] = append(pg.succFrom[string(from)], link)
-	pg.succTo[string(to)] = append(pg.succTo[string(to)], link)
-	return nil
 }
 
 func assocDatesOf(v vocab, n *graphcache.Node) (assocDates, error) {

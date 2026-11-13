@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -41,31 +40,22 @@ type placeLink struct {
 }
 
 // placeGraph is the part_of / succeeded_by neighborhood needed to compose
-// chains for a set of Places at a query date. Links are indexed by endpoint
-// so a parent question does not scan every other place's edges.
+// chains for a set of Places at a query date: the entry of each place the walk
+// expanded. Links are indexed by endpoint within an entry so a parent question
+// does not scan every other place's edges.
 type placeGraph struct {
-	byID     map[string]PlaceSummary
-	partFrom map[string][]placeLink // part id → wholes
-	partTo   map[string][]placeLink // whole id → parts
-	succFrom map[string][]placeLink // predecessor id → successors
-	succTo   map[string][]placeLink // successor id → predecessors
-	period   map[string]valuecompare.Window
-	// inputs are the keys the build recorded reading each place it expanded,
-	// by place id: its values, its part_of links at the part end, and those
-	// links' associations.
-	inputs map[string][]graphcache.InputKey
+	places map[string]placeEntry
 }
 
 func newPlaceGraph() *placeGraph {
-	return &placeGraph{
-		byID:     map[string]PlaceSummary{},
-		partFrom: map[string][]placeLink{},
-		partTo:   map[string][]placeLink{},
-		succFrom: map[string][]placeLink{},
-		succTo:   map[string][]placeLink{},
-		period:   map[string]valuecompare.Window{},
-		inputs:   map[string][]graphcache.InputKey{},
-	}
+	return &placeGraph{places: map[string]placeEntry{}}
+}
+
+// shell is the summary shell of a place the graph holds, and whether it does.
+// A place with no entity row reads as absent.
+func (g *placeGraph) shell(id []byte) (PlaceSummary, bool) {
+	e, ok := g.places[string(id)]
+	return e.shell, ok && e.found
 }
 
 // reach visits, once each, the places a walk up part_of from seeds expands:
@@ -81,7 +71,7 @@ func (g *placeGraph) reach(seeds [][]byte, visit func(id []byte)) {
 		var next [][]byte
 		for _, id := range frontier {
 			visit(id)
-			for _, l := range g.partFrom[string(id)] {
+			for _, l := range g.places[string(id)].partFrom {
 				if !seen[string(l.to)] {
 					seen[string(l.to)] = true
 					next = append(next, l.to)
@@ -97,14 +87,14 @@ func (g *placeGraph) reach(seeds [][]byte, visit func(id []byte)) {
 // build reaches every row that walks through it.
 func (g *placeGraph) closure(seeds [][]byte) []graphcache.InputKey {
 	var keys []graphcache.InputKey
-	g.reach(seeds, func(id []byte) { keys = append(keys, g.inputs[string(id)]...) })
+	g.reach(seeds, func(id []byte) { keys = append(keys, g.places[string(id)].inputs...) })
 	return keys
 }
 
 // closureSize is len(closure(seeds)) without building it.
 func (g *placeGraph) closureSize(seeds [][]byte) int {
 	n := 0
-	g.reach(seeds, func(id []byte) { n += len(g.inputs[string(id)]) })
+	g.reach(seeds, func(id []byte) { n += len(g.places[string(id)].inputs) })
 	return n
 }
 
@@ -163,8 +153,8 @@ type assocDates struct {
 }
 
 func (g *placeGraph) periodOf(id []byte) valuecompare.Window {
-	if w, ok := g.period[string(id)]; ok {
-		return w
+	if e, ok := g.places[string(id)]; ok && e.found {
+		return e.period
 	}
 	return valuecompare.Always()
 }
@@ -192,7 +182,7 @@ func (g *placeGraph) ImmediateParents(placeID []byte, at *datevalue.Value) [][]b
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.partFrom[string(placeID)] {
+	for _, l := range g.places[string(placeID)].partFrom {
 		if !g.linkHolds(q, l) {
 			continue
 		}
@@ -213,7 +203,7 @@ func (g *placeGraph) ImmediateParts(placeID []byte, at *datevalue.Value) [][]byt
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.partTo[string(placeID)] {
+	for _, l := range g.places[string(placeID)].partTo {
 		if !g.linkHolds(q, l) {
 			continue
 		}
@@ -243,9 +233,9 @@ func (g *placeGraph) Predecessors(placeID []byte) [][]byte {
 func (g *placeGraph) succNeighbors(placeID []byte, forward bool) [][]byte {
 	seen := map[string]bool{}
 	var out [][]byte
-	links := g.succTo[string(placeID)]
+	links := g.places[string(placeID)].succTo
 	if forward {
-		links = g.succFrom[string(placeID)]
+		links = g.places[string(placeID)].succFrom
 	}
 	for _, l := range links {
 		other := l.from
@@ -265,7 +255,7 @@ func (g *placeGraph) succNeighbors(placeID []byte, forward bool) [][]byte {
 }
 
 func (g *placeGraph) displayName(id []byte) string {
-	h, ok := g.byID[string(id)]
+	h, ok := g.shell(id)
 	if !ok {
 		return ""
 	}
@@ -429,16 +419,14 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 	if h == nil || len(h.Entity.ID) == 0 {
 		return nil
 	}
-	g, err := placeStep(c, h.Entity.ID, hops.ParentsOfPlace, hops.PartsOfPlace, hops.PredecessorsOfPlace, hops.SuccessorsOfPlace)
+	g, err := placeStep(c, h.Entity.ID)
 	if err != nil {
 		return err
 	}
-	g.byID[string(h.Entity.ID)] = *h
-	g.period[string(h.Entity.ID)] = periodWindow(h.StartDate, h.EndDate)
 	today := TodayDate()
 
 	seenPart := map[string]bool{}
-	for _, l := range g.partFrom[string(h.Entity.ID)] {
+	for _, l := range g.places[string(h.Entity.ID)].partFrom {
 		if _, ok := linkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
 			continue
 		}
@@ -448,7 +436,7 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 		}
 		seenPart[key] = true
 		rel := g.relationship(l.to, RelPartOf)
-		rel.StartDate, rel.EndDate = membershipDates(l, g.byID[string(l.from)], g.byID[string(l.to)])
+		rel.StartDate, rel.EndDate = g.membership(l)
 		h.PartOf = append(h.PartOf, rel)
 	}
 	sort.SliceStable(h.PartOf, func(i, j int) bool {
@@ -457,9 +445,9 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 
 	for _, id := range g.ImmediateParts(h.Entity.ID, &today) {
 		rel := g.relationship(id, RelContains)
-		for _, l := range g.partTo[string(h.Entity.ID)] {
+		for _, l := range g.places[string(h.Entity.ID)].partTo {
 			if bytes.Equal(l.from, id) {
-				rel.StartDate, rel.EndDate = membershipDates(l, g.byID[string(l.from)], g.byID[string(l.to)])
+				rel.StartDate, rel.EndDate = g.membership(l)
 				break
 			}
 		}
@@ -468,14 +456,14 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 
 	for _, id := range g.Predecessors(h.Entity.ID) {
 		rel := g.relationship(id, RelPredecessor)
-		if other, ok := g.byID[string(id)]; ok {
+		if other, ok := g.shell(id); ok {
 			rel.StartDate, rel.EndDate = other.StartDate, other.EndDate
 		}
 		h.Predecessors = append(h.Predecessors, rel)
 	}
 	for _, id := range g.Successors(h.Entity.ID) {
 		rel := g.relationship(id, RelSuccessor)
-		if other, ok := g.byID[string(id)]; ok {
+		if other, ok := g.shell(id); ok {
 			rel.StartDate, rel.EndDate = other.StartDate, other.EndDate
 		}
 		h.Successors = append(h.Successors, rel)
@@ -486,12 +474,19 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 func (g *placeGraph) relationship(id []byte, kind string) PlaceRelationship {
 	title := g.displayName(id)
 	rel := PlaceRelationship{Kind: kind, Title: title}
-	if h, ok := g.byID[string(id)]; ok {
+	if h, ok := g.shell(id); ok {
 		rel.Entity = h.Entity
 	} else {
 		rel.Entity = canonicalentities.Entity{ID: append([]byte(nil), id...)}
 	}
 	return rel
+}
+
+// membership is the span a link shows, from the shells of its two ends.
+func (g *placeGraph) membership(l placeLink) (start, end *datevalue.Value) {
+	from, _ := g.shell(l.from)
+	to, _ := g.shell(l.to)
+	return membershipDates(l, from, to)
 }
 
 // membershipDates is the span a hierarchical link shows: the link's own
@@ -593,7 +588,7 @@ func ParentsAtDate(c *database.Catalog, placeID []byte, at datevalue.Value) ([]s
 
 // PartsAtDate is the display names of Places that are part_of placeID at at.
 func PartsAtDate(c *database.Catalog, placeID []byte, at datevalue.Value) ([]string, error) {
-	g, err := placeStep(c, placeID, hops.PartsOfPlace)
+	g, err := placeStep(c, placeID)
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +605,7 @@ func PartsAtDate(c *database.Catalog, placeID []byte, at datevalue.Value) ([]str
 // SuccessionNames is predecessor and successor display names via
 // succeeded_by (dates do not filter; never used for display chains).
 func SuccessionNames(c *database.Catalog, placeID []byte) (predecessors, successors []string, err error) {
-	g, err := placeStep(c, placeID, hops.PredecessorsOfPlace, hops.SuccessorsOfPlace)
+	g, err := placeStep(c, placeID)
 	if err != nil {
 		return nil, nil, err
 	}
