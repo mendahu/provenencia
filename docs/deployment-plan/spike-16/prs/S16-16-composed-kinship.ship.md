@@ -1,7 +1,7 @@
 # Ship log — S16-16 Kinship answers are composed from the pivots, and the Family read is one pass
 
 **Plan:** [`S16-16-composed-kinship.md`](S16-16-composed-kinship.md) · **Branch:** `s16-16-composed-kinship` · **PR:** #814
-**State:** draft PR open
+**State:** fixing 1
 
 ## Round 0 — implement
 Base `main` @ `aa150de0f`. Dispatched `pr-implementer`, round 0.
