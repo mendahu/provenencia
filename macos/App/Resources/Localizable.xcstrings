@@ -23096,7 +23096,7 @@
       }
     },
     "sources.page.artifact.graphs.label": {
-      "comment": "Label of the evidence graph checkbox group in the Add artifact dialog and on an artifact card in edit",
+      "comment": "Label of the evidence graph checkbox group in the Add artifact dialog and in the Artifact sheet",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23108,7 +23108,7 @@
       }
     },
     "sources.page.artifact.graphs.hint": {
-      "comment": "Hint under the evidence graph checkbox group label in the Add artifact dialog and on an artifact card in edit",
+      "comment": "Hint under the evidence graph checkbox group label in the Add artifact dialog and in the Artifact sheet",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23120,7 +23120,7 @@
       }
     },
     "sources.page.artifact.graphs.loading": {
-      "comment": "Loading line on an artifact card in edit while its evidence graph links are read",
+      "comment": "Loading line in the Artifact sheet while its evidence graph links are read",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23132,7 +23132,7 @@
       }
     },
     "sources.page.artifact.graphs.loadErrorTitle": {
-      "comment": "Callout title on an artifact card in edit when its evidence graph links fail to load",
+      "comment": "Callout title in the Artifact sheet when its evidence graph links fail to load",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23144,7 +23144,7 @@
       }
     },
     "sources.page.artifact.graphs.loadErrorMessage": {
-      "comment": "Callout message on an artifact card in edit when its evidence graph links fail to load; argument is the error text",
+      "comment": "Callout message in the Artifact sheet when its evidence graph links fail to load; argument is the error text",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23336,7 +23336,7 @@
       }
     },
     "sources.page.artifact.graphs.none": {
-      "comment": "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked",
+      "comment": "Muted line under the evidence graph group in the Add artifact dialog and in the Artifact sheet when no box is checked",
       "extractionState": "manual",
       "localizations": {
         "en": {

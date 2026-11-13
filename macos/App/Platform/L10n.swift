@@ -6518,19 +6518,19 @@ enum L10n {
         static let artifactGraphsLabel = LocalizedStringResource(
             "sources.page.artifact.graphs.label",
             defaultValue: "Evidence graphs",
-            comment: "Label of the evidence graph checkbox group in the Add artifact dialog and on an artifact card in edit"
+            comment: "Label of the evidence graph checkbox group in the Add artifact dialog and in the Artifact sheet"
         )
 
         static let artifactGraphsHint = LocalizedStringResource(
             "sources.page.artifact.graphs.hint",
             defaultValue: "Which evidence graphs can cite this artifact",
-            comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and on an artifact card in edit"
+            comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and in the Artifact sheet"
         )
 
         static let artifactGraphsNone = LocalizedStringResource(
             "sources.page.artifact.graphs.none",
             defaultValue: "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked.",
-            comment: "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked"
+            comment: "Muted line under the evidence graph group in the Add artifact dialog and in the Artifact sheet when no box is checked"
         )
 
         static let artifactNotInGraph = LocalizedStringResource(
@@ -6557,20 +6557,20 @@ enum L10n {
         static let artifactGraphsLoading = LocalizedStringResource(
             "sources.page.artifact.graphs.loading",
             defaultValue: "Reading the evidence graphs…",
-            comment: "Loading line on an artifact card in edit while its evidence graph links are read"
+            comment: "Loading line in the Artifact sheet while its evidence graph links are read"
         )
 
         static let artifactGraphsLoadErrorTitle = LocalizedStringResource(
             "sources.page.artifact.graphs.loadErrorTitle",
             defaultValue: "Couldn’t read the evidence graphs",
-            comment: "Callout title on an artifact card in edit when its evidence graph links fail to load"
+            comment: "Callout title in the Artifact sheet when its evidence graph links fail to load"
         )
 
         static func artifactGraphsLoadErrorMessage(_ error: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.graphs.loadErrorMessage",
                 defaultValue: "Label and description are kept. Read the evidence graphs again to change the links. %@",
-                comment: "Callout message on an artifact card in edit when its evidence graph links fail to load; argument is the error text"
+                comment: "Callout message in the Artifact sheet when its evidence graph links fail to load; argument is the error text"
             ), error)
         }
 

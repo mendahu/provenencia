@@ -276,7 +276,7 @@ struct SourcePageArtifactsView: View {
 
     /// The badge and **Link to a graph** on a card in no graph: one row with the
     /// button at the end, else the button on its own line at the end. A card
-    /// with the row is taller than its neighbours, as a card in edit is.
+    /// with the row is taller than its neighbours.
     private func noGraphRow(_ art: CatalogArtifact) -> some View {
         let badge = PVBadge(L10n.Sources.artifactNotInGraph, tone: .neutral, icon: .link)
             .fixedSize()
