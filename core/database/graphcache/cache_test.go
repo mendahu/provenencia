@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/effects"
@@ -462,7 +463,14 @@ func TestRegisterRejects(t *testing.T) {
 		{"keyed with no Cap", func() {
 			graphcache.RegisterKeyed(graphcache.KeyedEntry[string]{Name: "t.nocap", Apply: noApply[string]})
 		}},
-		{"keyed with no Apply", func() {
+		{"keyed with neither Apply nor Inputs", func() {
+			defer func() {
+				r := recover()
+				if msg, _ := r.(string); !strings.Contains(msg, "needs an Apply or Inputs") {
+					t.Errorf("panic %v, want one naming Apply or Inputs", r)
+				}
+				panic(r)
+			}()
 			graphcache.RegisterKeyed(graphcache.KeyedEntry[string]{Name: "t.noapply", Cap: 1})
 		}},
 		{"derived from an unregistered entry", func() {
@@ -487,5 +495,160 @@ func TestRegisterRejects(t *testing.T) {
 			}()
 			tt.do()
 		})
+	}
+}
+
+// inputsOfKeys is the Inputs of a test entry whose value names the keys it was
+// built from, by id.
+func inputsOfKeys(from map[string][]graphcache.InputKey) func(id []byte, v string) []graphcache.InputKey {
+	return func(id []byte, v string) []graphcache.InputKey { return from[v] }
+}
+
+func handlesCommit(t *testing.T, g *graphcache.Graph, ids ...[]byte) {
+	t.Helper()
+	if err := g.OnCommit(effects.Commit{Effects: effects.Set{Handles: ids}}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKeyedInputs(t *testing.T) {
+	defer graphcache.SnapshotRegistryForTest()()
+	idX := bytes.Repeat([]byte{0xa1}, 16)
+	idY := bytes.Repeat([]byte{0xa2}, 16)
+	idZ := bytes.Repeat([]byte{0xa3}, 16)
+	k := func(id []byte) graphcache.InputKey { return graphcache.InputKey{ID: id} }
+	k1 := graphcache.RegisterKeyed(graphcache.KeyedEntry[string]{
+		Name: "t.inputs", Cap: 4,
+		Inputs: inputsOfKeys(map[string][]graphcache.InputKey{
+			"a": {k(idA), k(idX)}, "b": {k(idB)}, "a2": {k(idA), k(idZ)},
+		}),
+	})
+	held := func(g *graphcache.Graph) string {
+		var out string
+		for i, id := range [][]byte{idA, idB} {
+			if _, ok := k1.Peek(g, id); ok {
+				out += "AB"[i : i+1]
+			}
+		}
+		return out
+	}
+	fill := func(g *graphcache.Graph) {
+		k1.Set(g, idA, "a")
+		k1.Set(g, idB, "b")
+	}
+	tests := []struct {
+		name    string
+		handles [][]byte
+		want    string
+	}{
+		{"a written input drops its key", [][]byte{idX}, "B"},
+		{"an unrelated handle drops nothing", [][]byte{idY}, "AB"},
+		{"a key's own handle drops it", [][]byte{idB}, "A"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := graphcachetest.OpenCatalog(t).Graph()
+			fill(g)
+			handlesCommit(t, g, tc.handles...)
+			if got := held(g); got != tc.want {
+				t.Fatalf("held %q, want %q", got, tc.want)
+			}
+		})
+	}
+	t.Run("an overwrite replaces the inputs", func(t *testing.T) {
+		g := graphcachetest.OpenCatalog(t).Graph()
+		fill(g)
+		k1.Set(g, idA, "a2")
+		handlesCommit(t, g, idX)
+		if got := held(g); got != "AB" {
+			t.Fatalf("held %q after the old input moved, want AB", got)
+		}
+		handlesCommit(t, g, idZ)
+		if got := held(g); got != "B" {
+			t.Fatalf("held %q after the new input moved, want B", got)
+		}
+	})
+	t.Run("the index follows every mutation", func(t *testing.T) {
+		g := graphcachetest.OpenCatalog(t).Graph()
+		fill(g)
+		if n := graphcache.InputIndexSizeForTest(g, k1); n != 3 {
+			t.Fatalf("index holds %d pairs, want 3", n)
+		}
+		k1.Set(g, idA, "a2")
+		if n := graphcache.InputIndexSizeForTest(g, k1); n != 3 {
+			t.Fatalf("after an overwrite %d pairs, want 3", n)
+		}
+		k1.SetCapForTest(g, 1)
+		if n := graphcache.InputIndexSizeForTest(g, k1); n != 2 {
+			t.Fatalf("after eviction %d pairs, want 2", n)
+		}
+		fill(g)
+		k1.Drop(g, [][]byte{idA, idB})
+		if n := graphcache.InputIndexSizeForTest(g, k1); n != 0 {
+			t.Fatalf("after Drop %d pairs, want 0", n)
+		}
+		k1.SetCapForTest(g, 0)
+		fill(g)
+		k1.Clear(g)
+		if n := graphcache.InputIndexSizeForTest(g, k1); n != 0 {
+			t.Fatalf("after Clear %d pairs, want 0", n)
+		}
+	})
+}
+
+func TestKeyedInputLinks(t *testing.T) {
+	defer graphcache.SnapshotRegistryForTest()()
+	c := graphcachetest.OpenCatalog(t)
+	g := c.Graph()
+	canon := graphcachetest.NewCanon(t, c)
+	event, place := canon.Event("birth"), canon.Entity("place")
+	person := canon.Person()
+	canon.Commit(event, place, person)
+
+	var link []byte
+	kv := graphcache.RegisterKeyed(graphcache.KeyedEntry[string]{
+		Name: "t.links", Cap: 4,
+		Inputs: func(id []byte, v string) []graphcache.InputKey {
+			if bytes.Equal(id, event) {
+				return []graphcache.InputKey{{ID: event, Bridge: "location", Endpoint: "event"}}
+			}
+			keys := []graphcache.InputKey{{ID: place, Bridge: "location", Endpoint: "place"}}
+			if link != nil {
+				keys = append(keys, graphcache.InputKey{ID: link})
+			}
+			return keys
+		},
+	})
+	set := func() {
+		kv.Set(g, event, "e")
+		kv.Set(g, place, "p")
+	}
+	held := func() int { return g.KeyCounts()["t.links"] }
+
+	set()
+	link = canon.Location(event, place)
+	canon.Commit(link)
+	if n := held(); n != 0 {
+		t.Fatalf("a new location left %d keys held, want 0", n)
+	}
+	set()
+	join := canon.Join(person, event, "subject")
+	canon.Commit(join)
+	if n := held(); n != 2 {
+		t.Fatalf("a participation left %d keys held, want 2", n)
+	}
+	canon.Remove(link)
+	canon.Commit(link)
+	if n := held(); n != 1 { // the event's inputs do not list the association
+		t.Fatalf("a removed location left %d keys held, want 1 (the event)", n)
+	}
+	set()
+	second := canon.Event("birth")
+	canon.Commit(second, canon.Location(second, place))
+	set()
+	canon.Merge(second, event)
+	canon.Commit(second, event)
+	if n := held(); n != 1 {
+		t.Fatalf("merging a handle located at the place left %d keys held, want 1", n)
 	}
 }
