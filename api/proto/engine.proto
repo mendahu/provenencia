@@ -778,10 +778,12 @@ message GraphLinks {
 message CreateArtifactResponse {
   Artifact artifact = 1;
   WriteEffects effects = 2;
+  repeated MetadataWorkspaceEntry metadata = 3; // the Artifact's board after the write, in display order
 }
 
 // UpdateArtifactRequest patches label and/or description, and, when graph_links
-// is present, sets the Artifact's graph links in the same write.
+// is present, sets the Artifact's graph links, and, when metadata is present,
+// its metadata, all in the same write.
 // File attach stays IngestArtifactFile (first-attach only).
 message UpdateArtifactRequest {
   string project_dir = 1;
@@ -790,11 +792,13 @@ message UpdateArtifactRequest {
   string label = 4;
   string description = 5;
   GraphLinks graph_links = 6; // absent = links unchanged
+  MetadataDraft metadata = 7; // absent = metadata unchanged; present = the stored values become these
 }
 
 message UpdateArtifactResponse {
   Artifact artifact = 1;
   WriteEffects effects = 2;
+  repeated MetadataWorkspaceEntry metadata = 3; // the Artifact's board after the write, in display order
 }
 
 message DeleteArtifactRequest {
@@ -2623,5 +2627,5 @@ enum ErrorKind {
 message Error {
   string code = 1;              // e.g. "catalog.already_exists"
   ErrorKind kind = 2;
-  repeated string params = 3;   // ordered args for L10n format strings
+  repeated string params = 3;   // ordered args for L10n format strings, or, where the error's Go doc says so, the id of the row the refusal is about
 }

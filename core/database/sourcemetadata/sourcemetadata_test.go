@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
@@ -570,6 +571,18 @@ func TestSourceMetadata(t *testing.T) {
 				}
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty text %v", err)
+				}
+				link, err := runFieldCreate(c, "Web page", metadatafields.DataTypeURL, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = runSet(c, userID, src.ID, Input{FieldID: link.ID, ValueText: "not a link"})
+				if !errors.Is(err, ErrInvalid) || !reflect.DeepEqual(errParams(t, err), []string{database.UUIDString(link.ID)}) {
+					t.Fatalf("bad url %v %v", err, errParams(t, err))
+				}
+				_, err = runSet(c, userID, src.ID, Input{FieldID: missing, ValueText: "x"})
+				if !errors.Is(err, ErrInvalid) || len(errParams(t, err)) != 0 {
+					t.Fatalf("missing field %v", err)
 				}
 			},
 		},
@@ -1468,11 +1481,59 @@ func TestApply(t *testing.T) {
 					"owner with no row":    {missing, Draft{Values: []Input{{FieldID: f1.ID, ValueText: "a"}}}},
 				}
 				for name, tc := range bad {
-					if _, err := runApply(c, userID, tc.owner, tc.d); !errors.Is(err, ErrInvalid) {
+					_, err := runApply(c, userID, tc.owner, tc.d)
+					if !errors.Is(err, ErrInvalid) {
 						t.Fatalf("%s: got %v", name, err)
+					}
+					if name != "blank value" && len(errParams(t, err)) != 0 {
+						t.Fatalf("%s: params %v", name, errParams(t, err))
 					}
 					if n := rows(); n != 0 {
 						t.Fatalf("%s wrote %d rows", name, n)
+					}
+				}
+			},
+		},
+		{
+			name: "a refused value names its field",
+			run: func(t *testing.T) {
+				c, userID, src, doc, link, f1, _ := applyWorld(t)
+				rows := func() int {
+					return countRows(t, c, "source_metadata") + countRows(t, c, "source_metadata_layout")
+				}
+				want := func(f metadatafields.Field) []string { return []string{database.UUIDString(f.ID)} }
+				cases := []struct {
+					name string
+					run  func() error
+					want []string
+				}{
+					{"blank text", func() error {
+						_, err := runApply(c, userID, src.ID, Draft{Values: []Input{{FieldID: f1.ID, ValueText: "a"}, {FieldID: doc.ID, ValueText: "   "}}})
+						return err
+					}, want(doc)},
+					{"bad url", func() error {
+						_, err := runApply(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "not a link"}}})
+						return err
+					}, want(link)},
+					{"first refused in draft order", func() error {
+						_, err := runApply(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "x"}, {FieldID: doc.ID, ValueText: " "}}})
+						return err
+					}, want(link)},
+					{"CreateAll", func() error {
+						_, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "x"}}})
+						return err
+					}, want(link)},
+				}
+				for _, tc := range cases {
+					err := tc.run()
+					if !errors.Is(err, ErrInvalid) {
+						t.Fatalf("%s: got %v", tc.name, err)
+					}
+					if got := errParams(t, err); !reflect.DeepEqual(got, tc.want) {
+						t.Fatalf("%s: params %v, want %v", tc.name, got, tc.want)
+					}
+					if n := rows(); n != 0 {
+						t.Fatalf("%s wrote %d rows", tc.name, n)
 					}
 				}
 			},
@@ -1493,6 +1554,16 @@ func TestApply(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, tt.run)
 	}
+}
+
+// errParams is the params of the *apperr.Error in err's chain.
+func errParams(t *testing.T, err error) []string {
+	t.Helper()
+	var ae *apperr.Error
+	if !errors.As(err, &ae) {
+		t.Fatalf("not an apperr: %v", err)
+	}
+	return ae.Params()
 }
 
 func countRows(t *testing.T, c *database.Catalog, table string) int {

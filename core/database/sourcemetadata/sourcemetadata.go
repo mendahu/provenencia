@@ -25,6 +25,9 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
+// ErrInvalid is a refused metadata request. A refused value carries its field's
+// wire id as params[0], for the client to place the message on its row; it is
+// never shown.
 var ErrInvalid = apperr.New(apperr.CodeSourceMetadataInvalid, apperr.KindUser)
 
 // Row is one stored metadata value.
@@ -83,12 +86,12 @@ type LayoutRow struct {
 
 // Set upserts a metadata value for (owner, field). The caller records the
 // returned changes. An unchanged value returns the existing row and no changes.
+// A refused value is ErrInvalid naming its field.
 func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchange.Change, error) {
 	st, err := storeFor(owner)
 	if err != nil {
 		return Row{}, nil, err
 	}
-	in.ValueText = strings.TrimSpace(in.ValueText)
 	if tx == nil || len(in.FieldID) != 16 {
 		return Row{}, nil, ErrInvalid
 	}
@@ -105,7 +108,7 @@ func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchang
 	}
 	field := fields[string(in.FieldID)]
 
-	normalized, err := normalizeValue(field.DataType, in.ValueText)
+	normalized, err := normalizeFor(field, in.ValueText)
 	if err != nil {
 		return Row{}, nil, err
 	}
@@ -301,7 +304,8 @@ func CreateAll(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchang
 // the draft leaves out stays, so a draft never undoes a dismiss by omission.
 // Apply appends no layout row for a new value: a caller with a board sends the
 // whole order as d.Layout. Only differing rows are written. The caller records
-// the returned changes.
+// the returned changes. A refused value is ErrInvalid naming its field (the
+// first in draft order); any other refusal is a bare ErrInvalid.
 func Apply(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchange.Change, error) {
 	st, err := storeFor(owner)
 	if err != nil {
@@ -371,7 +375,7 @@ func apply(tx *database.Tx, userID []byte, st *store, owner Owner, have stored, 
 	}
 	normalized := make([]string, len(d.Values))
 	for i, in := range d.Values {
-		n, err := normalizeValue(fields[string(in.FieldID)].DataType, strings.TrimSpace(in.ValueText))
+		n, err := normalizeFor(fields[string(in.FieldID)], in.ValueText)
 		if err != nil {
 			return nil, err
 		}
@@ -936,6 +940,16 @@ func listWorkspaces(tx *sql.Tx, owners []Owner) (map[string][]WorkspaceEntry, er
 		out[o.key()] = entries
 	}
 	return out, nil
+}
+
+// normalizeFor trims text and normalizes it for the field's type. A refused
+// value is ErrInvalid with the field's wire id as its param.
+func normalizeFor(field metadatafields.Field, text string) (string, error) {
+	n, err := normalizeValue(field.DataType, strings.TrimSpace(text))
+	if err != nil {
+		return "", ErrInvalid.WithParams(database.UUIDString(field.ID))
+	}
+	return n, nil
 }
 
 func normalizeValue(dataType, valueText string) (string, error) {

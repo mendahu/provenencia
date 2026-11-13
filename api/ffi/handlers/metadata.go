@@ -106,11 +106,11 @@ func SetMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, owner)
+		entries, err := ownerBoardProto(c, owner)
 		if err != nil {
 			return err
 		}
-		out = &engine.SetMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
+		out = &engine.SetMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: entries}
 		return nil
 	})
 	if err != nil {
@@ -146,11 +146,11 @@ func ClearMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, owner)
+		entries, err := ownerBoardProto(c, owner)
 		if err != nil {
 			return err
 		}
-		out = &engine.ClearMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
+		out = &engine.ClearMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: entries}
 		return nil
 	})
 	if err != nil {
@@ -186,11 +186,11 @@ func DismissMetadataSuggestion(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, owner)
+		entries, err := ownerBoardProto(c, owner)
 		if err != nil {
 			return err
 		}
-		out = &engine.DismissMetadataSuggestionResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
+		out = &engine.DismissMetadataSuggestionResponse{Effects: writeEffectsProto(wrote), Metadata: entries}
 		return nil
 	})
 	if err != nil {
@@ -226,11 +226,11 @@ func ReorderMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, owner)
+		entries, err := ownerBoardProto(c, owner)
 		if err != nil {
 			return err
 		}
-		out = &engine.ReorderMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
+		out = &engine.ReorderMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: entries}
 		return nil
 	})
 	if err != nil {
@@ -252,13 +252,13 @@ func GetMetadataBoard(in []byte) ([]byte, error) {
 	}
 	var out *engine.GetMetadataBoardResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		entries, err := sourcemetadata.ListWorkspace(c, owner)
+		entries, err := ownerBoardProto(c, owner)
 		if err != nil {
 			return err
 		}
 		out = &engine.GetMetadataBoardResponse{Board: &engine.MetadataBoard{
 			OwnerId: database.UUIDString(owner.ID),
-			Entries: metadataEntriesProto(entries),
+			Entries: entries,
 		}}
 		return nil
 	})
@@ -266,6 +266,16 @@ func GetMetadataBoard(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+// ownerBoardProto is the owner's board in display order: ListWorkspace as wire
+// entries. A missing owner is sourcemetadata.ErrInvalid.
+func ownerBoardProto(c *database.Catalog, owner sourcemetadata.Owner) ([]*engine.MetadataWorkspaceEntry, error) {
+	entries, err := sourcemetadata.ListWorkspace(c, owner)
+	if err != nil {
+		return nil, err
+	}
+	return metadataEntriesProto(entries), nil
 }
 
 // metadataEntriesProto is metadataEntryProto for a whole board, nil when empty.

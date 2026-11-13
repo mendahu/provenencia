@@ -213,12 +213,9 @@ func TestCreateEvidenceGraph(t *testing.T) {
 		if n := len(types); n < 3 || types[n-2] != "evidence_graph_metadata create" || types[n-1] != "evidence_graph_metadata_layout create" {
 			t.Fatalf("changes %v, want the graph's, then its value and layout creates", types)
 		}
-		var board engine.GetMetadataBoardResponse
-		mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{
-			ProjectDir: f.dir, Owner: &engine.MetadataOwner{Level: "graph", Id: resp.GetGraph().GetId()},
-		}, &board)
-		if len(board.GetBoard().GetEntries()) != 1 || board.GetBoard().GetEntries()[0].GetValueText() != "14" {
-			t.Fatalf("board %+v", board.GetBoard())
+		board := boardEntries(t, f.dir, &engine.MetadataOwner{Level: "graph", Id: resp.GetGraph().GetId()})
+		if len(board) != 1 || board[0].GetValueText() != "14" {
+			t.Fatalf("board %+v", board)
 		}
 	})
 	_, foreign := f.otherSource(t)
@@ -272,10 +269,8 @@ func TestUpdateEvidenceGraph(t *testing.T) {
 			ProjectDir: f.dir, UserId: f.userID, Owner: owner, FieldId: line, ValueText: "14",
 		}, &engine.SetMetadataResponse{})
 		held := func() int {
-			var board engine.GetMetadataBoardResponse
-			mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: f.dir, Owner: owner}, &board)
 			n := 0
-			for _, e := range board.GetBoard().GetEntries() {
+			for _, e := range boardEntries(t, f.dir, owner) {
 				if e.GetHasValue() {
 					n++
 				}

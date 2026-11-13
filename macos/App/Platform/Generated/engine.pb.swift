@@ -2943,6 +2943,12 @@ public nonisolated struct Provenencia_Engine_V1_CreateArtifactResponse: @uncheck
   /// Clears the value of `effects`. Subsequent reads from it will return its default value.
   public mutating func clearEffects() {_uniqueStorage()._effects = nil}
 
+  /// the Artifact's board after the write, in display order
+  public var metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] {
+    get {_storage._metadata}
+    set {_uniqueStorage()._metadata = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2951,7 +2957,8 @@ public nonisolated struct Provenencia_Engine_V1_CreateArtifactResponse: @uncheck
 }
 
 /// UpdateArtifactRequest patches label and/or description, and, when graph_links
-/// is present, sets the Artifact's graph links in the same write.
+/// is present, sets the Artifact's graph links, and, when metadata is present,
+/// its metadata, all in the same write.
 /// File attach stays IngestArtifactFile (first-attach only).
 public nonisolated struct Provenencia_Engine_V1_UpdateArtifactRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -2978,11 +2985,22 @@ public nonisolated struct Provenencia_Engine_V1_UpdateArtifactRequest: Sendable 
   /// Clears the value of `graphLinks`. Subsequent reads from it will return its default value.
   public mutating func clearGraphLinks() {self._graphLinks = nil}
 
+  /// absent = metadata unchanged; present = the stored values become these
+  public var metadata: Provenencia_Engine_V1_MetadataDraft {
+    get {_metadata ?? Provenencia_Engine_V1_MetadataDraft()}
+    set {_metadata = newValue}
+  }
+  /// Returns true if `metadata` has been explicitly set.
+  public var hasMetadata: Bool {self._metadata != nil}
+  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
+  public mutating func clearMetadata() {self._metadata = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _graphLinks: Provenencia_Engine_V1_GraphLinks? = nil
+  fileprivate var _metadata: Provenencia_Engine_V1_MetadataDraft? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_UpdateArtifactResponse: @unchecked Sendable {
@@ -3007,6 +3025,12 @@ public nonisolated struct Provenencia_Engine_V1_UpdateArtifactResponse: @uncheck
   public var hasEffects: Bool {_storage._effects != nil}
   /// Clears the value of `effects`. Subsequent reads from it will return its default value.
   public mutating func clearEffects() {_uniqueStorage()._effects = nil}
+
+  /// the Artifact's board after the write, in display order
+  public var metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] {
+    get {_storage._metadata}
+    set {_uniqueStorage()._metadata = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -8290,7 +8314,7 @@ public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
 
   public var kind: Provenencia_Engine_V1_ErrorKind = .unspecified
 
-  /// ordered args for L10n format strings
+  /// ordered args for L10n format strings, or, where the error's Go doc says so, the id of the row the refusal is about
   public var params: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -12517,11 +12541,12 @@ nonisolated extension Provenencia_Engine_V1_GraphLinks: SwiftProtobuf.Message, S
 
 nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateArtifactResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}artifact\0\u{1}effects\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}artifact\0\u{1}effects\0\u{1}metadata\0")
 
   fileprivate class _StorageClass {
     var _artifact: Provenencia_Engine_V1_Artifact? = nil
     var _effects: Provenencia_Engine_V1_WriteEffects? = nil
+    var _metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -12534,6 +12559,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobu
     init(copying source: _StorageClass) {
       _artifact = source._artifact
       _effects = source._effects
+      _metadata = source._metadata
     }
   }
 
@@ -12554,6 +12580,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobu
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularMessageField(value: &_storage._artifact) }()
         case 2: try { try decoder.decodeSingularMessageField(value: &_storage._effects) }()
+        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._metadata) }()
         default: break
         }
       }
@@ -12572,6 +12599,9 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobu
       try { if let v = _storage._effects {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
       } }()
+      if !_storage._metadata.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._metadata, fieldNumber: 3)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -12583,6 +12613,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobu
         let rhs_storage = _args.1
         if _storage._artifact != rhs_storage._artifact {return false}
         if _storage._effects != rhs_storage._effects {return false}
+        if _storage._metadata != rhs_storage._metadata {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -12594,7 +12625,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateArtifactRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{1}label\0\u{1}description\0\u{3}graph_links\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{1}label\0\u{1}description\0\u{3}graph_links\0\u{1}metadata\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12608,6 +12639,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
       case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeSingularMessageField(value: &self._graphLinks) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._metadata) }()
       default: break
       }
     }
@@ -12636,6 +12668,9 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
     try { if let v = self._graphLinks {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
     } }()
+    try { if let v = self._metadata {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -12646,6 +12681,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
     if lhs.label != rhs.label {return false}
     if lhs.description_p != rhs.description_p {return false}
     if lhs._graphLinks != rhs._graphLinks {return false}
+    if lhs._metadata != rhs._metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12653,11 +12689,12 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
 
 nonisolated extension Provenencia_Engine_V1_UpdateArtifactResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateArtifactResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}artifact\0\u{1}effects\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}artifact\0\u{1}effects\0\u{1}metadata\0")
 
   fileprivate class _StorageClass {
     var _artifact: Provenencia_Engine_V1_Artifact? = nil
     var _effects: Provenencia_Engine_V1_WriteEffects? = nil
+    var _metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -12670,6 +12707,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactResponse: SwiftProtobu
     init(copying source: _StorageClass) {
       _artifact = source._artifact
       _effects = source._effects
+      _metadata = source._metadata
     }
   }
 
@@ -12690,6 +12728,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactResponse: SwiftProtobu
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularMessageField(value: &_storage._artifact) }()
         case 2: try { try decoder.decodeSingularMessageField(value: &_storage._effects) }()
+        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._metadata) }()
         default: break
         }
       }
@@ -12708,6 +12747,9 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactResponse: SwiftProtobu
       try { if let v = _storage._effects {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
       } }()
+      if !_storage._metadata.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._metadata, fieldNumber: 3)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -12719,6 +12761,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactResponse: SwiftProtobu
         let rhs_storage = _args.1
         if _storage._artifact != rhs_storage._artifact {return false}
         if _storage._effects != rhs_storage._effects {return false}
+        if _storage._metadata != rhs_storage._metadata {return false}
         return true
       }
       if !storagesAreEqual {return false}

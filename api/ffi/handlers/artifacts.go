@@ -67,7 +67,11 @@ func CreateArtifact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote)}
+		board, err := ownerBoardProto(c, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: a.ID})
+		if err != nil {
+			return err
+		}
+		out = &engine.CreateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote), Metadata: board}
 		return nil
 	})
 	if err == nil {
@@ -96,6 +100,10 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	draft, err := parseDraft(req.GetMetadata())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.UpdateArtifactResponse
 	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
@@ -114,7 +122,11 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := artifacts.Update(tx, userID, updated, graphs)
-				return struct{}{}, changes, err
+				if err != nil {
+					return struct{}{}, nil, err
+				}
+				more, err := applyDraft(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: prev.ID}, draft)
+				return struct{}{}, append(changes, more...), err
 			})
 		if err != nil {
 			return err
@@ -127,7 +139,11 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote)}
+		board, err := ownerBoardProto(c, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: prev.ID})
+		if err != nil {
+			return err
+		}
+		out = &engine.UpdateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote), Metadata: board}
 		return nil
 	})
 	if err == nil {

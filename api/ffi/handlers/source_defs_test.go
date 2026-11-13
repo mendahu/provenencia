@@ -478,12 +478,19 @@ func newUserType(t *testing.T, dir, userID, label string) string {
 	return created.Type.GetId()
 }
 
-// newUserField creates a user-origin metadata field through the RPC and
+// newUserField creates a user-origin text metadata field through the RPC and
 // returns its id.
 func newUserField(t *testing.T, dir, userID, label string) string {
 	t.Helper()
+	return newField(t, dir, userID, label, "text")
+}
+
+// newField creates a user-origin metadata field of the given data type through
+// the RPC and returns its id.
+func newField(t *testing.T, dir, userID, label, dataType string) string {
+	t.Helper()
 	out, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
-		ProjectDir: dir, UserId: userID, Label: label, DataType: "text",
+		ProjectDir: dir, UserId: userID, Label: label, DataType: dataType,
 	}))
 	if err != nil {
 		t.Fatal(err)
