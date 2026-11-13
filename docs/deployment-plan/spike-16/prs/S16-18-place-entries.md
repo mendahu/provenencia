@@ -1,6 +1,6 @@
 # S16-18 — Place entries
 
-**Status:** Planned
+**Status:** Landed in [#817](https://github.com/mendahu/provenencia/pull/817) (2026-11-13)
 **Spike / slice:** Spike 16 · Slice 2c — Walks
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine refactor; every place chain, place page and summary row reads the same as today)
@@ -14,6 +14,16 @@
 **Context:** [design § Results per key](../cache-architecture.md#results-per-key-for-the-walks), [design § A cache a composer reads hands its inputs to the row](../cache-architecture.md#a-cache-a-composer-reads-hands-its-inputs-to-the-row), [design § The write path fills only what it reads](../cache-architecture.md#the-write-path-fills-only-what-it-reads), [`docs/catalog-caches.md`](../../../catalog-caches.md), [Spike 14 summary inputs](../../archive/spike-14/summary-inputs.md), working rules: "The point of this batch is simpler code", "Cache entities and results per key; compose answers", "One cache registry, two ways to fill", "Every cache names the signal that updates it, and updates exactly", "Apply states its fan-out", "A write's one-shot graph fills only what it reads", "A cache a composer reads hands its inputs to the row", "Orders are defined and results do not move", "Memory is budgeted", "Batch 1's caps stay where S16-01 puts them", "No new persisted projections, and no stored answer without a measurement", "Measure growth"
 **Planned:** 2026-11-13 against `main` @ `aa150de`
 **Review:** [`S16-18-place-entries.review.md`](S16-18-place-entries.review.md) — Fits with changes / Ready with changes, two rounds, no open blocker
+
+## Landed
+
+- `eventPlaceGraph` calls `g.Nodes(placeIDs)` before `buildPlaceGraph`: `eventPlaces` reads each place's node one at a time, and the chain build's old node load had batched it (`TestPersonDerivedRows`, `TestPersonEventsQueryCount`). S16-19 deletes both.
+- `buildPlaceGraph` keeps its signature; its `rec` parameter is unused, since `closure` reads the entries' `inputs`.
+- An entry's `partFrom`/`partTo` and `succFrom`/`succTo` are filled by orienting each followed link and filing it under the end that is the place, so a self-loop sits in both lists.
+- An extra test hook, `FillPlaceEntriesForTest`, holds entries for T-8 and T-11.
+- The plan's `\bbyID\b` sweep hits unrelated `byID` locals in `composePersons`.
+- §11 was amended by the user (2026-11-13) after round 0: the hub-commit refill has a 1 s ceiling (measured 560 – 668 ms against 142 ms), the cold crafted-hub read a 3 s ceiling on any of three runs (measured 1706 – 2366 ms against 1328 – 1522 ms), and cold-list and after-location compare the median of three runs.
+- The ship log's STEP-1 and STEP-9 figures are in the PR description.
 
 ### Implementer — read this first
 
