@@ -114,4 +114,4 @@ CON-1 Resolved (AC-3.3 `rg` prints nothing). CON-2 Resolved (`## Landed` lists e
 Merged `origin/main` @ `898d040f9` (S16-18 plan docs only). check-pr PASS against `898d040f9`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: warm-proposal slowdown accepted by the user (2026-11-13), memoising `For` parked in `docs/ideas/promote-ranking.md`.
+Gate PASS · CI green · open: none · follow-ups: none · to user: warm-proposal slowdown accepted by the user (2026-11-13), memoising `For` parked in `docs/ideas/promote-ranking.md`.
