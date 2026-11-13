@@ -106,7 +106,7 @@ Uncached `go test -tags fts5 ./api/... ./core/...` ×3: `TestRecordLinksBudgets/
 Merged `origin/main` (`71773c1be`, docs only). Gate PASS against `71773c1be`.
 
 ## Result
-Gate PASS · CI green (runs 43415894164, 43415894149 on `a6d87c341`, after F-7) · open: none · follow-ups: PRF-2 (already homed in `docs/ideas/structural-debt.md`) · to user: PRF-1 (answered: 200 ms), CON-2 (answered: keep)
+Gate PASS · CI green (runs 43415894164, 43415894149 on `a6d87c341`, after F-7) · open: none · follow-ups: PRF-2 (already homed in `docs/ideas/structural-debt.md`) · to user: PRF-1 (answered: 200 ms, then 600 ms after CI), CON-2 (answered: keep), CI budgets (answered: raise all three)
 
 ## CI — round 1 (red)
 Run 43364250762 (head `add73b9c4`): Go tests failed on three timing budgets only; macOS tests and localizable green.
