@@ -111,11 +111,21 @@ func TermLabeler(c *database.Catalog) (func(id []byte, key string) (Term, bool),
 		return nil, err
 	}
 	return func(id []byte, key string) (Term, bool) {
-		if _, ok := v.termLabel[string(id)]; !ok {
+		t, ok := v.term(id, key)
+		if !ok {
 			return Term{}, false
 		}
-		return *v.finishTerm(&Term{ID: id, Key: key}), true
+		return *v.finishTerm(&t), true
 	}, nil
+}
+
+// term is the unfinished Term of a term id and key, and whether the id is a
+// term of the vocabulary. It is the one known-term rule of every role read.
+func (v vocab) term(id []byte, key string) (Term, bool) {
+	if _, ok := v.termLabel[string(id)]; !ok {
+		return Term{}, false
+	}
+	return Term{ID: id, Key: key}, true
 }
 
 func (v vocab) prop(key string) []byte { return v.propID[key] }
@@ -969,6 +979,13 @@ func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.
 		h.Subjects = append(h.Subjects, EventSubject{
 			Entity: canonicalentities.FromNode(person), Name: name, NameValueCount: count,
 		})
+	}
+	participantLinks, err := follow(in, n.ID, hops.ParticipantsOfEvent)
+	if err != nil {
+		return EventSummary{}, err
+	}
+	for _, p := range rolesByNeighbor(participantLinks, v.term) {
+		h.Participants = append(h.Participants, EventParticipant{ID: append([]byte(nil), p.id...), Roles: p.roles})
 	}
 	if h.Date != nil {
 		h.StartDate = nil

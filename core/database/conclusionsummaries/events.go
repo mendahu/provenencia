@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
@@ -47,7 +48,11 @@ type EventSummary struct {
 	EndDate        *datevalue.Value
 	EndDateCount   int
 	Subjects       []EventSubject
-	Places         []ChainedPlace
+	// Participants are every person on the event through any role, by id and
+	// roles, in the order their participations are linked. The roles are not
+	// finished: a reader that shows them labels them (TermLabeler).
+	Participants []EventParticipant
+	Places       []ChainedPlace
 	// PictureImageFileID is the image of the picture the Event leads with;
 	// nil when none. Preferred when set and in the gallery, else earliest.
 	PictureImageFileID []byte
@@ -63,6 +68,52 @@ type EventSubject struct {
 	Entity         canonicalentities.Entity
 	Name           *namevalue.Value
 	NameValueCount int
+}
+
+// EventParticipant is one entity on an event through its participations and the
+// distinct roles those carry, in link order.
+type EventParticipant struct {
+	ID    []byte
+	Roles []Term
+}
+
+// neighborRoles is one neighbor of a walk and the distinct roles its links
+// carry.
+type neighborRoles struct {
+	id    []byte
+	roles []Term
+	seen  map[string]struct{}
+}
+
+// rolesByNeighbor is the one collapse rule for an event's participants: links
+// in input order; neighbors are de-duplicated in first-seen order; each link
+// adds its role term to its neighbor's roles unless that term is already
+// there. A link with no term, or whose term label does not know, adds no role.
+func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) (Term, bool)) []neighborRoles {
+	var out []neighborRoles
+	index := map[string]int{}
+	for _, l := range links {
+		i, ok := index[string(l.Neighbor)]
+		if !ok {
+			i = len(out)
+			index[string(l.Neighbor)] = i
+			out = append(out, neighborRoles{id: l.Neighbor})
+		}
+		if len(l.TermID) == 0 {
+			continue
+		}
+		if _, have := out[i].seen[string(l.TermID)]; have {
+			continue
+		}
+		if t, ok := label(l.TermID, l.TermKey); ok {
+			if out[i].seen == nil {
+				out[i].seen = map[string]struct{}{}
+			}
+			out[i].seen[string(l.TermID)] = struct{}{}
+			out[i].roles = append(out[i].roles, t)
+		}
+	}
+	return out
 }
 
 // eventTitle chooses the summary's title from its own parts: subjects in
