@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 @testable import Provenencia
 
@@ -25,6 +26,21 @@ struct MetadataDraftHostTests {
     }
 
     private func ids(_ rows: [CatalogMetadataEntry]) -> [String] { rows.map(\.field.id) }
+
+    /// T-9: a view over a draft board redraws after each kind of change.
+    @Test func draftHostIsObservable() async {
+        func fires(_ change: (MetadataDraftHost) -> Void) -> Bool {
+            let host = makeHost()
+            var fired = false
+            withObservationTracking { _ = host.entries } onChange: { fired = true }
+            change(host)
+            return fired
+        }
+        #expect(fires { _ = $0.clear(fieldID: "roll") })
+        #expect(fires { _ = $0.dismissSuggestion(fieldID: "provider") })
+        #expect(fires { _ = $0.reorder(fieldIDs: ["roll", "url", "provider"]) })
+        #expect(fires { _ = $0.set(fieldID: "provider", valueText: "Ancestry") })
+    }
 
     @Test func boardActionsBuildTheDraft() async throws {
         let host = makeHost()

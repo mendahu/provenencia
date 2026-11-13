@@ -227,7 +227,6 @@ private struct MetadataBoardTextEditor: View {
     let onCancel: () -> Void
     let onClear: () -> Void
 
-    @Environment(\.openURL) private var openURL
     @State private var draft = ""
 
     private func beginEdit() {
@@ -286,31 +285,64 @@ private struct MetadataBoardTextEditor: View {
         }
     }
 
-    @ViewBuilder
     private var displayValue: some View {
-        let fieldID = entry.field.id
+        MetadataValueText(
+            entry: entry,
+            accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(entry.field.id).value",
+            lineLimit: nil,
+            chrome: true
+        )
+    }
+}
+
+/// One metadata value, drawn the same on a board row and in a card's read-only
+/// copy details: mono caption, and a URL value with a safe link as a plain
+/// underlined link button. `chrome` adds the board row's resting inset so
+/// entering edit does not shift glyphs; `lineLimit` nil wraps, 1 truncates the tail.
+struct MetadataValueText: View {
+    let entry: CatalogMetadataEntry
+    let accessibilityIdentifier: String
+    var lineLimit: Int?
+    var chrome: Bool
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
         if entry.field.dataType == CatalogFieldDataType.url, let url = entry.openURL {
             Button {
                 openURL(url)
             } label: {
-                Text(verbatim: entry.valueText)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
+                valueText
                     .foregroundStyle(PVColor.textLink)
                     .underline(true, color: PVColor.textLink)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             .buttonStyle(.plain)
-            .metadataBoardValueChrome()
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
+            .modifier(MetadataValueChromeIf(chrome: chrome))
+            .accessibilityIdentifier(accessibilityIdentifier)
             .help(L10n.string(L10n.Sources.openMetadataURL))
         } else {
-            Text(verbatim: entry.valueText)
-                .font(PVFont.mono(size: PVTypeScale.caption))
+            valueText
                 .foregroundStyle(PVColor.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .metadataBoardValueChrome()
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
+                .modifier(MetadataValueChromeIf(chrome: chrome))
+                .accessibilityIdentifier(accessibilityIdentifier)
         }
+    }
+
+    private var valueText: some View {
+        Text(verbatim: entry.valueText)
+            .font(PVFont.mono(size: PVTypeScale.caption))
+            .lineLimit(lineLimit)
+            .truncationMode(.tail)
+            .fixedSize(horizontal: false, vertical: lineLimit == nil)
+    }
+}
+
+private struct MetadataValueChromeIf: ViewModifier {
+    let chrome: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if chrome { content.metadataBoardValueChrome() } else { content }
     }
 }
 
