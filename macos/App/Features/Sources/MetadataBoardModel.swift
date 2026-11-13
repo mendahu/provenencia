@@ -123,6 +123,15 @@ final class MetadataBoardModel {
         }
     }
 
+    /// Asks a clear of a value: with no value for `fieldID`, false; on a host that confirms, true and
+    /// nothing is written (the caller opens its confirm); otherwise clears at once and answers false.
+    func requestClear(fieldID: String) async -> Bool {
+        guard entries.contains(where: { $0.field.id == fieldID && $0.hasValue }) else { return false }
+        if host.confirmsClear { return true }
+        _ = await clear(fieldID: fieldID)
+        return false
+    }
+
     /// Clears a saved value. True when it was cleared.
     func clear(fieldID: String) async -> Bool {
         host.clearFailure()

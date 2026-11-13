@@ -9,6 +9,8 @@ protocol MetadataBoardHost: AnyObject {
     var entries: [CatalogMetadataEntry] { get set }
     /// Every metadata field the researcher can add.
     var fields: [CatalogMetadataField] { get }
+    /// True when clearing a value asks first (a live board writes at once); a draft board clears with no confirm.
+    var confirmsClear: Bool { get }
 
     /// Saves a value; answers the owner's whole board.
     func set(fieldID: String, valueText: String) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
@@ -52,6 +54,7 @@ final class SourcePageMetadataHost: MetadataBoardHost {
     }
 
     var fields: [CatalogMetadataField] { context.fields }
+    var confirmsClear: Bool { true }
 
     func set(fieldID: String, valueText: String) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         try await context.store.setMetadata(

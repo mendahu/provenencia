@@ -126,6 +126,19 @@ struct MetadataBoardModelTests {
         #expect(dialogs.pendingDelete != nil)
     }
 
+    @Test func liveBoardAsksBeforeClearing() async {
+        let saved = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Mary")
+        let host = TestMetadataBoardHost(entries: [saved])
+        let board = MetadataBoardModel(host: host)
+
+        #expect(await board.requestClear(fieldID: "f-author"))
+        #expect(!host.calls.contains(.clear("f-author")))
+
+        host.confirmsClear = false
+        #expect(await board.requestClear(fieldID: "f-author") == false)
+        #expect(host.calls.contains(.clear("f-author")))
+    }
+
     @Test func invalidValueStaysOnTheFieldOrDialog() async {
         let repo = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
         let host = TestMetadataBoardHost(entries: [repo])
@@ -165,6 +178,7 @@ private final class TestMetadataBoardHost: MetadataBoardHost {
 
     var entries: [CatalogMetadataEntry]
     var fields: [CatalogMetadataField] = []
+    var confirmsClear = true
     private(set) var calls: [Call] = []
     /// What `entries` held when `didWrite` ran.
     private(set) var entriesAtDidWrite: [CatalogMetadataEntry] = []
