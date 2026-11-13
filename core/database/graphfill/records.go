@@ -25,17 +25,21 @@ type GraphRecords struct {
 	GraphID  []byte
 	subjects []SubjectRecord
 	byID     map[string]int
-	labels   map[string]string
+	// byObservation maps an Observation id to its Subject's index and its
+	// index in that Subject's Observations.
+	byObservation map[string][2]int
+	labels        map[string]string
 }
 
 // newGraphRecords is the one constructor of a graph's records, from the rows
 // the loaders return.
 func newGraphRecords(graphID []byte, subjects []graphcache.EvidenceSubject, observations []graphcache.EvidenceObservation, members []graphcache.EvidenceMember) *GraphRecords {
 	r := &GraphRecords{
-		GraphID:  append([]byte(nil), graphID...),
-		subjects: make([]SubjectRecord, len(subjects)),
-		byID:     make(map[string]int, len(subjects)),
-		labels:   graphcache.SubjectLabels(subjects),
+		GraphID:       append([]byte(nil), graphID...),
+		subjects:      make([]SubjectRecord, len(subjects)),
+		byID:          make(map[string]int, len(subjects)),
+		byObservation: make(map[string][2]int, len(observations)),
+		labels:        graphcache.SubjectLabels(subjects),
 	}
 	for i, s := range subjects {
 		r.subjects[i].Subject = s
@@ -48,6 +52,7 @@ func newGraphRecords(graphID []byte, subjects []graphcache.EvidenceSubject, obse
 	}
 	for _, o := range observations {
 		if i, ok := r.byID[string(o.SubjectID)]; ok {
+			r.byObservation[string(o.ID)] = [2]int{i, len(r.subjects[i].Observations)}
 			r.subjects[i].Observations = append(r.subjects[i].Observations, o)
 		}
 	}
@@ -65,6 +70,20 @@ func (r *GraphRecords) Subject(id []byte) (SubjectRecord, bool) {
 		return SubjectRecord{}, false
 	}
 	return r.subjects[i], true
+}
+
+// Observation is the Observation with this id and the record of its Subject,
+// and false when the graph has none.
+func (r *GraphRecords) Observation(id []byte) (SubjectRecord, graphcache.EvidenceObservation, bool) {
+	if r == nil {
+		return SubjectRecord{}, graphcache.EvidenceObservation{}, false
+	}
+	at, ok := r.byObservation[string(id)]
+	if !ok {
+		return SubjectRecord{}, graphcache.EvidenceObservation{}, false
+	}
+	rec := r.subjects[at[0]]
+	return rec, rec.Observations[at[1]], true
 }
 
 // Labels maps each Subject's id (as a string) to its label. The map is shared.
