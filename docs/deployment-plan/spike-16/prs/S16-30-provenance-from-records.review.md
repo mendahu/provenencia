@@ -1,7 +1,7 @@
 # Review — S16-30 Provenance records compose from cached records
 
-**Verdict:** round 1: Fits with changes / Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** round 1: Fits with changes / Ready with changes; round 2: Fits with changes / Ready with changes; every finding Fixed or Declined, nothing To user; Planned
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None. Asked before review (2026-11-13): the handler reads the subject type from the vocabulary; the picture paths stay one SQL read; bar 11 and the scope Check reworded to match.
@@ -9,6 +9,7 @@
 ## Writer's own calls
 - "The second pass of `PersonDerivedRows`" read as composing every field of every owner and keeping one: D-7 and D-8 name each owner's Property before composing (`only` replaces `subjectValued`).
 - Citation words live on each `EvidenceObservation` (D-1), as the working rule words it ("each Observation's Citation words"), not once per Citation (M-7).
+- `grapheventtitles` stays off `FirstTextOf` (M-9): folding it changes which toponym Property titles a Source event card; parked as `structural-debt.md` P-28 rather than asked now.
 - The detail budget times `ForEntity` only, on `households(f, 80)` (X-2); the life rows are held by query counts.
 
 ## Round 1
@@ -23,7 +24,7 @@
 **Answer:** Fixed — `valueOf` sets the ids from `DateID` / `NameID`; the old D-12, its Risk row and its Stop condition are gone.
 
 ### M-4 · major · A second "Observations → TextRecord → FirstText" builder beside `grapheventtitles`
-**Answer:** Fixed — D-2: `observations.FirstTextOf` *(new)*; `grapheventtitles.FromStored` and the detail read call it; `graphfill` gains no `observations` import.
+**Answer:** Fixed — D-2: `observations.FirstTextOf` *(new)*, called by the detail read; `graphfill` gains no `observations` import. Round 2 (M-9) narrowed it: `grapheventtitles` stays (P-28).
 
 ### M-5 · minor · `SubjectLabels`' "the one label rule" comment
 **Answer:** Fixed — STEP-2 updates the comment.
@@ -60,3 +61,23 @@ Logged.
 
 ### X-8 · minor · Small choices
 **Answer:** Fixed — D-1 states the join and the flag are never NULL (`000026.sql`). The rest needs no change: a cross-graph value Subject is a Stop condition already; an owner with no outcome for its Property has no field, as today.
+
+## Round 2
+
+### M-9 · blocker · `FirstTextOf` asks for a Property id `grapheventtitles.FromStored` does not have; the two callers pick toponyms differently
+**Answer:** Fixed — `grapheventtitles` is out of this PR: D-2 names only the detail read as caller, with the provenencia `toponym` id it resolves today; an Out row sends the fold to [`structural-debt.md`](../../../ideas/structural-debt.md) P-28 (new), which names the Property choice it needs. D-2's import sentence corrected. M-2's wording note (name parts' ids and `Idx`) is added to D-12.
+
+### X-9 · major · No Property id for `FromStored`
+**Answer:** Fixed — as M-9.
+
+### X-10 · minor · D-2's import claim
+**Answer:** Fixed — D-2.
+
+### X-11 · minor · AC-1.3's `PersonDerivedRows` case has no named test
+**Answer:** Fixed — T-5 asserts `CountSelects` `N()` 0 on the second read; AC-1.3 names T-3 and T-5.
+
+### X-12 · minor · T-1's Subject, Property and id capture
+**Answer:** Fixed — T-1: a name Observation on `f.ann`, the `CreateResult` captured in the closure.
+
+### X-13 · nit · DoD brief line
+**Answer:** Fixed — "(none: not gated)".
