@@ -40,14 +40,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		return nil, err
 	}
 	typeID := v.TypeIDsByKey()[vocabkey.Person]
-	var want [][]byte
-	seen := map[string]bool{}
-	for _, id := range ids {
-		if len(id) == 16 && !seen[string(id)] {
-			seen[string(id)] = true
-			want = append(want, id)
-		}
-	}
+	want := database.UniqueBlobIDs(ids)
 	// One batched load of the nodes, so an id that is no node costs no query of
 	// its own; only the people among them are read further.
 	if err := g.Nodes(want); err != nil {
@@ -68,15 +61,12 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 	// loaded so shownKin reads them.
 	var named [][]byte
 	kin := map[string]kinship.Kin{}
-	isNamed := map[string]bool{}
 	for _, id := range people {
 		kin[string(id)] = kinship.KinOf(id, links[string(id)], terms, rules)
 		for _, role := range kinship.Roles() {
 			for _, l := range kin[string(id)][role] {
-				if other, _, _ := l.From(id); !isNamed[string(other)] {
-					isNamed[string(other)] = true
-					named = append(named, other)
-				}
+				other, _, _ := l.From(id)
+				named = append(named, other)
 			}
 		}
 	}
@@ -87,23 +77,18 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 	// The kin of each shown relative a family unit reads, read once.
 	shown := map[string]kinship.Kin{}
 	var around [][]byte
-	isAround := map[string]bool{}
 	for _, id := range people {
 		shown[string(id)] = shownKin(g, typeID, id, kin[string(id)])
-		for _, other := range shown[string(id)].Around(id) {
-			if !isAround[string(other)] {
-				isAround[string(other)] = true
-				around = append(around, other)
-			}
-		}
+		around = append(around, shown[string(id)].Around(id)...)
 	}
 	aroundLinks, err := r.Relationships(around, canonlinks.Options{})
 	if err != nil {
 		return nil, err
 	}
 	aroundKin := map[string]kinship.Kin{}
-	for _, other := range around {
-		aroundKin[string(other)] = shownKin(g, typeID, other, kinship.KinOf(other, aroundLinks[string(other)], terms, rules))
+	for id, ls := range aroundLinks {
+		other := []byte(id)
+		aroundKin[id] = shownKin(g, typeID, other, kinship.KinOf(other, ls, terms, rules))
 	}
 
 	out := make([]Family, 0, len(people))
