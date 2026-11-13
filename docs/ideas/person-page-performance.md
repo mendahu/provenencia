@@ -18,7 +18,7 @@ The budget was met on the lightest per-pair fixture: `recordlinks_perf_test.go`'
 
 If time follows work, the richer shapes take about 185–440 ms a read, with every other pane waiting.
 
-**Shape.** First, add a census-sized case to `TestRecordLinksBudgets` (`censusHouseholds(f, 50, size: 8 | 12)`, birth events so parent and sibling links are implied) and log `ReadWork` and the times. If it is slow, keep each pair's lines on the Evidence graph memo (`graphcache.SetEvidenceGraphMemo`, as `evidencelayer.Load` does), stored under both graphs and keyed by the other graph and the page entity, so a commit to one graph drops only its pairs and `MaxReadWork` charges only what is recomputed. A write that names no graph (a portrait choice) need not refresh the key at all.
+**Shape.** First, add a census-sized case to `TestRecordLinksBudgets` (`censusHouseholds(f, 50, size: 8 | 12)`, birth events so parent and sibling links are implied) and log `ReadWork` and the times. If it is slow, keep each pair's lines in a keyed registry entry with `DropNamedGraphs` (as `evidencelayer.Layers`), stored under both graphs and keyed by the other graph and the page entity, so a commit to one graph drops only its pairs and `MaxReadWork` charges only what is recomputed. A write that names no graph (a portrait choice) need not refresh the key at all.
 
 ## Timeline participants are sent once per event (P-8)
 
