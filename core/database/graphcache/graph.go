@@ -267,7 +267,7 @@ func (g *Graph) Nodes(ids [][]byte) error {
 func (g *Graph) Node(id []byte) (*Node, error) {
 	n, err := g.node(id)
 	if err == nil && g != nil && g.inputRecorder != nil {
-		g.inputRecorder(nodeKey(id))
+		g.inputRecorder(NodeKey(id))
 	}
 	return n, err
 }

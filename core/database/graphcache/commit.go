@@ -150,7 +150,7 @@ func (g *Graph) mergedNeighbors(ids [][]byte) (reload, touched [][]byte, err err
 		return nil, nil, nil
 	}
 	err = sqlbatch.Each(ids, func(chunk [][]byte) error {
-		raws, err := g.linkRaws(chunk)
+		raws, err := g.linkRaws(chunk, bridgeKeys())
 		if err != nil {
 			return err
 		}
