@@ -70,6 +70,9 @@ struct PVTitleText: View {
     /// and no limit for `.display`.
     let lineLimit: Int?
     let emphasized: Bool
+    /// The font the caller set. An italic run of a row title takes it, so a compact card's
+    /// caption-size name keeps one size; with none set, the list row's title font.
+    @Environment(\.font) private var callerFont
 
     init(
         _ source: PVTitleSource,
@@ -109,7 +112,7 @@ struct PVTitleText: View {
         switch source {
         case .name(let text, let styled, _):
             if let styled {
-                Text(Self.italicizingEmphasis(styled, font: PVListText.titleFont))
+                Text(Self.italicizingEmphasis(styled, font: callerFont ?? PVListText.titleFont))
             } else {
                 Text(verbatim: text)
             }

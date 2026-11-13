@@ -9,17 +9,21 @@ enum PVTileCardSize: Equatable {
     nonisolated var height: CGFloat {
         switch self {
         case .regular: 92
+        case .compact: 46
+        }
+    }
+
+    /// The side of the square thumbnail slot, which is also the height the text beside it
+    /// gets. A compact card's thumbnail fills its height inside the padding.
+    nonisolated var thumbnail: CGFloat {
+        switch self {
+        case .regular: 70
         case .compact: 38
         }
     }
 
-    /// The side of the square thumbnail slot.
-    nonisolated var thumbnail: CGFloat {
-        switch self {
-        case .regular: 70
-        case .compact: 28
-        }
-    }
+    /// The space between the title and the lines under it.
+    nonisolated var lineSpacing: CGFloat { 3 }
 
     nonisolated var titleLineLimit: Int {
         switch self {
@@ -124,7 +128,7 @@ struct PVTileCard<Thumbnail: View, Title: View, Lines: View, Trailing: View>: Vi
         ) {
             HStack(alignment: .center, spacing: size.contentSpacing) {
                 thumbnail
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: size.lineSpacing) {
                     if hasTrailing {
                         HStack(spacing: PVSpacing.space4) {
                             title
