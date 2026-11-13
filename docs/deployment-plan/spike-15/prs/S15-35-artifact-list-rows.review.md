@@ -1,7 +1,7 @@
 # Review — S15-35 The Artifact list shows each Artifact's copy details
 
-**Verdict:** round 1: Fits with changes (maintainability) — Not ready (executability); every round-1 finding answered; round 2 pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (fresh, read-only), executability (fresh, read-only)
+**Verdict:** Fits with changes — Ready with changes, 2 rounds; every blocker Fixed; one user answer (the Person page pill).
+**Rounds:** 2. **Reviewers:** maintainability (fresh, read-only), executability (fresh, read-only)
 
 ## To user
 
@@ -78,3 +78,26 @@
 
 ### X-11 · minor · Not yet Planned
 **Answer:** Fixed by this loop — status moves to Planned after round 2.
+
+## Round 2
+
+### M-11 · blocker · `SourceArtifactsSection.inNoGraph` kept beside `graphLines`
+**Answer:** Fixed — D-6 deletes it (its last app reader moves to `graphLines`; the sheet and the graph form never read it); **Deletes** lists it; `restingRowMarksAnArtifactInNoGraph` asserts `graphLines`; STEP-5's `rg` adds `artifacts\.inNoGraph`. The side note on cost: Fixed — `graphLines` is one pass over the graphs' `artifactIDs` (O(links)), and § 6 Scale no longer compares it with the cached index.
+
+### X-1 · blocker · The copy-details column is not a fixed-width column
+**Answer:** Fixed — D-7 (3) uses `.frame(minWidth: 0, maxWidth: 320|440, alignment: .topLeading)`, a flexible frame that takes the offered width whatever its child measures, and says how the `HStack` shares a narrow row; manual steps 1 and 3 check it.
+
+### X-2 · major · STEP-6's `rg` and the catalog comments
+**Answer:** Fixed — the check is scoped to the Sources files, `L10n.swift` and the catalog, excluding the Citation composer's own card comments; D-12 rewords the dirty-confirm comments ("another card's edit", "the form or card") and mirrors every reworded comment in `Localizable.xcstrings`.
+
+### X-3 · major · T-6's fixture
+**Answer:** Fixed — T-6 names `makeStore`, `photoType()`'s `iconKey`, the page location and the warm.
+
+### X-4 · minor · An item whose minimum is wider than the row
+**Answer:** Fixed — D-3: placed at the row's width and clipped at the layout's bounds; never placed past the edge.
+
+### X-5 · minor · Spoken structure and the thumbnail's arguments
+**Answer:** Fixed — the label line is one combined element; the thumbnail button keeps today's label; `mediaType` and `originalFilename` are spelled out.
+
+### X-6 · nit · No T-2
+**Answer:** Fixed — § 8 notes T-2 was dropped in round 1.
