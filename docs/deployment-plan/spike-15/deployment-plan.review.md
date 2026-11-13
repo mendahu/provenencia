@@ -194,3 +194,42 @@ Logged.
 
 ### K2 minors (draft starting rows, returned rows into Swift, S15-09 status, trim keep list, S15-11 reload)
 **Answer:** Fixed — S15-36 scope; S15-09 "In review, trim pending"; keep list names the pencil change; S15-11 says a graph Save reloads.
+
+## Map review K3 — citation re-plan (2026-11-13)
+
+**Verdict:** Reshape → Fits with changes after the answers below. **Rounds:** 1. **Reviewer:** maintainability (fresh).
+
+**To user.** None: the findings change PR cuts and layers, not product calls.
+
+### K3-1 · blocker · Needed fields belong in the engine's board merge, not a list Swift merges
+**Answer:** Fixed — rule "Boards flag needed fields; the engine decides the rows"; S15-38 annotates `listWorkspaces` and `TypeSuggestion`, emits dismissed and unsuggested needed fields, `DismissSuggestion` refuses a needed field, every reply carries it; the date's and page's requirements are named on their reads. Map § 6.10.
+
+### K3-2 · blocker · Requirements cached on `.sourceWorkspace` go stale after a format edit
+**Answer:** Fixed — rule "Requirements need a refresh signal; renders do not"; S15-15 reports `.changedCitationFormats(typeId)`; S15-38 wires it and updates `docs/catalog-caches.md`.
+
+### K3-3 · blocker · Citation date terms would be a second DateValue formatter
+**Answer:** Fixed — `datevalue.CitationDisplay` beside `CompactDisplay` (rule "Dates in citations use citation terms", S15-14, map § 6.3).
+
+### K3-4 · major · Missing per render and requirements per type are one concept
+**Answer:** Fixed — one function from requirements and values to missing; the batch render drops its missing list; the preview keeps it (rule "A format's fields are needed or used", S15-14, S15-16).
+
+### K3-5 · major · Unknown and supplied in three shapes, three controls
+**Answer:** Fixed — `core/valuemark` (S15-14) used by all three stores and the resolver; one proto `ValueMark`; S15-41 builds the control once, S15-42 and S15-45 reuse it.
+
+### K3-6 · major · S15-37 too big; who seeds `unknown_text`
+**Answer:** Fixed — S15-37 (metadata values), S15-43 (Source date), S15-44 (locator page); S15-19 lands after S15-37 and seeds `UnknownText` through `Install`.
+
+### K3-7 · major · Flags cut per screen though the board is shared
+**Answer:** Fixed — S15-39 flags every board at once (brief on the board row); S15-40 is only the Artifact list mark; the header date flag joins S15-42; S15-11 and S15-13 are back to their original scope; the page's flag is S15-45.
+
+### K3-8 · major · Dependency graph and slice order disagree
+**Answer:** Fixed — S15-11 and S15-13 no longer depend on slice 4; S15-37, S15-38, S15-43, S15-44 scopes under Slice 4; S15-23's scope under Slice 9; missing edges added (S15-39 on S15-11 and S15-34; S15-42 on S15-38 and S15-41).
+
+### K3-9 · minor · Editing a field's unknown text has no home
+**Answer:** Fixed — S15-46 (Metadata page), brief S15-D25.
+
+### K3-10 · minor · Docs and skills not named
+**Answer:** Fixed — S15-44 updates `interpretation-layer-data-model.md` § 3.2; S15-19 updates `add-seeded-vocabulary` and `seeded-vocabulary.md`; S15-14 updates `add-date-value`.
+
+### K3-11 – K3-14 · nits
+**Answer:** K3-12, K3-13, K3-14 fixed. K3-11 declined: S15-03's plan is Landed and stays as written.

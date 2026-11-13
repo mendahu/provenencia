@@ -25,6 +25,7 @@ PR plans (docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md), per plan-pr:
 Briefs (docs/deployment-plan/<spike>/design/S#-D#-<slug>.md), per
 add-design-brief:
   - header fields present
+  - **Implements later as** names exactly one PR (one brief, one PR)
   - the Paste block matches add-design-brief word for word
   - the UI building-block inventory exists, its Status words are known,
     and its Home paths exist
@@ -288,13 +289,21 @@ def check_plan(report: Report, text: str) -> None:
     check_links(report, lines)
 
 
-def check_brief(report: Report, text: str) -> None:
+def check_brief(report: Report, text: str, path: Path) -> None:
     lines = text.splitlines()
 
     fields = header_fields(lines)
     for name in BRIEF_FIELDS:
         if name not in fields:
             report.error(0, f"missing header field **{name}:**")
+
+    # Written before "One brief, one PR" (2026-11-13) and kept as written.
+    multi_pr_ok = {"S15-D1-source-page.md", "S15-D14-source-page-artifacts.md"}
+    if "Implements later as" in fields and path.name not in multi_pr_ok:
+        line, value = fields["Implements later as"]
+        prs = sorted(set(re.findall(r"\bS\d+-\d+\b", value)))
+        if len(prs) != 1:
+            report.error(line, f"**Implements later as** names {len(prs)} PRs ({', '.join(prs) or 'none'}); a brief gates exactly one PR (add-design-brief, One brief, one PR)")
 
     skill = BRIEF_SKILL.read_text(encoding="utf-8")
     m = re.search(r"## Paste block\s*```markdown\n(.*?)\n```", skill, re.DOTALL)
@@ -349,7 +358,7 @@ def main(argv: list[str]) -> int:
         elif PLAN_NAME_RE.match(path.name) and path.parent.name == "prs":
             check_plan(report, path.read_text(encoding="utf-8"))
         elif BRIEF_NAME_RE.match(path.name):
-            check_brief(report, path.read_text(encoding="utf-8"))
+            check_brief(report, path.read_text(encoding="utf-8"), path)
         else:
             report.warn(0, "not a PR plan (prs/S#-NN-slug.md) or a brief (S#-D#-slug.md); skipped")
         for msg in report.errors + report.warnings:

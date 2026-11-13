@@ -239,6 +239,8 @@ review gate, with these questions in addition to the rubric:
   layer's change first.
 - **Another spike's code.** Does a PR change code that a PR in another open
   spike's map also changes? Name the dependency in both maps.
+- **One brief, one PR.** Does any brief ID gate more than one PR in the map?
+  Give the later PR its own brief.
 - **Docs and skills per PR.** Does each PR that renames, re-keys or retires a
   pattern name the docs and skills it makes false?
 

@@ -42,7 +42,7 @@ The two overlap only by accident: "image 37" means nothing without the file, and
 What follows from it:
 
 - **Citation formats do not read the locator,** except `{citation.image}`, the image number in the online-copy layer ("image 37 of 412") when the Artifact is a provider's image set.
-- **Missing access details are flagged, never invented.** A scan or download with no provider, URL or film number gets a citation whose copy layer is incomplete, and the preview says so.
+- **Missing access details are flagged, never invented.** A scan or download with no provider, URL or film number gets a citation whose copy layer is incomplete, and the Artifact's board flags the needed fields (§ 6.10).
 - **Copy details are captured when the Artifact is added,** while the researcher still knows where it came from: the import flow shows the Artifact's metadata fields, not only the Artifact page afterwards. This also raises the value of filling them automatically ([`registry-source-import.md`](../../ideas/registry-source-import.md)).
 - **A physical original has no access path;** `holder` ("privately held by …"), on the Source, takes the place of the copy layer.
 - **One EE citation usually covers several Provenencia Citations.** A researcher draws one Citation per cell or name they want to highlight; EE cites the row or the entry once. § 6.9 covers what that means for data entry and display.
@@ -653,7 +653,7 @@ Statutes, session laws, codes, legislative documents, published court reports. T
 
 ### P17 — Fallback
 
-Any Source whose type maps to no pattern, or whose pattern is missing a required element, gets today's line: Source title, Artifact label, Citation label, page ([`citation-formats.md`](citation-formats.md) "What ships in S13-11"). The citation preview names the missing elements so the researcher can fill them.
+Any Source whose type maps to no pattern, or whose pattern is missing a required element, gets today's line: Source title, Artifact label, Citation label, page ([`citation-formats.md`](citation-formats.md) "What ships in S13-11"). Each board flags the needed fields that are empty so the researcher can fill them (§ 6.10).
 
 ---
 
@@ -702,16 +702,19 @@ A small syntax of our own, modelled on the convention genealogy programs use for
 | Syntax | Meaning |
 | --- | --- |
 | `{source.meta.key}`, `{artifact.meta.key}`, `{graph.meta.key}` | The value of the metadata field with that key **on that level**, as typed: the Source, the Citation's Artifact, or the Citation's Evidence graph |
-| `{meta.key}` | Shorthand: the most specific value, the graph's, else the Artifact's, else the Source's. Seeded formats use it so they work however finely the researcher files (§ 6.9) |
 | `{source.title}` and the other built-ins | Values that are not metadata (below) |
-| `{a\|b\|…}` | The first that has a value (`{meta.short_title\|source.title}`, `{meta.author_sort\|meta.author}`) |
+| `{a\|b\|…}` | The first that has a value, like SQL `COALESCE` (`{source.meta.short_title\|source.title}`, `{graph.meta.line_number\|source.meta.line_number}`). The only way a format falls back from one level to another |
 | `[ … ]` | Optional group: removed entirely, its text and punctuation included, if any placeholder inside it is empty. Groups nest |
 | `*…*` | Italic |
 | `\{` `\[` `\*` `\\` | A literal character |
 
-Everything else is literal text, including quotation marks and parentheses. The level prefix is what lets a format pick a value from a particular level (user, 2026-11-09): `{source.meta.url}` for the site a Source is from, `{artifact.meta.url}` for the image the Citation was drawn on. Metadata always sits under `meta.`, so a built-in and a metadata key can never collide, whatever the researcher names their fields (user, 2026-11-09).
+Everything else is literal text, including quotation marks and parentheses. **Every metadata placeholder names its level (user, 2026-11-13).** There is no unprefixed `{meta.key}` and no hidden fallback between levels: a format that wants the graph's value, else the Source's, writes `{graph.meta.key|source.meta.key}`, so anyone reading it sees the order. The level prefix is what lets a format pick a value from a particular level (user, 2026-11-09): `{source.meta.url}` for the site a Source is from, `{artifact.meta.url}` for the image the Citation was drawn on. Metadata always sits under `meta.`, so a built-in and a metadata key can never collide, whatever the researcher names their fields (user, 2026-11-09).
 
-**Empty placeholders outside a group** print nothing, and the preview names them as missing. So a format says which fields it expects (outside groups) and which are optional (inside groups), and the "missing fields" warning in the citation preview comes from the format itself.
+**Needed and used fields (user, 2026-11-13).** A placeholder outside any group is **needed**: empty, it leaves a hole and prints nothing. A placeholder inside a group is **used**: empty, its group drops out cleanly. A `{a|b}` chain is one requirement, met when any option has a value. The engine reads the type's three formats and derives, per level, the fields and built-ins they need or use; one function turns those requirements and the resolved values into what is missing (the format editor's preview shows it), and each metadata board shows its level's requirements (§ 6.10). A chain that is empty everywhere is flagged on its **first** option only, with a hint naming the others ("or on the Source"). A built-in in a chain whose last option always has a value (`{source.meta.short_title|source.title}`) is never needed.
+
+**A value can be marked unknown or supplied (user, 2026-11-13).** Every metadata value, the Source date and a Citation's printed page each carry two facts besides their text: **unknown** (the researcher has answered: the record does not give it) and **supplied** (the value is not on the record; the researcher took it from elsewhere). They are independent of a date's precision ("abt", "bef"), which says how exact a value is, not where it came from. A marked-unknown value meets its requirement and prints its field's **unknown text**: a field definition gains it (seeded: `publication_place` "n.p.", `publisher` "n.p."; researcher fields may leave it empty, and then print nothing), the Source date prints "n.d." and the printed page "unpaginated". A supplied value prints in square brackets ("[Topeka]", "[ca. 1880]"). Check every term against the edition on hand before the seed is merged.
+
+**Dates in citations use citation terms (user, 2026-11-13).** The app's pages keep writing "abt 1880"; a citation writes a DateValue's qualifiers the way citation style does ("ca. 1880", "bef. 3 March 1830", "aft. 1880", "1878–1882"), day-month-year, months spelled out except in the short note (§ 2). `core/datevalue` owns it, as a second display style (`CitationDisplay`) beside `CompactDisplay`, so one package turns a DateValue into text; the app's date display is unchanged.
 
 **No transforms on metadata (user, 2026-11-09).** Metadata is free text, so the engine never reorders, inverts or abbreviates it. A researcher who wants "Smith, Alice" in the source list fills `author_sort`; one who wants "Co." in short notes types it that way, or leaves the full form. Each field's description says to enter the value as it should appear.
 
@@ -734,9 +737,9 @@ The Citation level has only built-ins: Citations carry no metadata (§ 6.9).
 
 #### Resolving a placeholder
 
-A level-prefixed placeholder reads that level only. `{meta.key}` reads the Citation's Evidence graph, else its Artifact, else the Source (§ 6.6). The **list** form describes the Source as a whole, so it reads Source values only: `{meta.key}` there means `{source.meta.key}`, and an `artifact.`, `graph.` or `citation.` placeholder is an error the editor reports.
+A placeholder reads its own level only; a `{a|b}` chain is how a format reads another level when the first is empty. The **list** form describes the Source as a whole, so it reads Source values only: an `artifact.`, `graph.` or `citation.` placeholder there is an error the editor reports. An unprefixed `{meta.key}` is a parse error that names the three levels.
 
-The editor's **Insert field** picker groups fields by level (Source, Artifact, Evidence graph, Citation) and inserts the prefixed form (`{graph.meta.line_number}`); the researcher can shorten it to `{meta.line_number}` to read the most specific level.
+The editor's **Insert field** picker groups fields by level (Source, Artifact, Evidence graph, Citation) and inserts the prefixed form (`{graph.meta.line_number}`); a researcher who files at another level writes a chain (`{graph.meta.line_number|source.meta.line_number}`).
 
 #### Storage
 
@@ -763,7 +766,7 @@ Revisit before release, when existing projects belong to other researchers.
 
 ### 6.5 The item
 
-**Decision (user, 2026-11-09): the item is a graph-level metadata field, `item`, typed once per Evidence graph.** It is what the graph is about, phrased as a citation wants it: "Ada Robins", "household of John Smith", "baptism of Ada Smith, 3 March 1830", "John Smith to William Robins". Every Citation drawn in the graph inherits it, so the Citations of one household render one citation (§ 6.9). Seeded formats read `{meta.item}`.
+**Decision (user, 2026-11-09): the item is a graph-level metadata field, `item`, typed once per Evidence graph.** It is what the graph is about, phrased as a citation wants it: "Ada Robins", "household of John Smith", "baptism of Ada Smith, 3 March 1830", "John Smith to William Robins". Every Citation drawn in the graph inherits it, so the Citations of one household render one citation (§ 6.9). Seeded formats read `{graph.meta.item|source.meta.item}`.
 
 **Why not read it from each Citation.** Deriving it per Citation, from the Subjects whose Observations cite that Citation, gives the Citations of one row different items (the name column cites the person, the relationship column cites two), so they would never group; and it needs a rule for the principal when a Citation supports several people. A graph-level field avoids both.
 
@@ -824,7 +827,7 @@ CREATE TABLE evidence_graph_metadata_layout (
 ```
 
 - **Same fields, three levels.** All three levels take any field from the one vocabulary, seeded and researcher-made alike. No new columns on `artifacts` or `citations`.
-- **The most specific value wins.** For each key, the format engine reads the value on the Citation's graph, else on its Artifact, else on the Source. A researcher who files one Source per household never needs the graph level; one who files the whole page as a Source fills line numbers per graph, one graph per household (§ 6.9).
+- **The format says which level it reads.** Each placeholder names its level, and a chain says the fallback (§ 6.3; this replaced an implicit graph-else-Artifact-else-Source rule, user, 2026-11-13). The seeded formats read item fields as `{graph.meta.key|source.meta.key}`, so a researcher who files one Source per household never needs the graph level; one who files the whole page as a Source fills line numbers per graph, one graph per household (§ 6.9).
 - **Templating follows the Source's type.** An Artifact's and a graph's suggestions are the `artifact` and `graph` rows of their Source's type, so a census Source suggests provider and URL on each Artifact and line, dwelling and family on each graph. The Source types admin edits the three lists the way it edits one today.
 - **Layout works as on the Source.** `ListWorkspace`'s merge rules (dismiss hides an empty suggestion, saved order first, then suggestions, then extras) apply unchanged per Artifact and per graph ([`source-layer-data-model.md`](../../source-layer-data-model.md) § 5.4). The Artifact form and the graph's edit view each get a metadata board built from the Source page's. The Citation composer gets none.
 - **Readers of the join** filter by level: `sourcetypes` and `sourcevocab` (suggestion ops and Install). The `effects` registry and the catalog model are unchanged (D-7).
@@ -850,9 +853,9 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 4. **Format engine:** `core/citationformat` (parse, resolve, render), the three format columns, the FFI calls, and the provenance sheet's citation line reading the full format, with today's line as the fallback.
 5. **Format editor** on the Source type, with the live preview.
 6. **Seed:** every type, field, suggestion and format in § 6.8, installed at create; a one-off command updates the dogfood projects (§ 6.4). It is data, so it can land in batches if one PR is too large.
-7. **Citation preview** on the Source page, naming missing fields.
+7. **Needed fields** flagged on each metadata board, with unknown and supplied values (§ 6.10).
 8. **Grouped display:** the provenance sheet and the Person page's Sources section show one full note per rendered citation (§ 6.9).
-9. **Copy citation**, full or short.
+9. **Copy citation**, full or short, from a Citation; **Copy source-list entry** from the Source page.
 
 ### 6.8 The seed
 
@@ -931,15 +934,15 @@ Lines are wrapped here for reading; a format is one line. Types that share a pat
 **Census**
 
 ```text
-full:  {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, {meta.schedule}]
-       [, ED {meta.enumeration_district}][, piece {meta.piece}][, fol. {meta.folio}][, p. {citation.page}]
-       [, schedule {meta.schedule_number}][, dwelling {meta.dwelling_number}][, family {meta.family_number}]
-       [, line {meta.line_number}][, {meta.item}][; {meta.format}, *{meta.provider}*]
-       [ ({meta.url}[ : accessed {meta.accessed_date}])][; citing {meta.citing}].
-short: {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, ED {meta.enumeration_district}]
-       [, fol. {meta.folio}][, p. {citation.page}][, dwell. {meta.dwelling_number}][, fam. {meta.family_number}]
-       [, {meta.item}].
-list:  {meta.jurisdiction}. {source.date:year} [{meta.creator} ]census[, {meta.schedule}].
+full:  {source.date:year} [{source.meta.creator} ]census, {source.meta.jurisdiction}[, {source.meta.schedule}]
+       [, ED {source.meta.enumeration_district}][, piece {source.meta.piece}][, fol. {graph.meta.folio|source.meta.folio}][, p. {citation.page}]
+       [, schedule {graph.meta.schedule_number|source.meta.schedule_number}][, dwelling {graph.meta.dwelling_number|source.meta.dwelling_number}][, family {graph.meta.family_number|source.meta.family_number}]
+       [, line {graph.meta.line_number|source.meta.line_number}][, {graph.meta.item|source.meta.item}][; {artifact.meta.format}, *{artifact.meta.provider}*]
+       [ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])][; citing {artifact.meta.citing}].
+short: {source.date:year} [{source.meta.creator} ]census, {source.meta.jurisdiction}[, ED {source.meta.enumeration_district}]
+       [, fol. {graph.meta.folio|source.meta.folio}][, p. {citation.page}][, dwell. {graph.meta.dwelling_number|source.meta.dwelling_number}][, fam. {graph.meta.family_number|source.meta.family_number}]
+       [, {graph.meta.item|source.meta.item}].
+list:  {source.meta.jurisdiction}. {source.date:year} [{source.meta.creator} ]census[, {source.meta.schedule}].
 ```
 
 > 1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (https://www.ancestry.com : accessed 12 March 2025); citing NARA microfilm publication T9, roll 393.
@@ -947,198 +950,198 @@ list:  {meta.jurisdiction}. {source.date:year} [{meta.creator} ]census[, {meta.s
 **Birth, marriage and death certificates** (each with its own word)
 
 ```text
-full:  [{meta.creator}, ]birth certificate[ no. {meta.document_number}][ ({source.date:full})][, {meta.item}]
-       [, vol. {meta.volume}][, p. {citation.page}][, entry {meta.entry_number}][; {meta.format}, *{meta.provider}*]
-       [ ({meta.url}[ : accessed {meta.accessed_date}])][; {meta.repository}].
-short: [{meta.creator}, ]birth certificate[ no. {meta.document_number}][, {meta.item}].
-list:  {meta.jurisdiction}.[ {meta.creator}.] Birth certificates.[ {meta.repository}.]
+full:  [{source.meta.creator}, ]birth certificate[ no. {source.meta.document_number}][ ({source.date:full})][, {graph.meta.item|source.meta.item}]
+       [, vol. {source.meta.volume}][, p. {citation.page}][, entry {graph.meta.entry_number|source.meta.entry_number}][; {artifact.meta.format}, *{artifact.meta.provider}*]
+       [ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])][; {source.meta.repository}].
+short: [{source.meta.creator}, ]birth certificate[ no. {source.meta.document_number}][, {graph.meta.item|source.meta.item}].
+list:  {source.meta.jurisdiction}.[ {source.meta.creator}.] Birth certificates.[ {source.meta.repository}.]
 ```
 
 **Church register**
 
 ```text
-full:  {meta.creator}[ ({meta.jurisdiction})], *{source.title}*[, vol. {meta.volume}][, p. {citation.page}]
-       [, fol. {meta.folio}][, no. {meta.entry_number}][, {meta.item}][; {meta.format}, *{meta.provider}*]
-       [ ({meta.url}[ : accessed {meta.accessed_date}])][; film {meta.film_number}[, item {meta.item_number}]]
-       [; {meta.repository}].
-short: {meta.creator}, *{meta.short_title|source.title}*[, vol. {meta.volume}][, p. {citation.page}]
-       [, no. {meta.entry_number}].
-list:  {meta.creator}[ ({meta.jurisdiction})]. *{source.title}*[, {meta.coverage}].[ {meta.repository}.]
+full:  {source.meta.creator}[ ({source.meta.jurisdiction})], *{source.title}*[, vol. {source.meta.volume}][, p. {citation.page}]
+       [, fol. {graph.meta.folio|source.meta.folio}][, no. {graph.meta.entry_number|source.meta.entry_number}][, {graph.meta.item|source.meta.item}][; {artifact.meta.format}, *{artifact.meta.provider}*]
+       [ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])][; film {artifact.meta.film_number}[, item {artifact.meta.item_number}]]
+       [; {source.meta.repository}].
+short: {source.meta.creator}, *{source.meta.short_title|source.title}*[, vol. {source.meta.volume}][, p. {citation.page}]
+       [, no. {graph.meta.entry_number|source.meta.entry_number}].
+list:  {source.meta.creator}[ ({source.meta.jurisdiction})]. *{source.title}*[, {source.meta.coverage}].[ {source.meta.repository}.]
 ```
 
 **Record book**
 
 ```text
-full:  {meta.jurisdiction}, [{meta.creator}, ]{meta.book|source.title}[: {citation.page}][, entry {meta.entry_number}]
-       [, {meta.item}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
-       [; film {meta.film_number}][; {meta.repository}].
-short: {meta.jurisdiction}, {meta.book|source.title}[: {citation.page}].
-list:  {meta.jurisdiction}.[ {meta.creator}.] {source.title}[, {meta.coverage}].[ {meta.repository}.]
+full:  {source.meta.jurisdiction}, [{source.meta.creator}, ]{source.meta.book|source.title}[: {citation.page}][, entry {graph.meta.entry_number|source.meta.entry_number}]
+       [, {graph.meta.item|source.meta.item}][; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])]
+       [; film {artifact.meta.film_number}][; {source.meta.repository}].
+short: {source.meta.jurisdiction}, {source.meta.book|source.title}[: {citation.page}].
+list:  {source.meta.jurisdiction}.[ {source.meta.creator}.] {source.title}[, {source.meta.coverage}].[ {source.meta.repository}.]
 ```
 
 **Passenger list**
 
 ```text
-full:  {source.title}[, p. {citation.page}][, line {meta.line_number}][, {meta.item}]
-       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
-       [; citing {meta.citing}][; {meta.film_publication}[, roll {meta.roll}]].
-short: {meta.short_title|source.title}[, p. {citation.page}][, line {meta.line_number}].
-list:  [{meta.creator}. ]{meta.collection|source.title}.[ {meta.repository}.]
+full:  {source.title}[, p. {citation.page}][, line {graph.meta.line_number|source.meta.line_number}][, {graph.meta.item|source.meta.item}]
+       [; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])]
+       [; citing {artifact.meta.citing}][; {artifact.meta.film_publication}[, roll {artifact.meta.roll}]].
+short: {source.meta.short_title|source.title}[, p. {citation.page}][, line {graph.meta.line_number|source.meta.line_number}].
+list:  [{source.meta.creator}. ]{source.meta.collection|source.title}.[ {source.meta.repository}.]
 ```
 
 **Case file**
 
 ```text
-full:  {meta.jurisdiction}, [{meta.creator}, ]{source.title}[ {meta.case_number}][, {meta.item}]
-       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])][; {meta.repository}].
-short: {meta.jurisdiction}, {meta.short_title|source.title}[ {meta.case_number}][, {meta.item}].
-list:  {meta.jurisdiction}.[ {meta.creator}.] {meta.collection|source.title}.[ {meta.repository}.]
+full:  {source.meta.jurisdiction}, [{source.meta.creator}, ]{source.title}[ {source.meta.case_number}][, {graph.meta.item|source.meta.item}]
+       [; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])][; {source.meta.repository}].
+short: {source.meta.jurisdiction}, {source.meta.short_title|source.title}[ {source.meta.case_number}][, {graph.meta.item|source.meta.item}].
+list:  {source.meta.jurisdiction}.[ {source.meta.creator}.] {source.meta.collection|source.title}.[ {source.meta.repository}.]
 ```
 
 **Archived manuscript**
 
 ```text
-full:  [{meta.creator}, ]{source.title}[ ({source.date:full})][, {meta.item}][; {meta.collection}]
-       [, {meta.call_number}][, box {meta.box}][, folder {meta.folder}][; {meta.format}, *{meta.provider}*]
-       [ ({meta.url}[ : accessed {meta.accessed_date}])]; {meta.repository}.
-short: [{meta.creator}, ]{meta.short_title|source.title}[, {meta.collection}][, box {meta.box}][, folder {meta.folder}].
-list:  {meta.collection|source.title}[, {meta.coverage}].[ {meta.call_number}.] {meta.repository}.
+full:  [{source.meta.creator}, ]{source.title}[ ({source.date:full})][, {graph.meta.item|source.meta.item}][; {source.meta.collection}]
+       [, {source.meta.call_number}][, box {source.meta.box}][, folder {source.meta.folder}][; {artifact.meta.format}, *{artifact.meta.provider}*]
+       [ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])]; {source.meta.repository}.
+short: [{source.meta.creator}, ]{source.meta.short_title|source.title}[, {source.meta.collection}][, box {source.meta.box}][, folder {source.meta.folder}].
+list:  {source.meta.collection|source.title}[, {source.meta.coverage}].[ {source.meta.call_number}.] {source.meta.repository}.
 ```
 
 **Government file**
 
 ```text
-full:  {source.title}[ ({source.date:full})][, {meta.item}][; {meta.collection}][; Record Group {meta.record_group}]
-       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
-       [; {meta.film_publication}[, roll {meta.roll}]]; {meta.repository}.
-short: {meta.short_title|source.title}[, {meta.item}].
-list:  {meta.repository}.[ Record Group {meta.record_group}.] {meta.collection|source.title}.
+full:  {source.title}[ ({source.date:full})][, {graph.meta.item|source.meta.item}][; {source.meta.collection}][; Record Group {source.meta.record_group}]
+       [; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])]
+       [; {artifact.meta.film_publication}[, roll {artifact.meta.roll}]]; {source.meta.repository}.
+short: {source.meta.short_title|source.title}[, {graph.meta.item|source.meta.item}].
+list:  {source.meta.repository}.[ Record Group {source.meta.record_group}.] {source.meta.collection|source.title}.
 ```
 
 **Grave marker** (`creator` is the cemetery)
 
 ```text
-full:  {meta.creator}[ ({meta.jurisdiction})], {meta.item|source.title}[, section {meta.section}][, lot {meta.lot}]
-       [; photographed by {meta.photographer}[, {meta.accessed_date}]].
-short: {meta.creator}[ ({meta.jurisdiction})], {meta.item|source.title}.
-list:  {meta.jurisdiction}. {meta.creator}. Grave markers.
+full:  {source.meta.creator}[ ({source.meta.jurisdiction})], {graph.meta.item|source.meta.item|source.title}[, section {source.meta.section}][, lot {source.meta.lot}]
+       [; photographed by {source.meta.photographer}[, {artifact.meta.accessed_date}]].
+short: {source.meta.creator}[ ({source.meta.jurisdiction})], {graph.meta.item|source.meta.item|source.title}.
+list:  {source.meta.jurisdiction}. {source.meta.creator}. Grave markers.
 ```
 
 **Family Bible**
 
 ```text
-full:  {source.title}[, *{meta.published_in}*][ ([{meta.publication_place}: ]{meta.publisher}[, {source.date:year}])]
-       [, {meta.item}][; {meta.holder}].
-short: {meta.short_title|source.title}[, {meta.item}].
-list:  {source.title}[, {meta.coverage}].[ *{meta.published_in}*.][ {meta.holder}.]
+full:  {source.title}[, *{source.meta.published_in}*][ ([{source.meta.publication_place}: ]{source.meta.publisher}[, {source.date:year}])]
+       [, {graph.meta.item|source.meta.item}][; {source.meta.holder}].
+short: {source.meta.short_title|source.title}[, {graph.meta.item|source.meta.item}].
+list:  {source.title}[, {source.meta.coverage}].[ *{source.meta.published_in}*.][ {source.meta.holder}.]
 ```
 
 **Photograph**
 
 ```text
-full:  {source.title}[, {meta.medium}][, {source.date:full}][, {meta.photographer|meta.studio}][; {meta.holder}].
-short: {meta.short_title|source.title}[, {source.date:year}].
-list:  {source.title}.[ {meta.medium}.][ {meta.holder}.]
+full:  {source.title}[, {source.meta.medium}][, {source.date:full}][, {source.meta.photographer|source.meta.studio}][; {source.meta.holder}].
+short: {source.meta.short_title|source.title}[, {source.date:year}].
+list:  {source.title}.[ {source.meta.medium}.][ {source.meta.holder}.]
 ```
 
 **Private papers**
 
 ```text
-full:  [{meta.creator}, ]{source.title}[, {source.date:full}][, {meta.item}][; {meta.holder}].
-short: [{meta.creator}, ]{meta.short_title|source.title}[, {meta.item}].
-list:  [{meta.creator}. ]{source.title}[, {meta.coverage}].[ {meta.holder}.]
+full:  [{source.meta.creator}, ]{source.title}[, {source.date:full}][, {graph.meta.item|source.meta.item}][; {source.meta.holder}].
+short: [{source.meta.creator}, ]{source.meta.short_title|source.title}[, {graph.meta.item|source.meta.item}].
+list:  [{source.meta.creator}. ]{source.title}[, {source.meta.coverage}].[ {source.meta.holder}.]
 ```
 
 **DNA match report**
 
 ```text
-full:  {meta.testing_company}, {source.title}[, kit {meta.kit_number}][, match {meta.match_identifier}]
-       [, {meta.item}][, report dated {source.date:full}][; {meta.holder}].
-short: {meta.testing_company}, {meta.short_title|source.title}[, match {meta.match_identifier}].
-list:  {meta.testing_company}. {source.title}.[ {meta.holder}.]
+full:  {source.meta.testing_company}, {source.title}[, kit {source.meta.kit_number}][, match {source.meta.match_identifier}]
+       [, {graph.meta.item|source.meta.item}][, report dated {source.date:full}][; {source.meta.holder}].
+short: {source.meta.testing_company}, {source.meta.short_title|source.title}[, match {source.meta.match_identifier}].
+list:  {source.meta.testing_company}. {source.title}.[ {source.meta.holder}.]
 ```
 
 **GEDCOM file**
 
 ```text
-full:  [{meta.creator}, ]{source.title}[, GEDCOM file exported from {meta.software}][, {source.date:full}]
-       [, {meta.item}][; {meta.holder}].
-short: [{meta.creator}, ]{meta.short_title|source.title}[, {meta.item}].
-list:  [{meta.creator}. ]{source.title}.[ {meta.holder}.]
+full:  [{source.meta.creator}, ]{source.title}[, GEDCOM file exported from {source.meta.software}][, {source.date:full}]
+       [, {graph.meta.item|source.meta.item}][; {source.meta.holder}].
+short: [{source.meta.creator}, ]{source.meta.short_title|source.title}[, {graph.meta.item|source.meta.item}].
+list:  [{source.meta.creator}. ]{source.title}.[ {source.meta.holder}.]
 ```
 
 **Interview** (oral testimony: the same, with `interview by` inside an optional group)
 
 ```text
-full:  {meta.interviewee}[ ({meta.jurisdiction})], interview by {meta.interviewer}, {source.date:full}
-       [, {meta.item}][; {meta.holder}].
-short: {meta.interviewee}, interview, {source.date:full}.
-list:  {meta.interviewee}. Interview by {meta.interviewer}.[ {meta.jurisdiction},] {source.date:full}.[ {meta.holder}.]
+full:  {source.meta.interviewee}[ ({source.meta.jurisdiction})], interview by {source.meta.interviewer}, {source.date:full}
+       [, {graph.meta.item|source.meta.item}][; {source.meta.holder}].
+short: {source.meta.interviewee}, interview, {source.date:full}.
+list:  {source.meta.interviewee}. Interview by {source.meta.interviewer}.[ {source.meta.jurisdiction},] {source.date:full}.[ {source.meta.holder}.]
 ```
 
 **Correspondence**
 
 ```text
-full:  {meta.creator}[ ({meta.jurisdiction})] to {meta.recipient}, {source.title}, {source.date:full}[; {meta.holder}].
-short: {meta.creator} to {meta.recipient}, {source.date:full}.
-list:  {meta.creator}. Correspondence to {meta.recipient}[, {meta.coverage}].[ {meta.holder}.]
+full:  {source.meta.creator}[ ({source.meta.jurisdiction})] to {source.meta.recipient}, {source.title}, {source.date:full}[; {source.meta.holder}].
+short: {source.meta.creator} to {source.meta.recipient}, {source.date:full}.
+list:  {source.meta.creator}. Correspondence to {source.meta.recipient}[, {source.meta.coverage}].[ {source.meta.holder}.]
 ```
 
 **Book**
 
 ```text
-full:  {meta.author}[, ed. {meta.editor}][, comp. {meta.compiler}][, trans. {meta.translator}], *{source.title}*
-       [, {meta.edition}][, vol. {meta.volume}][, {meta.series}][ ([{meta.publication_place}: ]{meta.publisher}
-       [, {source.date:year}])][, {citation.page}][; {meta.format}, *{meta.provider}*]
-       [ ({meta.url}[ : accessed {meta.accessed_date}])].
-short: {meta.author}, *{meta.short_title|source.title}*[, {citation.page}].
-list:  {meta.author_sort|meta.author}. *{source.title}*.[ {meta.edition}.][ [{meta.publication_place}: ]{meta.publisher}
+full:  {source.meta.author}[, ed. {source.meta.editor}][, comp. {source.meta.compiler}][, trans. {source.meta.translator}], *{source.title}*
+       [, {source.meta.edition}][, vol. {source.meta.volume}][, {source.meta.series}][ ([{source.meta.publication_place}: ]{source.meta.publisher}
+       [, {source.date:year}])][, {citation.page}][; {artifact.meta.format}, *{artifact.meta.provider}*]
+       [ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])].
+short: {source.meta.author}, *{source.meta.short_title|source.title}*[, {citation.page}].
+list:  {source.meta.author_sort|source.meta.author}. *{source.title}*.[ {source.meta.edition}.][ [{source.meta.publication_place}: ]{source.meta.publisher}
        [, {source.date:year}].]
 ```
 
 **Journal article** (broadcast: `published_in` is the programme, `publisher` the network)
 
 ```text
-full:  {meta.author}, "{source.title}," *{meta.published_in}*[ {meta.volume}][, no. {meta.issue}][ ({source.date:full})]
-       [: {meta.page_range}][, specifically {citation.page}].
-short: {meta.author}, "{meta.short_title|source.title}"[, {citation.page}].
-list:  {meta.author_sort|meta.author}. "{source.title}." *{meta.published_in}*[ {meta.volume}][, no. {meta.issue}]
-       [ ({source.date:full})][: {meta.page_range}].
+full:  {source.meta.author}, "{source.title}," *{source.meta.published_in}*[ {source.meta.volume}][, no. {source.meta.issue}][ ({source.date:full})]
+       [: {source.meta.page_range}][, specifically {citation.page}].
+short: {source.meta.author}, "{source.meta.short_title|source.title}"[, {citation.page}].
+list:  {source.meta.author_sort|source.meta.author}. "{source.title}." *{source.meta.published_in}*[ {source.meta.volume}][, no. {source.meta.issue}]
+       [ ({source.date:full})][: {source.meta.page_range}].
 ```
 
 **Newspaper item**
 
 ```text
-full:  "{source.title}," *{meta.published_in}*[ ({meta.jurisdiction})], {source.date:full}[, p. {citation.page}]
-       [, col. {meta.column}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])].
-short: "{meta.short_title|source.title}," *{meta.published_in}*, {source.date:full}.
-list:  *{meta.published_in}*[ ({meta.jurisdiction})].
+full:  "{source.title}," *{source.meta.published_in}*[ ({source.meta.jurisdiction})], {source.date:full}[, p. {citation.page}]
+       [, col. {graph.meta.column|source.meta.column}][; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])].
+short: "{source.meta.short_title|source.title}," *{source.meta.published_in}*, {source.date:full}.
+list:  *{source.meta.published_in}*[ ({source.meta.jurisdiction})].
 ```
 
 **Website or online database**
 
 ```text
-full:  [{meta.creator}, ]"{source.title}," [{meta.format}, ]*{meta.site_name}*
-       [ ({meta.url}[ : accessed {meta.accessed_date}])][, {meta.item}][; citing {meta.citing}].
-short: "{meta.short_title|source.title}"[, {meta.item}].
-list:  [{meta.creator}. ]"{source.title}." *{meta.site_name}*.[ {meta.url}.]
+full:  [{source.meta.creator}, ]"{source.title}," [{artifact.meta.format}, ]*{source.meta.site_name}*
+       [ ({source.meta.url}[ : accessed {source.meta.accessed_date}])][, {graph.meta.item|source.meta.item}][; citing {artifact.meta.citing}].
+short: "{source.meta.short_title|source.title}"[, {graph.meta.item|source.meta.item}].
+list:  [{source.meta.creator}. ]"{source.title}." *{source.meta.site_name}*.[ {source.meta.url}.]
 ```
 
 **Statute**
 
 ```text
-full:  {meta.jurisdiction}, *{meta.published_in}*[ {source.date:year}][, vol. {meta.volume}][, chap. {meta.chapter}]
-       [, sec. {meta.section}][, p. {citation.page}].
-short: {meta.jurisdiction}, *{meta.published_in}*[ {source.date:year}][, chap. {meta.chapter}].
-list:  {meta.jurisdiction}. *{meta.published_in}*[, {source.date:year}].
+full:  {source.meta.jurisdiction}, *{source.meta.published_in}*[ {source.date:year}][, vol. {source.meta.volume}][, chap. {source.meta.chapter}]
+       [, sec. {source.meta.section}][, p. {citation.page}].
+short: {source.meta.jurisdiction}, *{source.meta.published_in}*[ {source.date:year}][, chap. {source.meta.chapter}].
+list:  {source.meta.jurisdiction}. *{source.meta.published_in}*[, {source.date:year}].
 ```
 
 **Court report**
 
 ```text
-full:  *{source.title}*, [{meta.volume} ]{meta.published_in} {citation.page|meta.page_range}[ ({source.date:year})].
-short: *{meta.short_title|source.title}*[, {citation.page}].
-list:  *{source.title}*. [{meta.volume} ]{meta.published_in}[ ({source.date:year})].
+full:  *{source.title}*, [{source.meta.volume} ]{source.meta.published_in} {citation.page|source.meta.page_range}[ ({source.date:year})].
+short: *{source.meta.short_title|source.title}*[, {citation.page}].
+list:  *{source.title}*. [{source.meta.volume} ]{source.meta.published_in}[ ({source.date:year})].
 ```
 
 ### 6.9 One EE citation, many Provenencia Citations
@@ -1157,11 +1160,40 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 2. **Showing the item once:** wherever Citations are listed for a reader (the provenance sheet, the Person page's Sources section, an export), Citations whose rendered full citation is the same are one EE citation; in practice, the same graph, Artifact and printed page. The full note shows once, with its Citations (the highlighted cells) beneath it. The same key gives the short note on second mention; a source list groups one level up, by Source. The key is computed when read; nothing new is stored.
 3. **Editing the item:** once, on the graph.
 
-**When one graph covers several items.** A researcher who keeps the Default graph for a page with two households of interest gets one set of item fields for both. The answer is the one Spike 12 intended: one graph per household. The Citation label stays the escape hatch ("line 14"), and the citation preview shows the result.
+**When one graph covers several items.** A researcher who keeps the Default graph for a page with two households of interest gets one set of item fields for both. The answer is the one Spike 12 intended: one graph per household. The Citation label stays the escape hatch ("line 14"), and the provenance sheet shows the result.
 
 **The printed page stays on the Citation,** because it is the one part of the item that can differ inside a graph. It already exists on the locator (`page_label`). If that is still too much input, a later option is a page map per Artifact ("image 37 is page 23"), entered once, so every Citation inherits the printed page from the image it is drawn on (§ 7).
 
-**Researchers who file finely skip the graph level.** If the Source is the household (one Source per household, each with an Artifact of the same page image, which the content-addressed File store already shares), the item values sit on the Source.
+**Researchers who file finely skip the graph level.** If the Source is the household (one Source per household, each with an Artifact of the same page image, which the content-addressed File store already shares), the item values sit on the Source, and the seeded chains `{graph.meta.key|source.meta.key}` read them there.
+
+### 6.10 Needed fields, unknown and supplied values (user, 2026-11-13)
+
+This replaces the Source page's citation preview (the S15-D1 "Citation" section, SD-11 – SD-13), which is not built. A preview on the Source page reported gaps in one place while most of them are fixed on an Artifact or a graph, and it needed a "For" Citation picker because the full and short notes belong to a Citation, not a Source. Copying a note stays where notes are used (the provenance sheet, the Person page's Sources section).
+
+**The forms and who owns them.** The full and short notes are a Citation's: they read its Artifact (the copy layer), its graph (the item) and its printed page. The source-list entry is the Source's: one line in a bibliography, for every time it is cited. So the Source page offers **Copy source-list entry** (rich text), and nothing renders a note there. Copying the entries of several Sources at once, from the Sources list, is parked in [`ideas/copy-source-list-entries.md`](../../ideas/copy-source-list-entries.md).
+
+**The requirements ride the board.** For a Source type, the engine derives from its three formats, per level (Source, Artifact, graph, Citation), each requirement: the field ids or built-ins in it (a chain has several, first one first), and **needed** or **used** (§ 6.3). The board's merge in Go (`sourcemetadata.listWorkspaces`, which already merges suggestions, values, dismissals and extras) annotates each entry with its requirement and whether its chain is met at another level, and emits a needed or used field even when it is not suggested or was dismissed; `DismissSuggestion` refuses a needed field. Every board read and write reply carries the annotation, so Swift draws it and decides nothing. A format edit reports a mutation that marks cached boards stale. Swift never parses a format.
+
+**On a metadata board** (the Source's, the Artifact sheet's, the graph form's), with the level's requirements:
+
+| Row | When | Shows | Dismiss |
+| --- | --- | --- | --- |
+| Saved value | Filled, or marked unknown or supplied | The value; "Unknown" with its unknown text; a supplied mark | — |
+| Needed for citation | A needed field with no value whose chain has no value at another level | The empty field, flagged unfilled | No: only a value or "unknown" answers it |
+| Used in citation | A used field with no value | The empty field, a quieter mark | As a suggestion |
+| Suggested by this type | A suggestion that is neither of the above | As today | As today |
+
+A field that is both suggested and needed shows once, as needed. A chain empty everywhere is flagged on its first option, with a hint naming the others. Filled at another level means not flagged.
+
+**Built-ins.** `{source.date}` is flagged in the Source page header where the date sits; `{citation.page}` in the citation composer. Labels and titles always have a value.
+
+**Unknown and supplied.** Each metadata value row, the Source date and the printed page can be marked **Unknown** (no text; prints the field's unknown text) or **Supplied** (text; prints in square brackets). A supplied date keeps its precision ("[ca. 1880]"). One Go type, `core/valuemark`, declares the pair and its rule (never both; unknown has no text) for every place that stores it, and the app builds one Unknown and Supplied control that the board row, the date dialog and the composer share. Storage:
+
+- `source_metadata`, `artifact_metadata`, `evidence_graph_metadata`: `is_unknown INTEGER NOT NULL DEFAULT 0` and `is_supplied INTEGER NOT NULL DEFAULT 0`, both `CHECK (… IN (0, 1))`, and `CHECK (NOT (is_unknown = 1 AND is_supplied = 1))`; an unknown row has no `value_text`.
+- `source_metadata_fields.unknown_text TEXT` (nullable): what a marked-unknown value prints. Seeded on the fields that have a convention ("n.p." for `publication_place` and `publisher`); editable on the Metadata page.
+- `sources.date_unknown` and `sources.date_supplied` (the same two facts beside `date_value_id`; unknown means no date value).
+- The locator's page: `page_unknown` and `page_supplied` beside `page_label` in its JSON; no migration.
+- Copy Source and a move carry the two facts with their value; the audit records them as part of the value.
 
 ---
 

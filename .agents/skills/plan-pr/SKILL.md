@@ -96,6 +96,11 @@ board catches errors before code does (user, 2026-10-29). Only a PR whose views
 look the same before and after (a bugfix or a behavior change that draws nothing
 different) is not gated.
 
+**One brief, one PR.** This PR's brief is its own: it gates no other PR, and
+this PR implements no other brief's requirements. If an existing brief already
+drew part of this PR (an older multi-PR brief), do not copy from it; write this
+PR's own brief, starting from the frames on the board.
+
 | Situation | Do |
 | --- | --- |
 | No chrome change (every view looks the same) | Brief field: `— (no chrome change)`. Say why in one clause |
