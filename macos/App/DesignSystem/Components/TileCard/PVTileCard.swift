@@ -13,16 +13,9 @@ enum PVTileCardSize: Equatable {
         }
     }
 
-    /// The side of the square thumbnail slot.
+    /// The side of the square thumbnail slot, which is also the height the text beside it
+    /// gets. A compact card's thumbnail fills its height inside the padding.
     nonisolated var thumbnail: CGFloat {
-        switch self {
-        case .regular: 70
-        case .compact: 28
-        }
-    }
-
-    /// The height the thumbnail and the text stack share inside the padding.
-    nonisolated var contentHeight: CGFloat {
         switch self {
         case .regular: 70
         case .compact: 38
@@ -148,7 +141,7 @@ struct PVTileCard<Thumbnail: View, Title: View, Lines: View, Trailing: View>: Vi
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, minHeight: size.contentHeight, maxHeight: size.contentHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: size.thumbnail, maxHeight: size.thumbnail, alignment: .leading)
         }
         .frame(height: size.height)
         .clipped()

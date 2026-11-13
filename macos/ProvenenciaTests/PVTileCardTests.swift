@@ -7,7 +7,6 @@ struct PVTileCardTests {
         let regular = PVTileCardSize.regular
         #expect(regular.height == 92)
         #expect(regular.thumbnail == 70)
-        #expect(regular.contentHeight == 70)
         #expect(regular.titleLineLimit == 2)
         #expect(regular.linesLineLimit == 2)
         #expect(regular.minimumWidth == 120)
@@ -16,8 +15,7 @@ struct PVTileCardTests {
 
         let compact = PVTileCardSize.compact
         #expect(compact.height == 46)
-        #expect(compact.thumbnail == 28)
-        #expect(compact.contentHeight == 38)
+        #expect(compact.thumbnail == 38)
         #expect(compact.titleLineLimit == 1)
         #expect(compact.linesLineLimit == 1)
         #expect(compact.minimumWidth == 300)
@@ -33,8 +31,15 @@ struct PVTileCardTests {
         let text = layout.defaultLineHeight(for: PVPersonCard.nsTitleFont(size))
             + size.lineSpacing
             + layout.defaultLineHeight(for: PVPersonCard.nsCompactYearsFont)
-        #expect(text <= size.contentHeight)
-        #expect(size.contentHeight + size.padding.top + size.padding.bottom == size.height)
-        #expect(size.thumbnail <= size.contentHeight)
+        #expect(text <= size.thumbnail)
+    }
+
+    /// A compact card's thumbnail fills the card's height inside the padding, with the
+    /// same inset above, below and to its left.
+    @Test func compactThumbnailFillsItsEdgeEvenly() {
+        let size = PVTileCardSize.compact
+        #expect(size.thumbnail + size.padding.top + size.padding.bottom == size.height)
+        #expect(size.padding.leading == size.padding.top)
+        #expect(size.padding.top == size.padding.bottom)
     }
 }
