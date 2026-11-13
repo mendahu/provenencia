@@ -32,4 +32,8 @@ Maintainability: **Fits with changes**. Executability: **Not ready**.
 
 ## Round 2
 
-Pending.
+Maintainability: **Fits with changes** — every round-1 answer holds.
+
+| ID | Sev | Finding | Answer |
+| --- | --- | --- | --- |
+| M-10 | blocker | D-2 called `subjects` once per kind, so Build would profile persons before events and give every person an empty life; Check reuses Build, so Verify would not catch it | Fixed — D-2: one `subjects` call over all three kinds, never per kind; T-2 asserts the person's lifespan lead is non-empty after `Warm` |
