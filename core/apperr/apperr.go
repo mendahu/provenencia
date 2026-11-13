@@ -131,14 +131,16 @@ const (
 	CodeFileDerivativesCorruptObject = "filederivatives.corrupt_object"
 )
 
-// Error is a coded application error. Params are ordered L10n format args.
+// Error is a coded application error. Params are ordered L10n format args or,
+// where the code's doc says so, the id of the row the refusal is about.
 type Error struct {
 	code   string
 	kind   Kind
 	params []string
 }
 
-// New returns a coded error. params are optional interpolation arguments.
+// New returns a coded error. params are optional interpolation arguments or,
+// where the code's doc says so, the id of the row the refusal is about.
 func New(code string, kind Kind, params ...string) *Error {
 	return &Error{code: code, kind: kind, params: append([]string(nil), params...)}
 }
