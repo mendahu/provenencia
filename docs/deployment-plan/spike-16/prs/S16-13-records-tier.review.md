@@ -70,3 +70,41 @@ Maintainability (fresh, strongest model): **Fits with changes**. Executability (
 ## Verdict
 
 Round 1 raised blockers that were all Fixed and one reshape (M-1). Round 2 is due.
+
+## Round 2 (2026-11-13)
+
+Fresh reviewers given the plan and this log. Maintainability: **Fits with changes** (round-1 answers hold; two new blockers). Executability: **Not ready** (two blockers, five lesser).
+
+### M-10 · blocker · The store entry registered in `graphcache`, fed by `graphfill`'s setter hooks
+**Answer:** Fixed — D-2: `graphfill` owns `graphfill.Graphs` with `EvidenceGraph`, `PeekEvidenceGraph`, `LoadEvidenceGraph` and `MaxEvidenceGraphs`; the ten callers switch; the setters, hook vars and `*ForTest` hooks leave `graphcache`. STEP-3.
+
+### M-11 · blocker · Layers and candidates Checks fill other entries during Verify
+**Answer:** Fixed — D-1: a Check reads no keyed entry through `Get`, `GetMany`, `Peek` or `Set`; D-8 and D-9 rebuild from `graphfill.LoadEvidenceGraph` and `evidencelayer.Build`; AC-4.9 and T-14 hold Verify read-only.
+
+### Below the bar: `cl.Claim.ClaimID` names two concepts
+**Answer:** Fixed — `SubjectRecord.Accepted`; the claim id is `cl.Accepted.ClaimID`.
+
+### X-11 · blocker · STEP-2 and STEP-3 order
+**Answer:** Fixed — STEP-2 removes memos only (store stays, without memos; `graphfill.MaxEvidenceGraphs` introduced; the cap test's memo cases go there) with its own `rg`; STEP-3 moves the store and runs AC-4.6's full `rg`; Scope rows and T-13 relabelled.
+
+### X-12 · blocker · Home of the test cap override
+**Answer:** Fixed — D-1: `Graph.capsForTest`, by entry id, survives `Drop` and `Clear`, applies to later containers; T-1 and T-1b test it across `Drop`.
+
+### X-13 · major · Candidates Check recipe
+**Answer:** Fixed — D-9 spells the inputs (`matchIndexOf`, `shortlistInputs(g, true)`, `LoadEvidenceGraph`, `Build`, `valuerules.Metas`), Subject selection, missing ids as mismatch, and `[][]byte{}` lists.
+
+### X-14 · major · `ScaleSeed` sources and signatures
+**Answer:** Fixed — D-14: `Base` seeds `ScaleSources+2`; method signatures; a second `NewScaleSeed` does not seed; imports checked.
+
+### X-15 · major · 80-graph record links budget unknown
+**Answer:** Fixed — STEP-1 measures the base first; D-15 adds `budgetLinks80` from it (× 1.25, not below `budgetLinksPast`).
+
+### X-16 · minor · Drop order and Peek during Verify
+**Answer:** Fixed — D-3 states the drop now runs in `applyEntries` and why it is safe; D-1's Check rule covers Peek.
+
+### X-17 · minor · T-8 fixture
+**Answer:** Fixed — T-8 names `f.source` and `evidencegraphstest.SoleGraph`.
+
+## Verdict
+
+Two rounds done. Every blocker Fixed; nothing To user. Plan **Planned**.
