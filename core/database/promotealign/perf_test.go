@@ -35,14 +35,18 @@ import (
 // raised from 1.5 s by the user on 2026-11-01: the CI runner measured 1.6–2.05 s
 // where a Mac measures 0.6 s (S13-02, S13-03). The warm figure was raised again
 // from 375 ms to 500 ms by the user on 2026-11-13, when the CI runner measured
-// 383 ms (S16-13; 1.25 times that is 479 ms). Warm history: 250, 350, 375,
-// 500 ms. Warm has now been raised for the CI runner: a proposal that creeps
-// toward 500 ms again is a real slowdown to investigate, not a reason to raise
-// it again.
+// 383 ms (S16-13; 1.25 times that is 479 ms), and again from 500 ms to 950 ms
+// by the user on 2026-11-13, because S16-16 composes each walked person's
+// kinship at every call instead of reading a stored answer (see
+// docs/ideas/promote-ranking.md#memoise-a-persons-composed-kinship): the CI
+// figure 383 ms times the worst ratio seen (1.96) times 1.25 headroom. Warm
+// history: 250, 350, 375, 500, 950 ms. Warm has now been raised for the CI
+// runner: a proposal that creeps toward 950 ms again is a real slowdown to
+// investigate, not a reason to raise it again.
 const (
 	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
-	budgetWarm         = 500 * time.Millisecond
+	budgetWarm         = 950 * time.Millisecond
 	budgetAfterCommit  = 2500 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
@@ -157,6 +161,25 @@ func newLargeFixture(t testing.TB, persons int) *largeFixture {
 	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, pageArt: pageArt, other: otherSrc, otherA: otherArt, city: cityID, citySubject: city}
 }
 
+// warmProposal is how long a warm proposal of Source A takes: the figure
+// TestLargeSourceBudgets gates and BenchmarkLargeSourcePropose reports.
+func (lf *largeFixture) warmProposal() time.Duration {
+	g := lf.Graph(lf.a)
+	return databasetest.Warm(func() { lf.propose(g, nil) })
+}
+
+// proposalAfterCommit is how long a proposal of Source A takes right after a
+// handle commit (a Person added to the other Source). n counts the people
+// added, so a name is never repeated across calls.
+func (lf *largeFixture) proposalAfterCommit(n *int) time.Duration {
+	g := lf.Graph(lf.a)
+	return databasetest.Fastest(2, func() time.Duration {
+		*n++
+		lf.promote(lf.Person(lf.other, lf.otherA, "Added "+letters(*n)+" Person"))
+		return databasetest.Since(func() { lf.propose(g, nil) })
+	})
+}
+
 // TestLargeSourceBudgets holds Promote to the times of S11-21 D-1 on a catalog
 // of 4,000 persons and 8,000 events (one city with 6,000), so a change that
 // makes it slow fails here instead of in a dogfood session. Subtests share one
@@ -202,11 +225,11 @@ func TestLargeSourceBudgets(t *testing.T) {
 	// A warm proposal rebuilds the canon each time, about 120 MB of short-lived
 	// allocations over a heap of about 170 MB, so each run sets off one or two
 	// collections (2026-11-03, a best of three measured 388 ms on a loaded CI
-	// runner against 110 – 190 ms on a Mac). The cost itself is
-	// docs/ideas/promote-ranking.md#narrower-canon-walk.
+	// runner against 110 – 190 ms on a Mac). The cost itself is S16-22's to
+	// narrow: it reads each handle's links from the kinship pivots instead of
+	// walking the component.
 	t.Run("warm", func(t *testing.T) {
-		d := databasetest.Warm(func() { propose() })
-		databasetest.WithinBudget(t, "warm proposal", d, budgetWarm)
+		databasetest.WithinBudget(t, "warm proposal", lf.warmProposal(), budgetWarm)
 	})
 
 	t.Run("memo matches a fresh run", func(t *testing.T) {
@@ -220,12 +243,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 
 	t.Run("after a handle commit", func(t *testing.T) {
 		n := 0
-		d := databasetest.Fastest(2, func() time.Duration {
-			n++
-			f.promote(f.Person(lf.other, lf.otherA, "Added "+letters(n)+" Person"))
-			return databasetest.Since(func() { propose() })
-		})
-		databasetest.WithinBudget(t, "proposal after a handle commit", d, budgetAfterCommit)
+		databasetest.WithinBudget(t, "proposal after a handle commit", lf.proposalAfterCommit(&n), budgetAfterCommit)
 	})
 
 	t.Run("warm queries", func(t *testing.T) {

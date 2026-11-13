@@ -2,6 +2,7 @@ package canonlinks
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 	"slices"
@@ -34,13 +35,6 @@ type pivotResult struct {
 	links []kinship.Implied
 }
 
-// personAnswer is one person's stored answer, For's or the siblings'. It is
-// shared and read-only.
-type personAnswer struct {
-	rules kinship.Rules
-	links []kinship.Implied
-}
-
 // maxKeys caps each kinship entry: a crafted catalog cannot grow one past it,
 // and past it the least recently used key leaves and is derived again on read.
 const maxKeys = 65_536
@@ -51,17 +45,6 @@ const maxKeys = 65_536
 // person's links and the results of their events, and both are one hop from
 // what they read.
 var pivots graphcache.Keyed[pivotResult]
-
-// forAnswers holds each person's full For answer. It reads nodes up to three
-// hops from the person (a birth, the parent, the parent's events), past what
-// the pivots' Apply can name, so any commit that names a handle drops all of
-// it. S16-16 deletes this entry.
-var forAnswers graphcache.Keyed[personAnswer]
-
-// siblingAnswers holds each person's implied siblings, for the page. A sibling
-// is two to four hops away, so any commit that names a handle drops all of it.
-// S16-16 deletes this entry.
-var siblingAnswers graphcache.Keyed[personAnswer]
 
 func init() {
 	pivots = graphcache.RegisterKeyed(graphcache.KeyedEntry[pivotResult]{
@@ -75,70 +58,7 @@ func init() {
 		Check: check,
 		Cap:   maxKeys,
 	})
-	forAnswers = graphcache.RegisterKeyed(graphcache.KeyedEntry[personAnswer]{
-		Name:        "canonlinks.for",
-		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
-		Apply:       clearOnHandles[personAnswer],
-		Check:       checkFor,
-		Cap:         maxKeys,
-	})
-	siblingAnswers = graphcache.RegisterKeyed(graphcache.KeyedEntry[personAnswer]{
-		Name:        "canonlinks.siblings",
-		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
-		Apply:       clearOnHandles[personAnswer],
-		Check:       checkSiblings,
-		Cap:         maxKeys,
-	})
 }
-
-// clearOnHandles empties the entry when a commit names any handle.
-func clearOnHandles[T any](g *graphcache.Graph, k graphcache.Keyed[T], roots [][]byte, _ effects.Set) error {
-	if len(roots) > 0 {
-		k.Clear(g)
-	}
-	return nil
-}
-
-// checkPersonAnswer rebuilds a stored per-person answer from the cached nodes
-// and compares. derive makes the answer for one id with a deriver that loads
-// nothing; found is false when the id has no answer to make.
-func checkPersonAnswer(derive func(d *deriver, id []byte) (links []kinship.Implied, found bool, err error)) func(g *graphcache.Graph, id []byte, res personAnswer) error {
-	return func(g *graphcache.Graph, id []byte, res personAnswer) error {
-		d, err := newDeriver(g, res.rules, cachedNodes(g))
-		if err != nil {
-			return err
-		}
-		links, found, err := derive(d, id)
-		if err != nil {
-			return err
-		}
-		if !found {
-			return fmt.Errorf("canonlinks: stored answer %x is for no cached person", id)
-		}
-		if !reflect.DeepEqual(res, personAnswer{rules: res.rules, links: links}) {
-			return fmt.Errorf("canonlinks: stored answer %x does not match a fresh derivation", id)
-		}
-		return nil
-	}
-}
-
-// checkFor checks a stored For answer: no pivot results are used.
-var checkFor = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Implied, bool, error) {
-	links, err := d.forLinks(id, d.eventLinks, func(m []byte) ([]kinship.Implied, error) {
-		return d.chainLinks(m, d.eventLinks)
-	})
-	return links, true, err
-})
-
-// checkSiblings checks a stored sibling answer.
-var checkSiblings = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Implied, bool, error) {
-	answers, err := d.siblingsOf([][]byte{id}, d.eventLinks)
-	if err != nil {
-		return nil, false, err
-	}
-	links, found := answers[string(id)]
-	return links, found, nil
-})
 
 // deps names every neighbor of each root, and the root.
 func deps(g *graphcache.Graph, roots [][]byte) [][]byte {
@@ -249,15 +169,6 @@ func (d *deriver) relationshipEdges(n *graphcache.Node) []kinship.Edge {
 	return out
 }
 
-// around reads a person's node and makes their neighbors available.
-func (d *deriver) around(id []byte) (*graphcache.Node, error) {
-	n, err := d.src.node(id)
-	if err != nil || n == nil {
-		return nil, err
-	}
-	return n, d.src.load(neighborsOf([]*graphcache.Node{n}))
-}
-
 // kinEdges is n's parent links for a canon read: each relationship link filed
 // on n, then the edge of each birth link in atEnd (n's event links).
 func (d *deriver) kinEdges(n *graphcache.Node, atEnd []kinship.Implied) []kinship.Edge {
@@ -271,13 +182,13 @@ func (d *deriver) kinEdges(n *graphcache.Node, atEnd []kinship.Implied) []kinshi
 }
 
 // parentEdges is n's parent links for a canon read: the links of the events n
-// stands in, then n's kin edges. event gives an event's links.
-func (d *deriver) parentEdges(n *graphcache.Node, event func([]byte) ([]kinship.Implied, error)) ([]kinship.Edge, error) {
-	atEnd, err := d.eventLinksAt(n, event)
+// stands in (atEnd), then n's kin edges. event gives an event's links.
+func (d *deriver) parentEdges(n *graphcache.Node, event func([]byte) ([]kinship.Implied, error)) (atEnd []kinship.Implied, edges []kinship.Edge, err error) {
+	atEnd, err = d.eventLinksAt(n, event)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return d.kinEdges(n, atEnd), nil
+	return atEnd, d.kinEdges(n, atEnd), nil
 }
 
 // eventLinks is what the event patterns imply over one event's links.
@@ -334,7 +245,7 @@ func (d *deriver) chainLinks(id []byte, eventResult func([]byte) ([]kinship.Impl
 	if err != nil || n == nil {
 		return nil, err
 	}
-	edges, err := d.parentEdges(n, eventResult)
+	_, edges, err := d.parentEdges(n, eventResult)
 	if err != nil {
 		return nil, err
 	}
@@ -387,116 +298,69 @@ func (r *Reader) chain(id []byte) ([]kinship.Implied, error) {
 
 // For returns every spouse, parent and grandparent link the patterns imply
 // with id as an end: the links of each event id stands in, then the chain links
-// through each parent and child of id. The answer is stored until the next
-// commit that names a handle; the slice and its links are the cache's, shared
-// and read-only. Links from different pivots differ in Event or Through, so
-// none is repeated.
+// through each parent and child of id. It composes the answer from the pivot
+// results at each call and stores none; the slice is the caller's to read and
+// must not be changed, since its links are the pivots'. Links from different
+// pivots differ in Event or Through, so none is repeated. An id that is no node
+// has no links.
 func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
-	got, err := forAnswers.GetMany(r.g, [][]byte{id}, func(missing [][]byte) (map[string]personAnswer, error) {
-		n, err := r.d.around(id)
-		if err != nil || n == nil {
-			// An id that is no node has no answer to keep.
-			return map[string]personAnswer{}, err
-		}
-		out, err := r.d.forLinks(id, r.event, r.chain)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]personAnswer{string(id): {rules: r.d.rules, links: out}}, nil
-	})
-	if err != nil {
+	steps, err := r.d.loadSteps([][]byte{id}, r.event)
+	if err != nil || len(steps) == 0 {
 		return nil, err
 	}
-	return got[string(id)].links, nil
+	return r.d.forLinks(steps[0], r.chain)
 }
 
 // Options are what Relationships returns beyond the person's recorded and
 // For-implied links. Siblings adds the siblings a shared parent implies.
 type Options struct{ Siblings bool }
 
-// Relationships returns id's relationship links, recorded and implied, one per
-// pair of ends and keys: each relationship link filed on id, then For's links,
-// then, with opts.Siblings, the siblings a shared parent implies, merged through
-// one kinship.LinkSet. The caller owns the slice and its bytes. Nothing is
-// filtered: a link to a merged person is returned, as For returns implied links
-// to one.
-func (r *Reader) Relationships(id []byte, opts Options) ([]kinship.Link, error) {
-	n, err := r.d.around(id)
-	if err != nil || n == nil {
-		return nil, err
-	}
-	set := kinship.NewLinkSet()
-	for _, e := range r.d.relationshipEdges(n) {
-		set.Add(kinship.Link{Edge: e})
-	}
-	implied, err := r.For(id)
+// Relationships returns each id's relationship links, recorded and implied, one
+// per pair of ends and keys: each relationship link filed on the id, then For's
+// links, then, with opts.Siblings, the siblings a shared parent implies, merged
+// through one kinship.LinkSet. It loads what it reads in a fixed number of
+// batches however many ids and relatives there are. An id that is no node has no
+// entry. The caller owns each slice and its bytes. Nothing is filtered: a link to
+// a merged person is returned, as For returns implied links to one.
+func (r *Reader) Relationships(ids [][]byte, opts Options) (map[string][]kinship.Link, error) {
+	steps, err := r.d.loadSteps(ids, r.event)
 	if err != nil {
 		return nil, err
 	}
-	for _, imp := range implied {
-		set.AddImplied(imp)
-	}
+	var siblings map[string][]kinship.Implied
 	if opts.Siblings {
-		answers, err := r.siblings([][]byte{id})
+		siblings, err = r.d.siblingsOf(steps, r.event)
 		if err != nil {
 			return nil, err
 		}
-		for _, imp := range answers[string(id)].links {
+	}
+	out := make(map[string][]kinship.Link, len(steps))
+	for _, s := range steps {
+		set := kinship.NewLinkSet()
+		for _, e := range r.d.relationshipEdges(s.node) {
+			set.Add(kinship.Link{Edge: e})
+		}
+		implied, err := r.d.forLinks(s, r.chain)
+		if err != nil {
+			return nil, err
+		}
+		for _, imp := range implied {
 			set.AddImplied(imp)
 		}
-	}
-	return set.Links(), nil
-}
-
-// LoadRelationships loads what Relationships(id, opts) reads for each id in a
-// fixed number of batches, however many ids and relatives: the ids, their
-// neighbors, the people one parent step from each, and those people's
-// neighbors. It then derives and stores each id's For answer, and with
-// opts.Siblings the siblings'. After it, Relationships for each id issues no
-// query. An id that is no node stores nothing.
-func (r *Reader) LoadRelationships(ids [][]byte, opts Options) error {
-	if _, err := r.d.loadSteps(ids, r.event); err != nil {
-		return err
-	}
-	for _, id := range ids {
-		if _, err := r.For(id); err != nil {
-			return err
+		for _, imp := range siblings[string(s.node.ID)] {
+			set.AddImplied(imp)
 		}
+		out[string(s.node.ID)] = set.Links()
 	}
-	if opts.Siblings {
-		return r.LoadSiblings(ids)
-	}
-	return nil
+	return out, nil
 }
 
-// LoadSiblings derives and stores the implied siblings of each id that has none
-// stored, loading every id's nodes in a fixed number of batches. An id that is
-// no node stores nothing.
-func (r *Reader) LoadSiblings(ids [][]byte) error {
-	_, err := r.siblings(ids)
-	return err
-}
-
-// siblings is each id's stored sibling answer, derived for those without one.
-// An id that is no node has no entry.
-func (r *Reader) siblings(ids [][]byte) (map[string]personAnswer, error) {
-	return siblingAnswers.GetMany(r.g, ids, func(missing [][]byte) (map[string]personAnswer, error) {
-		answers, err := r.d.siblingsOf(missing, r.event)
-		if err != nil {
-			return nil, err
-		}
-		out := make(map[string]personAnswer, len(answers))
-		for key, links := range answers {
-			out[key] = personAnswer{rules: r.d.rules, links: links}
-		}
-		return out, nil
-	})
-}
-
-// stepped is one id's node, its parent links for a canon read, and the people
-// one parent step away over them.
+// stepped is one id's node, the links of the events it stands in that have it
+// at an end, its parent links for a canon read, and the people one parent step
+// away over them.
 type stepped struct {
 	node   *graphcache.Node
+	atEnd  []kinship.Implied
 	edges  []kinship.Edge
 	people [][]byte
 }
@@ -556,11 +420,11 @@ func (d *deriver) loadSteps(ids [][]byte, event func([]byte) ([]kinship.Implied,
 	out := make([]stepped, len(nodes))
 	var allPeople [][]byte
 	for i, n := range nodes {
-		edges, err := d.parentEdges(n, event)
+		atEnd, edges, err := d.parentEdges(n, event)
 		if err != nil {
 			return nil, err
 		}
-		out[i] = stepped{node: n, edges: edges, people: stepPeople(n.ID, edges, d.terms)}
+		out[i] = stepped{node: n, atEnd: atEnd, edges: edges, people: stepPeople(n.ID, edges, d.terms)}
 		allPeople = append(allPeople, out[i].people...)
 	}
 	if err := d.src.load(allPeople); err != nil {
@@ -580,15 +444,10 @@ func (d *deriver) loadSteps(ids [][]byte, event func([]byte) ([]kinship.Implied,
 	return out, nil
 }
 
-// siblingsOf derives the siblings of each id that is a node, from loadSteps'
-// four batched loads however many ids and siblings there are. An id with no
-// entry is no node; a node with no siblings has an empty answer. event gives an
-// event's links. A parent that is linked but not cached is skipped.
-func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied, error)) (map[string][]kinship.Implied, error) {
-	steps, err := d.loadSteps(ids, event)
-	if err != nil {
-		return nil, err
-	}
+// siblingsOf derives the siblings of each stepped node, from the steps loadSteps
+// loaded. A node with no siblings has an empty answer. event gives an event's
+// links. A parent that is linked but not cached is skipped.
+func (d *deriver) siblingsOf(steps []stepped, event func([]byte) ([]kinship.Implied, error)) (map[string][]kinship.Implied, error) {
 	parents := make([][][]byte, len(steps))
 	edgesOfParent := map[string][]kinship.Edge{}
 	for i, s := range steps {
@@ -601,7 +460,7 @@ func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied
 			if !ok {
 				continue
 			}
-			es, err := d.parentEdges(n, event)
+			_, es, err := d.parentEdges(n, event)
 			if err != nil {
 				return nil, err
 			}
@@ -628,10 +487,21 @@ func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied
 	return out, nil
 }
 
-// edgeKey names the link an edge was read from: its ends and associations. Two
-// distinct links between the same people differ in their associations.
+// edgeKey names the link an edge was read from: its ends and associations, each
+// length-prefixed so no two distinct links share a key. Two distinct links
+// between the same people differ in their associations.
 func edgeKey(e kinship.Edge) string {
-	return string(e.A) + string(e.B) + string(bytes.Join(e.Associations, nil))
+	var key []byte
+	part := func(b []byte) {
+		key = binary.AppendUvarint(key, uint64(len(b)))
+		key = append(key, b...)
+	}
+	part(e.A)
+	part(e.B)
+	for _, a := range e.Associations {
+		part(a)
+	}
+	return string(key)
 }
 
 // neighborsOf names every neighbor of each node.
@@ -645,31 +515,18 @@ func neighborsOf(nodes []*graphcache.Node) [][]byte {
 	return ids
 }
 
-// forLinks is For's derivation. event and chain give a pivot's links.
-func (d *deriver) forLinks(id []byte, event, chain func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
-	n, err := d.around(id)
-	if err != nil || n == nil {
-		return nil, err
-	}
-	atEnd := func(imp kinship.Implied) bool { return bytes.Equal(imp.A, id) || bytes.Equal(imp.B, id) }
-	out, err := d.eventLinksAt(n, event)
-	if err != nil {
-		return nil, err
-	}
-
-	// The people one parent step from id: filed parents and children first,
-	// then the birth links above.
-	people := stepPeople(id, d.kinEdges(n, out), d.terms)
-	for _, m := range people {
-		if _, err := d.around(m); err != nil {
-			return nil, err
-		}
+// forLinks is For's derivation over one stepped node: the links of the events
+// it stands in, then the chain links with the node at an end through each person
+// one parent step away. chain gives a person's chain links.
+func (d *deriver) forLinks(s stepped, chain func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
+	out := slices.Clone(s.atEnd)
+	for _, m := range s.people {
 		links, err := chain(m)
 		if err != nil {
 			return nil, err
 		}
 		for _, imp := range links {
-			if atEnd(imp) {
+			if bytes.Equal(imp.A, s.node.ID) || bytes.Equal(imp.B, s.node.ID) {
 				out = append(out, imp)
 			}
 		}
