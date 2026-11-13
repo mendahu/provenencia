@@ -80,26 +80,6 @@ struct MetadataBoardModelTests {
         #expect(host.calls.filter { $0 == .didWrite }.count == 1)
     }
 
-    @Test func addDialogWritesToItsTargetBoard() async {
-        let hostA = TestMetadataBoardHost(entries: [])
-        let hostB = TestMetadataBoardHost(entries: [])
-        hostB.setResult = [catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Ancestry")]
-        let boardA = MetadataBoardModel(host: hostA)
-        let boardB = MetadataBoardModel(host: hostB)
-        let dialogs = MetadataBoardDialogs()
-
-        dialogs.openAdd(on: boardB)
-        #expect(dialogs.isAdding)
-        dialogs.addFieldID = "f-author"
-        dialogs.addValue = "Ancestry"
-        await dialogs.createFromAdd()
-
-        #expect(hostB.calls.contains(.set("f-author", "Ancestry")))
-        #expect(hostA.calls.isEmpty)
-        #expect(boardA.entries.isEmpty)
-        #expect(!dialogs.isAdding)
-    }
-
     @Test func clearConfirmTargetsItsBoard() async {
         let saved = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Mary")
         let hostA = TestMetadataBoardHost(entries: [saved])
@@ -172,10 +152,88 @@ struct MetadataBoardModelTests {
 
         host.entries = [catalogMetadataEntry(catalogMetadataField("film", label: "Film number"), "F-1")]
         board.resetDrafts()
-        #expect(board.addRow == MetadataBoardAddRow(fieldID: "", value: "F-7"))
+        #expect(board.addRow == MetadataBoardAddRow(fieldID: "", value: "F-7", takenFieldLabel: "Film number"))
     }
 
-    @Test func invalidValueStaysOnTheFieldOrDialog() async {
+    @Test func addRowTakenFieldSaysSo() {
+        let host = TestMetadataBoardHost(entries: [])
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.pickAddRowField("film")
+        host.entries = [catalogMetadataEntry(catalogMetadataField("film", label: "Film number"), "F-1")]
+        board.resetDrafts()
+        #expect(board.addRow?.fieldID == "")
+        #expect(board.addRow?.takenFieldLabel == "Film number")
+    }
+
+    @Test func pickingAFieldClearsTheNotice() {
+        let host = TestMetadataBoardHost(entries: [])
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.addRow?.takenFieldLabel = "Film number"
+        board.addRow?.error = "Bad"
+        board.pickAddRowField("roll")
+        #expect(board.addRow?.takenFieldLabel == nil)
+        #expect(board.addRow?.error == nil)
+        board.addRow?.error = "Bad"
+        board.setAddRowValue("x")
+        #expect(board.addRow?.error == nil)
+    }
+
+    @Test func unconfirmedInputReadsOpenRows() {
+        let host = TestMetadataBoardHost(entries: [])
+        let board = MetadataBoardModel(host: host)
+        #expect(!board.hasUnconfirmedInput)
+        board.openAddRow()
+        #expect(!board.hasUnconfirmedInput)
+        board.setAddRowValue("F-7")
+        #expect(board.hasUnconfirmedInput)
+        board.closeAddRow()
+        #expect(!board.hasUnconfirmedInput)
+        board.setTyped(true, fieldID: "provider")
+        #expect(board.hasUnconfirmedInput)
+        #expect(board.hasUnsavedChanges)
+    }
+
+    @Test func oneInnerEditAtATime() {
+        let saved = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
+        let host = TestMetadataBoardHost(entries: [saved])
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.beginEdit(fieldID: "f-repo")
+        #expect(board.addRow == nil)
+        #expect(board.editingFieldID == "f-repo")
+        board.openAddRow()
+        #expect(board.editingFieldID == nil)
+        #expect(board.addRow != nil)
+    }
+
+    @Test func dismissingATypedSuggestionClearsItsFlag() async {
+        let image = catalogMetadataEntry(catalogMetadataField("image", label: "Image number"), suggested: true)
+        let host = TestMetadataBoardHost(entries: [image])
+        let board = MetadataBoardModel(host: host)
+        board.setTyped(true, fieldID: "image")
+        #expect(board.hasUnconfirmedInput)
+        await board.dismissSuggestion(fieldID: "image")
+        #expect(!board.hasUnconfirmedInput)
+    }
+
+    @Test func refusalWithTypedTextElsewhereAnswersFalse() {
+        let provider = catalogMetadataEntry(catalogMetadataField("provider", label: "Provider"), "A")
+        let url = catalogMetadataEntry(catalogMetadataField("url", label: "URL"), "https://x.org")
+        let host = TestMetadataBoardHost(entries: [provider, url])
+        host.failureText = "Bad"
+        let board = MetadataBoardModel(host: host)
+        board.setTyped(true, fieldID: "provider")
+        let refusal = catalogMetadataRefusal(params: ["url"])
+        #expect(board.showRefusal(refusal) == false)
+        #expect(board.editingFieldID == nil)
+        board.setTyped(false, fieldID: "provider")
+        #expect(board.showRefusal(refusal))
+        #expect(board.editingFieldID == "url")
+    }
+
+    @Test func invalidValueStaysOnTheField() async {
         let repo = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
         let host = TestMetadataBoardHost(entries: [repo])
         host.setError = invalid
@@ -188,13 +246,11 @@ struct MetadataBoardModelTests {
         #expect(board.fieldError == "Bad")
         #expect(board.fieldErrorID == "f-repo")
 
-        let dialogs = MetadataBoardDialogs()
-        dialogs.openAdd(on: board)
-        dialogs.addFieldID = "f-new"
-        dialogs.addValue = "javascript:alert(1)"
-        await dialogs.createFromAdd()
-        #expect(dialogs.addValueError == "Bad")
-        #expect(dialogs.isAdding)
+        board.openAddRow()
+        board.pickAddRowField("f-new")
+        board.setAddRowValue("javascript:alert(1)")
+        await board.confirmAddRow()
+        #expect(board.addRow?.error == "Bad")
         #expect(!host.calls.contains { if case .showFailure = $0 { true } else { false } })
     }
 }
@@ -215,6 +271,7 @@ private final class TestMetadataBoardHost: MetadataBoardHost {
     var entries: [CatalogMetadataEntry]
     var fields: [CatalogMetadataField] = []
     var confirmsClear = true
+    var isChanged = false
     private(set) var calls: [Call] = []
     /// What `entries` held when `didWrite` ran.
     private(set) var entriesAtDidWrite: [CatalogMetadataEntry] = []

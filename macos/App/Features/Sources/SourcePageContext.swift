@@ -86,6 +86,20 @@ final class SourcePageContext {
 
     var source: CatalogSource? { workspace?.source }
 
+    /// The Source's Evidence graphs in the session's name order when the
+    /// session has them; nil otherwise (the list is loading, failed, or not
+    /// refreshed), so no graph group shows.
+    var evidenceGraphs: [CatalogEvidenceGraph]? {
+        guard case .loaded(let graphs) = session.evidenceGraphsRead(sourceID: sourceID) else { return nil }
+        return graphs
+    }
+
+    /// True while the graph list has not arrived.
+    var evidenceGraphsLoading: Bool {
+        if case .loading = session.evidenceGraphsRead(sourceID: sourceID) { return true }
+        return false
+    }
+
     // MARK: Shared vocabulary
 
     // Read from the shared list caches rather than the page payload: one cache

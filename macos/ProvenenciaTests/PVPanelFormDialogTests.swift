@@ -73,6 +73,11 @@ struct PVFormDialogCopyTests {
 
 @Suite
 struct PVFormDialogControlsTests {
+    @Test func confirmShortcutYieldsToAnInnerEdit() {
+        #expect(PVFormDialogControls.confirmShortcut(innerEditOpen: true) == nil)
+        #expect(PVFormDialogControls.confirmShortcut(innerEditOpen: false) == .defaultAction)
+    }
+
     @Test func cancelIsOnlyDisabledWhileRunning() {
         #expect(!PVFormDialogControls.isCancelDisabled(isRunning: false))
         #expect(PVFormDialogControls.isCancelDisabled(isRunning: true))
@@ -145,6 +150,19 @@ struct PVFormDialogClickTests {
 
 @Suite
 struct PVSheetDismissTests {
+    /// T-1: an open inner edit keeps an outside click from closing or asking.
+    @Test func innerEditStandsDown() {
+        #expect(PVSheetDismiss.action(
+            isRunning: false, isDirty: true, isConfirmingDiscard: false, innerEditOpen: true
+        ) == .ignore)
+        #expect(PVSheetDismiss.action(
+            isRunning: false, isDirty: true, isConfirmingDiscard: false, innerEditOpen: false
+        ) == .confirmDiscard)
+        #expect(PVSheetDismiss.action(
+            isRunning: false, isDirty: false, isConfirmingDiscard: false, innerEditOpen: true
+        ) == .ignore)
+    }
+
     /// T-1: the one table behind Escape and an outside click.
     @Test func sheetDismissActionTable() {
         for dirty in [false, true] {

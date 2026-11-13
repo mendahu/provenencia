@@ -7,6 +7,17 @@ struct MetadataBoardAddRow: Equatable {
     var fieldID = ""
     var value = ""
     var error: String?
+    /// The label of the field the row had picked when a reload put it on the board
+    /// (another window added it); the row says so until a field is picked again.
+    var takenFieldLabel: String?
+}
+
+/// What a board's Add reports to the add row that asked: written, refused by the
+/// engine with a message for the value field, or failed with the host showing it.
+enum MetadataBoardAddResult {
+    case saved
+    case invalid(String)
+    case failed
 }
 
 /// One owner's metadata rows (saved values + type suggestions), over the host
@@ -26,8 +37,11 @@ final class MetadataBoardModel {
     /// The add row; nil is closed. Kept across `resetDrafts`.
     var addRow: MetadataBoardAddRow?
     private(set) var isSavingAddRow = false
+    /// Fields whose open buffer (a row in edit, a suggestion's text) differs from its starting
+    /// text. The views report each flip through `setTyped`; the buffers stay view-local.
+    private(set) var typedFieldIDs: Set<String> = []
 
-    /// Read by `MetadataBoardDialogs` for the clear confirm and the Add dialog over the add row.
+    /// The rows and the owner's writes; `MetadataBoardDialogs` reads it for the clear confirm.
     let host: any MetadataBoardHost
 
     init(host: any MetadataBoardHost) {
@@ -61,10 +75,31 @@ final class MetadataBoardModel {
         fieldError = nil
         fieldErrorID = nil
         syncDrafts()
-        if let picked = addRow?.fieldID, entries.contains(where: { $0.field.id == picked }) {
+        let onBoard = Set(entries.map(\.field.id))
+        typedFieldIDs.formIntersection(onBoard)
+        if let picked = addRow?.fieldID, let taken = entries.first(where: { $0.field.id == picked }) {
             addRow?.fieldID = ""
+            addRow?.takenFieldLabel = taken.field.label
         }
     }
+
+    /// A view reports that its open buffer for `fieldID` now differs from its starting text, or no longer does.
+    func setTyped(_ typed: Bool, fieldID: String) {
+        guard typed != typedFieldIDs.contains(fieldID) else { return }
+        if typed { typedFieldIDs.insert(fieldID) } else { typedFieldIDs.remove(fieldID) }
+    }
+
+    /// True when text is typed and not yet confirmed: an open buffer, or an add row with a picked
+    /// field or a value with text.
+    var hasUnconfirmedInput: Bool {
+        if !typedFieldIDs.isEmpty { return true }
+        guard let row = addRow else { return false }
+        return !row.fieldID.isEmpty
+            || !row.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// What a draft form's dirty flag reads: a changed draft, or text not yet confirmed into it.
+    var hasUnsavedChanges: Bool { host.isChanged || hasUnconfirmedInput }
 
     /// Resets only when the rows the workspace holds differ from the rows the
     /// board showed, so a reload or patch that carries the board's own rows
@@ -90,6 +125,8 @@ final class MetadataBoardModel {
 
     func beginEdit(fieldID: String) {
         guard let entry = savedEntry(fieldID: fieldID) else { return }
+        // One inner edit at a time: the add row closes, as its ✕ would.
+        closeAddRow()
         if let current = editingFieldID, current != fieldID {
             cancelEdit()
         }
@@ -107,6 +144,7 @@ final class MetadataBoardModel {
         if let entry = entries.first(where: { $0.field.id == fieldID }) {
             drafts[fieldID] = entry.valueText
         }
+        typedFieldIDs.remove(fieldID)
         editingFieldID = nil
         if fieldErrorID == fieldID {
             fieldError = nil
@@ -159,6 +197,7 @@ final class MetadataBoardModel {
             let (updated, effects) = try await host.clear(fieldID: fieldID)
             host.entries = updated
             drafts[fieldID] = ""
+            typedFieldIDs.remove(fieldID)
             if editingFieldID == fieldID {
                 editingFieldID = nil
             }
@@ -180,9 +219,25 @@ final class MetadataBoardModel {
             && !row.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Opens an empty add row; an open one keeps its field, value and error.
+    /// Opens an empty add row; an open one keeps its field, value and error. A row in edit ends.
     func openAddRow() {
+        cancelEdit()
         if addRow == nil { addRow = MetadataBoardAddRow() }
+    }
+
+    /// The picker's choice: clears the refusal and the taken notice.
+    func pickAddRowField(_ fieldID: String) {
+        guard addRow != nil else { return }
+        addRow?.fieldID = fieldID
+        addRow?.error = nil
+        addRow?.takenFieldLabel = nil
+    }
+
+    /// The value input's text: clears the refusal.
+    func setAddRowValue(_ value: String) {
+        guard addRow != nil else { return }
+        addRow?.value = value
+        addRow?.error = nil
     }
 
     func closeAddRow() {
@@ -224,7 +279,7 @@ final class MetadataBoardModel {
         case shown
     }
 
-    /// A failed set: `sourcemetadata.invalid` stays on the row or dialog; I/O goes
+    /// A failed set: `sourcemetadata.invalid` stays on the row; I/O goes
     /// to the host's failure place; nothing shows when the owner is gone.
     private func classifySetFailure(_ error: Error) -> SetFailure {
         guard let message = host.failureMessage(for: error) else { return .ownerGone }
@@ -259,24 +314,17 @@ final class MetadataBoardModel {
               savedEntry(fieldID: fieldID) != nil,
               let message = rowRefusalMessage(error)
         else { return false }
-        if editingFieldID != fieldID {
-            if hasTypedEdit { return false }
-            beginEdit(fieldID: fieldID)
-        }
+        if !typedFieldIDs.subtracting([fieldID]).isEmpty { return false }
+        if editingFieldID != fieldID { beginEdit(fieldID: fieldID) }
         placeRowError(message, fieldID: fieldID)
         return true
-    }
-
-    /// True when the row in edit holds text that is not its saved value.
-    private var hasTypedEdit: Bool {
-        guard let id = editingFieldID, let saved = savedEntry(fieldID: id) else { return false }
-        return drafts[id] != saved.valueText
     }
 
     func dismissSuggestion(fieldID: String) async {
         host.clearFailure()
         do {
             let (updated, effects) = try await host.dismissSuggestion(fieldID: fieldID)
+            typedFieldIDs.remove(fieldID)
             host.entries = updated
             host.didWrite(effects)
             syncDrafts()
@@ -308,6 +356,7 @@ final class MetadataBoardModel {
     /// Takes the owner's rows from a `set` answer: the rows, the field's draft, then the effects.
     private func applySet(_ updated: [CatalogMetadataEntry], fieldID: String, effects: CatalogWriteEffects) {
         host.entries = updated
+        typedFieldIDs.remove(fieldID)
         drafts[fieldID] = updated.first { $0.field.id == fieldID }?.valueText ?? ""
         host.didWrite(effects)
     }

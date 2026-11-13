@@ -20,15 +20,19 @@ private struct PVSheetChrome<Content: View>: View {
 
     @State private var confirmingDiscard = false
     @State private var gate = PVDiscardGate()
+    @State private var innerEditOpen = false
 
     var body: some View {
         sheetBody
             .environment(\.pvSheetClose, PVSheetClose(run: { next in run(next) }))
+            .environment(\.pvSheetInnerEditOpen, innerEditOpen)
+            .onPreferenceChange(PVSheetInnerEditKey.self) { innerEditOpen = $0 }
             // A zero-size button owns Escape, so the rule lives in one place and
             // no visible Cancel needs its own key.
             .background {
                 Button(action: dismiss) { EmptyView() }
-                    .keyboardShortcut(.cancelAction)
+                    // While an inner edit is open its own handler takes Escape.
+                    .keyboardShortcut(innerEditOpen ? nil : .cancelAction)
                     .focusable(false)
                     .frame(width: 0, height: 0)
                     .opacity(0)
@@ -58,14 +62,15 @@ private struct PVSheetChrome<Content: View>: View {
 
     /// Escape and a click outside: the dirty rule with no step to run after.
     private func dismiss() {
-        run {}
+        run(honoringInnerEdit: true) {}
     }
 
     /// Closes the sheet by the dirty rule, then runs `next`. A dirty sheet asks
     /// first and holds `next` behind the question; Keep editing drops it.
-    private func run(_ next: @escaping @MainActor () -> Void) {
+    private func run(honoringInnerEdit: Bool = false, _ next: @escaping @MainActor () -> Void) {
         switch PVSheetCloseRule.outcome(
             isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: confirmingDiscard,
+            innerEditOpen: honoringInnerEdit && innerEditOpen,
             next: next, gate: &gate
         ) {
         case .nothing:
@@ -109,10 +114,14 @@ enum PVSheetCloseRule {
         isRunning: Bool,
         isDirty: Bool,
         isConfirmingDiscard: Bool,
+        innerEditOpen: Bool = false,
         next: @escaping @MainActor () -> Void,
         gate: inout PVDiscardGate
     ) -> Outcome {
-        switch PVSheetDismiss.action(isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: isConfirmingDiscard) {
+        switch PVSheetDismiss.action(
+            isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: isConfirmingDiscard,
+            innerEditOpen: innerEditOpen
+        ) {
         case .ignore:
             return .nothing
         case .keepEditing:
@@ -149,6 +158,35 @@ extension EnvironmentValues {
     var pvSheetClose: PVSheetClose {
         get { self[PVSheetCloseKey.self] }
         set { self[PVSheetCloseKey.self] = newValue }
+    }
+}
+
+/// Whether content inside a sheet has an inner edit open (a row in edit, an
+/// add row). Reduced with `||`.
+private struct PVSheetInnerEditKey: PreferenceKey {
+    static var defaultValue: Bool { false }
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
+private struct PVSheetInnerEditOpenKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True while content in the sheet reports an open inner edit; the form
+    /// dialog's Confirm then gives up Return.
+    var pvSheetInnerEditOpen: Bool {
+        get { self[PVSheetInnerEditOpenKey.self] }
+        set { self[PVSheetInnerEditOpenKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Reports an open inner edit to the enclosing sheet: Escape then reaches
+    /// the edit's own handler, a click outside does nothing, and the form's
+    /// Confirm gives up Return. Outside a sheet nothing reads it.
+    func pvSheetInnerEdit(_ open: Bool) -> some View {
+        preference(key: PVSheetInnerEditKey.self, value: open)
     }
 }
 

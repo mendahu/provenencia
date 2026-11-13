@@ -44,6 +44,13 @@ struct PVDiscardGateTests {
         ) == .nothing)
         #expect(!gate.holdsStep)
 
+        // An open inner edit stands the outside-click path down.
+        #expect(PVSheetCloseRule.outcome(
+            isRunning: false, isDirty: true, isConfirmingDiscard: false, innerEditOpen: true,
+            next: step, gate: &gate
+        ) == .nothing)
+        #expect(!gate.holdsStep)
+
         #expect(PVSheetCloseRule.outcome(
             isRunning: false, isDirty: true, isConfirmingDiscard: true, next: step, gate: &gate
         ) == .keepEditing)

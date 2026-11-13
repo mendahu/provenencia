@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Artifact cards: wrapping rows, on-card edit, and the Add dialog form.
+/// Artifact cards: wrapping rows that open the Artifact sheet, and the Add dialog form.
 struct SourcePageArtifactsView: View {
     /// Narrowest card. At `PVSpacing.widthContentMax` this is four across.
     private static let cardMinWidth: CGFloat = 264
@@ -93,7 +93,7 @@ struct SourcePageArtifactsView: View {
                         accessibilityIdentifierPrefix: "sources.page.addArtifact.graphs"
                     )
                     if model.artifacts.draftInNoGraph {
-                        noGraphLine(identifier: "sources.page.addArtifact.graphs.none")
+                        SourceArtifactNoGraphLine(accessibilityIdentifier: "sources.page.addArtifact.graphs.none")
                     }
                 }
             }
@@ -113,14 +113,6 @@ struct SourcePageArtifactsView: View {
                 }
             }
         }
-    }
-
-    /// The muted line under a graph group with no box checked.
-    private func noGraphLine(identifier: String) -> some View {
-        Text(L10n.Sources.artifactGraphsNone)
-            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-            .foregroundStyle(PVColor.textMuted)
-            .accessibilityIdentifier(identifier)
     }
 
     /// Form for the first-attach Add File dialog.
@@ -153,17 +145,12 @@ struct SourcePageArtifactsView: View {
     }
 
     private func artifactCard(_ art: CatalogArtifact, noGraph: Bool) -> some View {
-        let editing = model.artifacts.editingArtifactID == art.id
-        return PVCard(elevated: false, padding: 0) {
+        PVCard(elevated: false, padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 previewWell(art)
                 VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                    metaRow(art, editing: editing)
-                    if editing {
-                        editFields(art)
-                    } else {
-                        restingText(art, noGraph: noGraph)
-                    }
+                    metaRow(art)
+                    restingText(art, noGraph: noGraph)
                 }
                 .padding(.horizontal, PVSpacing.space6)
                 .padding(.top, PVSpacing.space6)
@@ -215,7 +202,7 @@ struct SourcePageArtifactsView: View {
         }
     }
 
-    private func metaRow(_ art: CatalogArtifact, editing: Bool) -> some View {
+    private func metaRow(_ art: CatalogArtifact) -> some View {
         HStack(spacing: PVSpacing.space4) {
             Text(verbatim: art.ref)
                 .font(PVFont.mono(size: PVTypeScale.caption))
@@ -225,7 +212,7 @@ struct SourcePageArtifactsView: View {
                 PVBadge(L10n.Sources.coverBadge, tone: .accent, icon: .photo)
                     .accessibilityIdentifier("sources.page.artifact.\(art.id).coverBadge")
             }
-            if !editing, model.artifacts.canUseAsThumbnail(art) {
+            if model.artifacts.canUseAsThumbnail(art) {
                 PVButton(L10n.Sources.useAsThumbnail, variant: .ghost, size: .sm, icon: .imageUp) {
                     Task { await model.artifacts.useAsThumbnail(art) }
                 }
@@ -234,28 +221,26 @@ struct SourcePageArtifactsView: View {
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
             }
             Spacer(minLength: 0)
-            if !editing {
-                HStack(spacing: PVSpacing.space2) {
-                    PVIconButton(
-                        .penLine,
-                        label: L10n.Sources.editArtifactLabel(ref: art.ref),
-                        size: .sm
-                    ) {
-                        model.artifacts.beginEdit(art.id)
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
-                    PVIconButton(
-                        .trash,
-                        label: L10n.Sources.deleteArtifact,
-                        size: .sm,
-                        tone: .danger
-                    ) {
-                        Task { await model.askDeleteArtifact(id: art.id) }
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
+            HStack(spacing: PVSpacing.space2) {
+                PVIconButton(
+                    .penLine,
+                    label: L10n.Sources.editArtifactLabel(ref: art.ref),
+                    size: .sm
+                ) {
+                    model.artifacts.openSheet(artifactID: art.id)
                 }
-                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
+                PVIconButton(
+                    .trash,
+                    label: L10n.Sources.deleteArtifact,
+                    size: .sm,
+                    tone: .danger
+                ) {
+                    Task { await model.askDeleteArtifact(id: art.id) }
+                }
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .frame(minHeight: 28)
     }
@@ -267,6 +252,12 @@ struct SourcePageArtifactsView: View {
                 .foregroundStyle(PVColor.textPrimary)
                 .lineLimit(2)
             descriptionLine(art)
+            ArtifactCopyDetailsView(
+                rows: model.artifacts.copyDetails(for: art.id),
+                ref: art.ref,
+                artifactID: art.id,
+                onMore: { model.artifacts.openSheet(artifactID: art.id, at: .copyDetails) }
+            )
             if noGraph {
                 noGraphRow(art)
             }
@@ -275,13 +266,13 @@ struct SourcePageArtifactsView: View {
 
     /// The badge and **Link to a graph** on a card in no graph: one row with the
     /// button at the end, else the button on its own line at the end. A card
-    /// with the row is taller than its neighbours, as a card in edit is.
+    /// with the row is taller than its neighbours.
     private func noGraphRow(_ art: CatalogArtifact) -> some View {
         let badge = PVBadge(L10n.Sources.artifactNotInGraph, tone: .neutral, icon: .link)
             .fixedSize()
             .accessibilityIdentifier("sources.page.artifact.\(art.id).noGraph")
         let button = PVButton(L10n.Sources.artifactLinkToGraph, variant: .ghost, size: .sm) {
-            model.artifacts.beginEdit(art.id)
+            model.artifacts.openSheet(artifactID: art.id, at: .graphs)
         }
         .fixedSize()
         .accessibilityLabel(L10n.Sources.artifactLinkToGraphLabel(ref: art.ref))
@@ -315,159 +306,6 @@ struct SourcePageArtifactsView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
-    }
-
-    /// The Evidence graphs the card in edit links the Artifact to; absent when
-    /// the session has no graphs for the Source. The line under the boxes shows
-    /// when none is checked.
-    @ViewBuilder
-    private func graphLinks(_ art: CatalogArtifact) -> some View {
-        graphLinksGroup(art)
-            .onChange(of: model.artifacts.visibleGraphs?.map(\.id)) { _, _ in
-                model.artifacts.graphsChanged()
-            }
-    }
-
-    @ViewBuilder
-    private func graphLinksGroup(_ art: CatalogArtifact) -> some View {
-        if model.artifacts.awaitingGraphs(id: art.id) {
-            PVField(
-                label: L10n.Sources.artifactGraphsLabel,
-                hint: L10n.Sources.artifactGraphsHint
-            ) {
-                SourceFormLoadArea(
-                    state: .loading,
-                    loadingText: L10n.Sources.artifactGraphsLoading,
-                    errorTitle: L10n.Sources.artifactGraphsLoadErrorTitle,
-                    errorMessage: L10n.Sources.artifactGraphsLoadErrorMessage,
-                    onReadAgain: {},
-                    compact: true,
-                    accessibilityIdentifierPrefix: "sources.page.artifact.\(art.id).graphs"
-                ) {
-                    EmptyView()
-                }
-            }
-        } else if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
-            let prefix = "sources.page.artifact.\(art.id).graphs"
-            PVField(
-                label: L10n.Sources.artifactGraphsLabel,
-                hint: L10n.Sources.artifactGraphsHint
-            ) {
-                SourceFormLoadArea(
-                    state: edit.loadState,
-                    loadingText: L10n.Sources.artifactGraphsLoading,
-                    errorTitle: L10n.Sources.artifactGraphsLoadErrorTitle,
-                    errorMessage: L10n.Sources.artifactGraphsLoadErrorMessage,
-                    onReadAgain: { Task { await model.artifacts.loadLinkLocks() } },
-                    compact: true,
-                    accessibilityIdentifierPrefix: prefix
-                ) {
-                    SourceArtifactGraphLinks(
-                        graphs: model.artifacts.linkEditGraphs,
-                        excluded: Binding(
-                            get: { model.artifacts.linkEdit?.excluded ?? [] },
-                            set: { model.artifacts.linkEdit?.excluded = $0 }
-                        ),
-                        locked: model.artifacts.lockedGraphs,
-                        isDisabled: model.artifacts.savingID == art.id,
-                        accessibilityIdentifierPrefix: prefix
-                    )
-                }
-                if model.artifacts.cardInNoGraph(id: art.id) {
-                    noGraphLine(identifier: "\(prefix).none")
-                }
-            }
-        }
-    }
-
-    private func editFields(_ art: CatalogArtifact) -> some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            if let saveError = model.artifacts.cardSaveError {
-                PVCallout(
-                    tone: .danger,
-                    title: L10n.Sources.artifactCardSaveErrorTitle,
-                    message: saveError,
-                    compact: true,
-                    announces: true
-                )
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).saveError")
-            }
-            PVTabPair { label, description in
-                PVField(
-                    label: L10n.Sources.artifactLabel,
-                    error: model.artifacts.cardLabelError(id: art.id),
-                    marker: .required
-                ) {
-                    PVInput(
-                        text: labelBinding(art),
-                        size: .sm,
-                        isInvalid: model.artifacts.cardLabelError(id: art.id) != nil,
-                        focus: label,
-                        activateOnAppear: true
-                    )
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).label")
-                    .onSubmit { commitEdit(art) }
-                }
-                PVField(
-                    label: L10n.Sources.artifactDescription,
-                    hint: L10n.Sources.artifactDescriptionHint
-                ) {
-                    PVTextArea(
-                        text: descriptionBinding(art),
-                        lineLimit: 3...8,
-                        focus: description
-                    )
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).description")
-                }
-            }
-            graphLinks(art)
-            HStack(spacing: PVSpacing.space3) {
-                PVButton(
-                    L10n.Sources.saveArtifact,
-                    variant: .primary,
-                    size: .sm,
-                    loading: model.artifacts.savingID == art.id
-                ) {
-                    commitEdit(art)
-                }
-                .disabled(!model.artifacts.canSaveFields(art.id))
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).save")
-                PVButton(L10n.Sources.cancelEdit, variant: .ghost, size: .sm) {
-                    model.artifacts.cancelFields(id: art.id)
-                }
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).cancel")
-            }
-        }
-        .onExitCommand { model.artifacts.cancelFields(id: art.id) }
-        .background {
-            Button {
-                commitEdit(art)
-            } label: {
-                EmptyView()
-            }
-            .keyboardShortcut(.return, modifiers: .command)
-            .disabled(!model.artifacts.canSaveFields(art.id))
-            .accessibilityHidden(true)
-        }
-    }
-
-    private func labelBinding(_ art: CatalogArtifact) -> Binding<String> {
-        Binding(
-            get: { model.artifacts.labels[art.id] ?? art.label },
-            set: { model.artifacts.labels[art.id] = $0 }
-        )
-    }
-
-    private func descriptionBinding(_ art: CatalogArtifact) -> Binding<String> {
-        Binding(
-            get: { model.artifacts.descriptions[art.id] ?? art.description },
-            set: { model.artifacts.descriptions[art.id] = $0 }
-        )
-    }
-
-    private func commitEdit(_ art: CatalogArtifact) {
-        guard model.artifacts.canSaveFields(art.id) else { return }
-        Task { await model.artifacts.saveFields(id: art.id) }
     }
 
     private func activatePreview(_ art: CatalogArtifact) {

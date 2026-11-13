@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Artifacts on the Source page: one card in edit at a time, the Add-artifact
+/// Artifacts on the Source page: the Artifact sheet, the Add-artifact
 /// dialog, and file attach/open.
 @MainActor
 @Observable
@@ -22,21 +22,6 @@ final class SourceArtifactsSection {
         var excludedGraphIDs: Set<String> = []
     }
 
-    /// The Evidence graph choices of the card in edit: ids and choices only.
-    /// Rows, names, refs and current links are read from the session's graph
-    /// list each time, so a write elsewhere shows at once.
-    struct LinkEdit: Equatable {
-        let artifactID: String
-        /// The Source's graphs when edit opened, in the session's name order.
-        let graphIDs: [String]
-        /// The unchecked graph ids, seeded with the graphs that do not link the Artifact.
-        var excluded: Set<String>
-        /// The engine's refusals to unlink this Artifact, from its preflight. Each
-        /// locks its graph; Swift decides no lock.
-        var blocks: [CatalogEvidenceGraphUnlinkBlock] = []
-        var loadState: SourceFormLoadState = .loading
-    }
-
     struct AttachDraft: Equatable {
         var artifactID = ""
         var artifactRef = ""
@@ -44,32 +29,6 @@ final class SourceArtifactsSection {
         var fileName: String?
         var reject: L10n.Errors.IngestCallout?
     }
-
-    /// A card's pencil or **Link to a graph** pressed while another card holds
-    /// unsaved edits: the question shows, and the target waits in `editGate`.
-    struct PendingEditSwitch: Identifiable {
-        let id = UUID()
-    }
-
-    /// The card whose label and description are fields. One at a time.
-    var editingArtifactID: String?
-    /// Set while "Discard changes?" asks whether another card may take the edit.
-    var pendingEditSwitch: PendingEditSwitch?
-    @ObservationIgnored private var editGate = PVDiscardGate()
-    /// Local edit buffers for the card in edit, keyed by id.
-    var labels: [String: String] = [:]
-    var descriptions: [String: String] = [:]
-    /// Per-artifact validation for the card label.
-    var fieldErrors: [String: String] = [:]
-    /// Artifact id currently saving label/description from the card.
-    private(set) var savingID: String?
-    /// The Evidence graph choices of the card in edit; nil when the session has
-    /// no graphs for the Source (the list is loading, failed or not refreshed).
-    var linkEdit: LinkEdit?
-    /// Why the last card save stopped, shown on the card; nil otherwise.
-    var cardSaveError: String?
-    /// The card's graph link read, so a test can await it.
-    @ObservationIgnored var linkLoadTask: Task<Void, Never>?
 
     // MARK: Add dialog
 
@@ -84,6 +43,9 @@ final class SourceArtifactsSection {
     var attachDraft = AttachDraft()
     private(set) var isSavingAttach = false
 
+    /// The Artifact sheet; nil when closed.
+    var sheet: ArtifactSheetModel?
+
     private let context: SourcePageContext
 
     init(context: SourcePageContext) {
@@ -92,14 +54,9 @@ final class SourceArtifactsSection {
 
     var items: [CatalogArtifact] { context.workspace?.artifacts ?? [] }
 
-    /// The Source's Evidence graphs in the session's name order when the
-    /// session has them (the link checkboxes show); nil otherwise (the list is
-    /// loading, failed, or not refreshed), so no group shows.
-    var visibleGraphs: [CatalogEvidenceGraph]? {
-        guard case .loaded(let graphs) = context.session.evidenceGraphsRead(sourceID: context.sourceID)
-        else { return nil }
-        return graphs
-    }
+    /// The Source's Evidence graphs when the session has them (the link
+    /// checkboxes show); nil otherwise, so no group shows.
+    var visibleGraphs: [CatalogEvidenceGraph]? { context.evidenceGraphs }
 
     /// The graph ids the Add dialog links: the checked ones in list order,
     /// possibly none. Nil when the group is hidden (the engine links every graph).
@@ -160,304 +117,40 @@ final class SourceArtifactsSection {
         context.session.artifactIDsInNoGraph(sourceID: context.sourceID, artifactIDs: items.map(\.id)) ?? []
     }
 
-    /// Seeds edit buffers for artifacts that do not have one yet.
-    func seedDrafts() {
-        for art in items {
-            if labels[art.id] == nil {
-                labels[art.id] = art.label
-            }
-            if descriptions[art.id] == nil {
-                descriptions[art.id] = art.description
-            }
-        }
-        if let id = editingArtifactID, !items.contains(where: { $0.id == id }) {
-            editingArtifactID = nil
-            dropLinkEdit()
-        }
+    /// The Artifact's saved copy details, read from the workspace the page already holds.
+    func copyDetails(for artifactID: String) -> [CatalogMetadataEntry] {
+        context.workspace?.metadataRows(for: MetadataOwner(level: .artifact, id: artifactID)) ?? []
     }
 
-    // MARK: Card edit
-
-    /// Opens edit on one card. Another card with unsaved edits asks first
-    /// ("Discard changes?"); the target waits in the gate until the answer.
-    func beginEdit(_ id: String) {
-        if editingArtifactID == id || savingID != nil { return }
-        if let current = editingArtifactID, fieldsDirty(current) {
-            editGate.hold { [weak self] in self?.openEdit(id) }
-            pendingEditSwitch = PendingEditSwitch()
-            return
-        }
-        openEdit(id)
-    }
-
-    /// The answer was Discard: the other card's edit is dropped and the target opens.
-    func confirmEditSwitch() {
-        pendingEditSwitch = nil
-        editGate.discard()?()
-    }
-
-    /// The answer was Keep editing: the other card keeps its edit.
-    func cancelEditSwitch() {
-        pendingEditSwitch = nil
-        _ = editGate.keepEditing()
-    }
-
-    /// Opens edit on one card and restores any other card to its stored text.
-    /// When the session has the Source's graphs it also starts reading which of
-    /// the Artifact's links the engine says its graphs must keep.
-    private func openEdit(_ id: String) {
-        guard let art = items.first(where: { $0.id == id }) else { return }
-        if let current = editingArtifactID, current != id {
-            cancelFields(id: current)
-        }
-        editingArtifactID = id
-        labels[id] = art.label
-        descriptions[id] = art.description
-        fieldErrors[id] = nil
-        cardSaveError = nil
-        dropLinkEdit()
-        startLinkEdit(id: id)
-    }
-
-    /// Builds the card's graph choices and starts its lock read, when the
-    /// session has the Source's graphs.
-    private func startLinkEdit(id: String) {
-        guard let graphs = visibleGraphs else { return }
-        linkEdit = LinkEdit(
-            artifactID: id,
-            graphIDs: graphs.map(\.id),
-            excluded: Set(graphs.filter { !$0.links(id) }.map(\.id))
-        )
-        linkLoadTask = Task { await loadLinkLocks() }
-    }
-
-    /// True while the card `id` is in edit and the graph list has not arrived,
-    /// so its graph group shows the loading state.
-    func awaitingGraphs(id: String) -> Bool {
-        guard editingArtifactID == id, linkEdit == nil else { return false }
-        if case .loading = context.session.evidenceGraphsRead(sourceID: context.sourceID) { return true }
-        return false
-    }
-
-    /// The graph list changed: a card opened in edit before it arrived gets
-    /// its group now, as `beginEdit` would have built it.
-    func graphsChanged() {
-        guard let id = editingArtifactID, linkEdit == nil else { return }
-        startLinkEdit(id: id)
-    }
-
-    private func dropLinkEdit() {
-        linkLoadTask?.cancel()
-        linkLoadTask = nil
-        linkEdit = nil
-    }
-
-    /// The edit's graph ids whose session graph links the Artifact now.
-    var linkedGraphIDs: [String] {
-        guard let edit = linkEdit else { return [] }
-        return edit.graphIDs.filter {
-            context.session.evidenceGraph(id: $0)?.links(edit.artifactID) == true
-        }
-    }
-
-    /// The edit's graph ids that are still in the session's graph list; a
-    /// graph deleted since edit opened drops out of every count and write.
-    private var liveGraphIDs: [String] {
-        (linkEdit?.graphIDs ?? []).filter { context.session.evidenceGraph(id: $0) != nil }
-    }
-
-    /// Graph id to the hint under its locked row: one lock per graph, from the
-    /// first block that names it.
-    var lockedGraphs: [String: String] {
-        (linkEdit?.blocks ?? []).lockHints(by: \.graphID)
-    }
-
-    /// The edit's checked graph ids in list order; a locked graph is always checked.
-    var checkedGraphIDs: [String] {
-        guard let edit = linkEdit else { return [] }
-        return PVChecklistState.checkedIDs(
-            ids: liveGraphIDs, excluded: edit.excluded, locked: Set(lockedGraphs.keys)
+    /// The page's workspace changed: a sheet whose Artifact is no longer on the
+    /// page closes with its draft and says so. An Artifact still there keeps its draft.
+    func workspaceChanged() {
+        guard let sheet, !items.contains(where: { $0.id == sheet.artifact.id }) else { return }
+        self.sheet = nil
+        context.toast = VocabularyToast(
+            title: L10n.string(L10n.Sources.toastArtifactGoneTitle),
+            body: L10n.Sources.toastArtifactGoneBody(label: sheet.openedLabel),
+            tone: .info
         )
     }
 
-    /// The graphs the card in edit offers, read from the session in the order
-    /// they were captured; a graph deleted since then drops out.
-    var linkEditGraphs: [CatalogEvidenceGraph] {
-        (linkEdit?.graphIDs ?? []).compactMap { context.session.evidenceGraph(id: $0) }
-    }
-
-    /// The card in edit has its graph boxes read and none is checked: saving
-    /// leaves the Artifact in no graph.
-    func cardInNoGraph(id: String) -> Bool {
-        guard let edit = linkEdit, edit.artifactID == id, edit.loadState == .ready else { return false }
-        return checkedGraphIDs.isEmpty
-    }
-
-    private func linksDirty(_ id: String) -> Bool {
-        guard let edit = linkEdit, edit.artifactID == id else { return false }
-        return Set(checkedGraphIDs) != Set(linkedGraphIDs)
-    }
-
-    /// Reads which graphs must keep the Artifact: one unlink preflight over a
-    /// pair for every graph that links it. Every block the engine reports locks
-    /// its graph. A result for a card that is no longer in edit is dropped.
-    func loadLinkLocks() async {
-        guard let edit = linkEdit else { return }
-        let artifactID = edit.artifactID
-        let pairs = edit.graphIDs.compactMap { graphID -> CatalogEvidenceGraphArtifactPair? in
-            guard context.session.evidenceGraph(id: graphID)?.links(artifactID) == true else { return nil }
-            return CatalogEvidenceGraphArtifactPair(graphID: graphID, artifactID: artifactID)
-        }
-        if pairs.isEmpty {
-            linkEdit?.blocks = []
-            linkEdit?.loadState = .ready
-            return
-        }
-        linkEdit?.loadState = .loading
-        do {
-            let blocks = try await context.store.getEvidenceGraphUnlinkImpact(
-                projectDir: context.projectDir,
-                pairs: pairs
-            )
-            guard linkEdit?.artifactID == artifactID else { return }
-            linkEdit?.blocks = blocks.filter { $0.artifactID == artifactID }
-            linkEdit?.loadState = .ready
-        } catch {
-            guard let message = context.fail(error) else { return }
-            guard linkEdit?.artifactID == artifactID else { return }
-            linkEdit?.loadState = .failed(message)
-        }
-    }
-
-    func fieldsDirty(_ id: String) -> Bool {
-        guard let art = items.first(where: { $0.id == id }) else { return false }
-        return textChanged(id, art) || linksDirty(id)
-    }
-
-    private func textChanged(_ id: String, _ art: CatalogArtifact) -> Bool {
-        let label = (labels[id] ?? art.label).trimmingCharacters(in: .whitespacesAndNewlines)
-        let desc = (descriptions[id] ?? art.description).trimmingCharacters(in: .whitespacesAndNewlines)
-        return label != art.label || desc != art.description
-    }
-
-    func canSaveFields(_ id: String) -> Bool {
-        guard savingID == nil, fieldsDirty(id) else { return false }
-        if let edit = linkEdit, edit.artifactID == id, edit.loadState != .ready { return false }
-        let label = (labels[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return !label.isEmpty
-    }
-
-    /// Shown while the card is in edit and the label has no text.
-    func cardLabelError(id: String) -> String? {
-        guard editingArtifactID == id else { return fieldErrors[id] }
-        let label = (labels[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if label.isEmpty {
-            return L10n.string(L10n.Sources.artifactCardLabelRequired)
-        }
-        return fieldErrors[id]
-    }
-
-    func cancelFields(id: String) {
-        guard savingID != id else { return }
-        if linkEdit?.artifactID == id { dropLinkEdit() }
-        if editingArtifactID == id { cardSaveError = nil }
-        guard let art = items.first(where: { $0.id == id }) else {
-            if editingArtifactID == id { editingArtifactID = nil }
-            return
-        }
-        labels[id] = art.label
-        descriptions[id] = art.description
-        fieldErrors[id] = nil
-        if editingArtifactID == id { editingArtifactID = nil }
-    }
-
-    /// The full set of graph ids a links Save sends: the checked ones in list
-    /// order, then the graphs made since edit opened that link the Artifact (the
-    /// card never showed them, so a Save must not drop them).
-    private var savedGraphIDs: [String] {
-        guard let edit = linkEdit else { return [] }
-        let shown = Set(edit.graphIDs)
-        let added = (context.session.evidenceGraphs(sourceID: context.sourceID) ?? [])
-            .filter { !shown.contains($0.id) && $0.links(edit.artifactID) }
-            .map(\.id)
-        return checkedGraphIDs + added
-    }
-
-    /// One Save for the card: one `updateArtifact` with the label, the
-    /// description and, when a box changed, every link, so the engine applies
-    /// all of it or none. A refusal leaves the card in edit with every field
-    /// and box as the researcher set it and nothing half applied.
-    func saveFields(id: String) async {
-        guard let art = items.first(where: { $0.id == id }) else { return }
-        guard savingID == nil else { return }
-        let label = (labels[id] ?? art.label).trimmingCharacters(in: .whitespacesAndNewlines)
-        let desc = (descriptions[id] ?? art.description).trimmingCharacters(in: .whitespacesAndNewlines)
-        if label.isEmpty {
-            fieldErrors[id] = L10n.string(L10n.Sources.artifactCardLabelRequired)
-            return
-        }
-        fieldErrors[id] = nil
-        var graphIDs: [String]?
-        if let edit = linkEdit, edit.artifactID == id {
-            guard edit.loadState == .ready else { return }
-            if linksDirty(id) { graphIDs = savedGraphIDs }
-        }
-        let fieldsChanged = label != art.label || desc != art.description
-        if !fieldsChanged, graphIDs == nil { return }
-        context.clearPageError()
-        cardSaveError = nil
-        savingID = id
-        defer { savingID = nil }
-        do {
-            let (updated, _, effects) = try await context.store.updateArtifact(
-                projectDir: context.projectDir,
-                userID: context.userID,
-                artifactID: id,
-                label: label,
-                description: desc,
-                graphIDs: graphIDs,
-                metadata: nil
-            )
-            // Its effects reload the graph list when links moved.
-            replace(updated, effects: effects)
-            if editingArtifactID == id {
-                editingArtifactID = nil
-                dropLinkEdit()
+    /// Opens the Artifact sheet at `section`. Nothing happens while a sheet is
+    /// open or when the Artifact is not on the page.
+    func openSheet(artifactID: String, at section: ArtifactSheetModel.Section = .top) {
+        guard sheet == nil, let art = items.first(where: { $0.id == artifactID }) else { return }
+        sheet = ArtifactSheetModel(
+            context: context,
+            mode: .edit(art),
+            opensAt: section,
+            onSaved: { [weak self] art, metadata, effects in
+                self?.show(art, metadata: metadata, effects: effects)
             }
-        } catch {
-            guard let message = context.fail(error) else { return }
-            // Read the locks again: a Citation may have taken the Artifact
-            // since edit opened, and the engine's preflight says which graph keeps it.
-            if graphIDs != nil, linkEdit?.artifactID == id {
-                await loadLinkLocks()
-            }
-            // Only the card that saved shows the error: another card may have
-            // opened edit while this one saved.
-            guard editingArtifactID == id else { return }
-            cardSaveError = saveErrorBody(message)
-        }
-    }
-
-    /// The card's save-error body. Nothing was written, so it never speaks of a
-    /// partial save: it names the graph the engine says keeps the Artifact when
-    /// the researcher unchecked it, else says the changes are kept.
-    private func saveErrorBody(_ message: String) -> String {
-        if let edit = linkEdit, edit.loadState == .ready {
-            let locked = lockedGraphs
-            let kept = edit.graphIDs.first { edit.excluded.contains($0) && locked[$0] != nil }
-            if let kept, let graph = context.session.evidenceGraph(id: kept) {
-                return L10n.Sources.artifactCardSaveErrorGraphKeeps(graph: graph.name, error: message)
-            }
-        }
-        return L10n.Sources.artifactCardSaveErrorKept(message)
+        )
     }
 
     /// Opens Add Artifact with the dropped file staged. Nothing is stored until confirm.
     func stagePageDrop(_ urls: [URL]) {
-        guard !urls.isEmpty, savingID == nil, !isSavingDraft else { return }
-        if let id = editingArtifactID {
-            cancelFields(id: id)
-        }
+        guard !urls.isEmpty, sheet == nil, !isSavingDraft else { return }
         openAdd()
         applyDroppedURLs(urls, into: .create)
     }
@@ -693,7 +386,7 @@ final class SourceArtifactsSection {
                 artifactID: id,
                 path: path
             )
-            replace(ingested.artifact, effects: ingested.effects)
+            show(ingested.artifact, effects: ingested.effects)
             isAttaching = false
             attachDraft = AttachDraft()
             await context.refreshCoverFromStore()
@@ -750,39 +443,32 @@ final class SourceArtifactsSection {
         }
     }
 
-    /// Changes the page's Artifact list and writes the result to the cached
-    /// workspace too, so a later patch of that cache (a metadata board write)
-    /// starts from what the page shows.
-    private func patchArtifacts(_ change: (inout [CatalogArtifact]) -> Void) {
+    /// Puts a written Artifact on the page, appended when new: the one apply
+    /// path for every Artifact write. The list is patched here (the page and the
+    /// cached workspace; no slot patches the Artifact list). A write that carried
+    /// the Artifact's copy details also puts its rows on the page, and the
+    /// `.wroteMetadataBoard` slot writes them into the cache, with no reload.
+    private func show(
+        _ art: CatalogArtifact,
+        metadata: [CatalogMetadataEntry]? = nil,
+        effects: CatalogWriteEffects
+    ) {
         guard var workspace = context.workspace else { return }
-        change(&workspace.artifacts)
+        if let idx = workspace.artifacts.firstIndex(where: { $0.id == art.id }) {
+            workspace.artifacts[idx] = art
+        } else {
+            workspace.artifacts.append(art)
+        }
         context.setWorkspace(workspace)
-    }
-
-    /// Puts a written Artifact on the page, appended when new. The list is
-    /// patched here, so only the effects apply: the Source's row moves and
-    /// its graph reads follow.
-    private func show(_ art: CatalogArtifact, effects: CatalogWriteEffects) {
-        patchArtifacts { artifacts in
-            if let idx = artifacts.firstIndex(where: { $0.id == art.id }) {
-                artifacts[idx] = art
-            } else {
-                artifacts.append(art)
-            }
+        let owner = MetadataOwner(level: .artifact, id: art.id)
+        if let metadata {
+            // The page only: the slot below writes the rows into the cached key once.
+            context.workspace?.setMetadataRows(metadata, for: owner)
+            context.session.apply(
+                effects, .wroteMetadataBoard(sourceId: context.sourceID, owner: owner, entries: metadata)
+            )
+        } else {
+            context.session.apply(effects)
         }
-        labels[art.id] = art.label
-        descriptions[art.id] = art.description
-        context.session.apply(effects)
-    }
-
-    private func replace(_ updated: CatalogArtifact, effects: CatalogWriteEffects) {
-        patchArtifacts { artifacts in
-            if let idx = artifacts.firstIndex(where: { $0.id == updated.id }) {
-                artifacts[idx] = updated
-            }
-        }
-        labels[updated.id] = updated.label
-        descriptions[updated.id] = updated.description
-        context.applyWrite(effects)
     }
 }

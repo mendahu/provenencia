@@ -15,7 +15,7 @@ final class SourcePageModel {
     var notes: SourceNotesSection
     var artifacts: SourceArtifactsSection
     var graphs: SourceGraphsSection
-    /// The page's one Add-metadata dialog and clear confirm, for every board on it.
+    /// The page's one clear confirm, for every board on it.
     let metadataDialogs = MetadataBoardDialogs()
 
     /// The Copy Source form while it is open.
@@ -97,11 +97,10 @@ final class SourcePageModel {
     var acceptsArtifactPageDrop: Bool {
         !artifacts.isAdding
             && !artifacts.isAttaching
-            && !metadataDialogs.isAdding
             && metadataDialogs.pendingDelete == nil
             && notes.pendingDelete == nil
             && pendingImpact == nil
-            && artifacts.pendingEditSwitch == nil
+            && artifacts.sheet == nil
     }
 
     /// Loads the workspace and page vocabulary, then syncs section state
@@ -167,7 +166,7 @@ final class SourcePageModel {
             notes.reset()
         }
         if previous?.artifacts != workspace.artifacts {
-            artifacts.seedDrafts()
+            artifacts.workspaceChanged()
         }
         appliedWorkspace = workspace
     }

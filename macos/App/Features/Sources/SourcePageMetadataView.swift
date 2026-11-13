@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The Source page's Metadata section: header, intro and its board.
+/// The Source page's Metadata section: header and its board. The header's help
+/// icon carries the intro as a tooltip; its Add field opens the board's inline row.
 struct SourcePageMetadataView: View {
     @Bindable var model: SourcePageModel
 
@@ -8,26 +9,27 @@ struct SourcePageMetadataView: View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             PVSectionHeader(
                 title: L10n.Sources.metadataHeading,
-                meta: model.metadata.saved.isEmpty
-                    ? nil
-                    : L10n.Sources.metadataFieldCount(model.metadata.saved.count),
+                aside: {
+                    PVIcon(.circleHelp, size: 15)
+                        .foregroundStyle(PVColor.textMuted)
+                        .help(L10n.string(L10n.Sources.metadataIntro))
+                        .accessibilityElement()
+                        .accessibilityLabel(L10n.string(L10n.Sources.metadataHelpLabel))
+                        .accessibilityHint(L10n.string(L10n.Sources.metadataIntro))
+                        .accessibilityIdentifier("sources.page.metadataHelp")
+                },
                 actions: {
-                    PVButton(L10n.Sources.addMetadata, variant: .primary, size: .sm, icon: .plus) {
-                        model.metadataDialogs.openAdd(on: model.metadata)
+                    PVButton(L10n.Sources.addMetadata, variant: .ghost, size: .sm, icon: .plus) {
+                        model.metadata.openAddRow()
                     }
                     .accessibilityIdentifier("sources.page.addMetadata")
                 }
             )
 
-            Text(L10n.Sources.metadataIntro)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-                .frame(maxWidth: PVSpacing.measureProse, alignment: .leading)
-
             MetadataBoardView(
                 board: model.metadata,
+                placement: .page,
                 accessibilityIdentifierPrefix: "sources.page.metadata",
-                onAdd: { model.metadataDialogs.openAdd(on: model.metadata) },
                 onClear: { id in
                     Task {
                         if await model.metadata.requestClear(fieldID: id) {

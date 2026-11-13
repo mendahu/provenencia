@@ -4,7 +4,7 @@ import SwiftUI
 /// kit checkbox per graph with its name and ref. State is the unchecked set
 /// (`excluded`), so a graph made later starts checked. A `locked` graph (its
 /// id mapped to its hint) is checked, shows the lock mark and cannot be
-/// cleared. Used by the Add artifact dialog and an Artifact card in edit.
+/// cleared. Used by the Add artifact dialog and the Artifact sheet.
 /// `accessibilityIdentifierPrefix` roots the ids: `<prefix>`, `.<graph id>`.
 struct SourceArtifactGraphLinks: View {
     let graphs: [CatalogEvidenceGraph]
@@ -57,5 +57,17 @@ extension Sequence where Element == CatalogEvidenceGraphUnlinkBlock {
             hints[block[keyPath: key]] = block.lockHint
         }
         return hints
+    }
+}
+
+/// The muted line under a graph group with no box checked.
+struct SourceArtifactNoGraphLine: View {
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        Text(L10n.Sources.artifactGraphsNone)
+            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+            .foregroundStyle(PVColor.textMuted)
+            .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
