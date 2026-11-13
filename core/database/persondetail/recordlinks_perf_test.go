@@ -19,9 +19,8 @@ const (
 	budgetLinksRepeat = 300 * time.Millisecond
 	budgetLinksPast   = 1500 * time.Millisecond // 65 graphs reload on every read
 	// budgetLinks80: S16-13 D-15, a repeat read at 80 graphs. The planning base
-	// read in 113 ms; 1.25 times that rounds up to 200 ms, below budgetLinksPast,
-	// so the budget is budgetLinksPast.
-	budgetLinks80 = budgetLinksPast // measured: S16-13 planning base
+	// read in 113 ms; 1.25 times that rounds up to 200 ms.
+	budgetLinks80 = 200 * time.Millisecond // measured: S16-13 planning base 113 ms x 1.25, rounded up
 )
 
 // households files n Sources "Household 1" to "Household n", each with the son
