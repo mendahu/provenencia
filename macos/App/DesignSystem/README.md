@@ -245,8 +245,11 @@ ignored, an open inner edit stands the sheet's Escape, Return and outside click
 down (the edit owns its own dismissal), a dirty sheet shows the discard question
 (and Escape on that question returns to the form), a clean sheet closes. A
 control that owns an open edit inside a sheet raises `.pvSheetInnerEdit(isOpen)`
-and takes Escape with a `.cancelAction` Cancel; `PVInlineEdit` and
-`PVInlineEditActions` do both. The visible Cancel button closes at
+and takes Escape with a `.cancelAction` Cancel. `PVInlineEdit` does both;
+`PVInlineEditActions` gives only the Cancel, so a control built on it raises the
+signal itself (as `MetadataBoardAddRowView` does). An input whose only inner
+edit is typed text raises it while focused with text and clears on
+`.onExitCommand` (the suggestion row). The visible Cancel button closes at
 once and carries no key of its own. A new sheet gets all of this by presenting
 with `.pvSheet`; do not add a raw `.sheet`, `.pvOutsideClick` or
 `.keyboardShortcut(.cancelAction)` for a sheet.
