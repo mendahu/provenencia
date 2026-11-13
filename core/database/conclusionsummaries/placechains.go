@@ -45,10 +45,11 @@ type placeLink struct {
 // does not scan every other place's edges.
 type placeGraph struct {
 	places map[string]placeEntry
+	pages  map[string]placePage // only placeStep fills it, for its own place
 }
 
 func newPlaceGraph() *placeGraph {
-	return &placeGraph{places: map[string]placeEntry{}}
+	return &placeGraph{places: map[string]placeEntry{}, pages: map[string]placePage{}}
 }
 
 // shell is the summary shell of a place the graph holds, and whether it does.
@@ -203,7 +204,7 @@ func (g *placeGraph) ImmediateParts(placeID []byte, at *datevalue.Value) [][]byt
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.places[string(placeID)].partTo {
+	for _, l := range g.pages[string(placeID)].partTo {
 		if !g.linkHolds(q, l) {
 			continue
 		}
@@ -233,9 +234,9 @@ func (g *placeGraph) Predecessors(placeID []byte) [][]byte {
 func (g *placeGraph) succNeighbors(placeID []byte, forward bool) [][]byte {
 	seen := map[string]bool{}
 	var out [][]byte
-	links := g.places[string(placeID)].succTo
+	links := g.pages[string(placeID)].succTo
 	if forward {
-		links = g.places[string(placeID)].succFrom
+		links = g.pages[string(placeID)].succFrom
 	}
 	for _, l := range links {
 		other := l.from
@@ -409,7 +410,7 @@ func placeNeighborhood(c *database.Catalog, ids [][]byte) (*placeGraph, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildPlaceGraph(g, v, ids, nil)
+	return buildPlaceGraph(g, v, ids)
 }
 
 // AttachPlaceRelationships fills PartOf / Contains / Predecessors /
@@ -445,7 +446,7 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 
 	for _, id := range g.ImmediateParts(h.Entity.ID, &today) {
 		rel := g.relationship(id, RelContains)
-		for _, l := range g.places[string(h.Entity.ID)].partTo {
+		for _, l := range g.pages[string(h.Entity.ID)].partTo {
 			if bytes.Equal(l.from, id) {
 				rel.StartDate, rel.EndDate = g.membership(l)
 				break

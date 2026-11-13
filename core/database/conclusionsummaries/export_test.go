@@ -57,14 +57,18 @@ func HeldPlaceEntryForTest(g *graphcache.Graph, id []byte) bool {
 	return ok
 }
 
-// PlaceEntryForTest returns whether the entry for the place is held and found,
-// the keys a summary row records for it, and the keys a commit drops it by.
-func PlaceEntryForTest(g *graphcache.Graph, id []byte) (held, found bool, inputs, dropBy []graphcache.InputKey) {
+// PlaceEntryForTest returns whether the chain entry for the place is held and
+// found, and the keys it is dropped by (the keys a summary row records for it).
+func PlaceEntryForTest(g *graphcache.Graph, id []byte) (held, found bool, inputs []graphcache.InputKey) {
 	e, ok := placeEntries.Peek(g, id)
-	if !ok {
-		return false, false, nil, nil
-	}
-	return true, e.found, e.inputs, placeInputs(id, e)
+	return ok, e.found, e.inputs
+}
+
+// PlacePageForTest returns whether the page entry for the place is held and the
+// keys it is dropped by.
+func PlacePageForTest(g *graphcache.Graph, id []byte) (held bool, inputs []graphcache.InputKey) {
+	p, ok := placePages.Peek(g, id)
+	return ok, p.inputs
 }
 
 // SetPlaceEntryCapForTest lowers the place entries g holds to n.
@@ -88,5 +92,15 @@ func FillPlaceEntriesForTest(g *graphcache.Graph, ids ...[]byte) error {
 		return err
 	}
 	_, err = placeEntriesOf(g, v, ids)
+	return err
+}
+
+// FillPlacePagesForTest holds the pages of ids on g, as the place page does.
+func FillPlacePagesForTest(g *graphcache.Graph, ids ...[]byte) error {
+	v, err := vocabulary(g)
+	if err != nil {
+		return err
+	}
+	_, err = placePagesOf(g, v, ids)
 	return err
 }

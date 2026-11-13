@@ -604,7 +604,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 		lives[string(id)] = life{births, deaths}
 		pickIDs = append(pickIDs, lifeEvents(births, deaths)...)
 	}
-	pg, err := eventPlaceGraph(g, v, pickIDs, rec)
+	pg, err := eventPlaceGraph(g, v, pickIDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -817,7 +817,7 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	pg, err := eventPlaceGraph(g, v, lifeEvents(births, deaths), nil)
+	pg, err := eventPlaceGraph(g, v, lifeEvents(births, deaths))
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
@@ -832,7 +832,7 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 
 // eventPlaceGraph builds the placeGraph for every Place of the given events,
 // skipping events with no node.
-func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte, rec *inputBudget) (*placeGraph, error) {
+func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGraph, error) {
 	var withNode [][]byte
 	for _, id := range eventIDs {
 		n, err := g.Node(id)
@@ -852,7 +852,7 @@ func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte, rec *input
 	if err := g.Nodes(placeIDs); err != nil {
 		return nil, err
 	}
-	return buildPlaceGraph(g, v, placeIDs, rec)
+	return buildPlaceGraph(g, v, placeIDs)
 }
 
 // lifeEvents are the ids of the births' and then the deaths' events.
@@ -997,7 +997,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	if err := g.Nodes(append(append([][]byte(nil), personIDs...), placeIDs...)); err != nil {
 		return nil, nil, err
 	}
-	pg, err := buildPlaceGraph(g, v, placeIDs, rec)
+	pg, err := buildPlaceGraph(g, v, placeIDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1275,7 +1275,7 @@ func finishPlaces(g *graphcache.Graph, v vocab, rec *inputBudget, summaries []Pl
 	for i := range summaries {
 		ids[i] = summaries[i].Entity.ID
 	}
-	pg, err := buildPlaceGraph(g, v, ids, rec)
+	pg, err := buildPlaceGraph(g, v, ids)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1292,7 +1292,7 @@ func finishPlaces(g *graphcache.Graph, v vocab, rec *inputBudget, summaries []Pl
 	return summaries, inputs, nil
 }
 
-func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte, _ *inputBudget) (*placeGraph, error) {
+func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph, error) {
 	pg := newPlaceGraph()
 	seeds = database.UniqueBlobIDs(seeds)
 	if len(seeds) == 0 {
@@ -1339,29 +1339,34 @@ func placeStep(c *database.Catalog, id []byte) (*placeGraph, error) {
 	if err != nil {
 		return nil, err
 	}
-	own, err := placeEntriesOf(g, v, [][]byte{id})
+	pages, err := placePagesOf(g, v, [][]byte{id})
 	if err != nil {
 		return nil, err
 	}
-	e, ok := own[string(id)]
+	page, ok := pages[string(id)]
 	if !ok {
 		return pg, nil
 	}
-	pg.places[string(id)] = e
-	var neighbors [][]byte
-	for _, links := range [][]placeLink{e.partFrom, e.partTo, e.succFrom, e.succTo} {
+	pg.pages[string(id)] = page
+	neighbors := [][]byte{id}
+	for _, links := range [][]placeLink{page.partTo, page.succFrom, page.succTo} {
 		for _, l := range links {
 			neighbors = append(neighbors, l.from, l.to)
 		}
 	}
-	others, err := placeEntriesOf(g, v, neighbors)
+	own, err := placeEntriesOf(g, v, [][]byte{id})
 	if err != nil {
 		return nil, err
 	}
-	for k, o := range others {
-		if k != string(id) {
-			pg.places[k] = o
-		}
+	for _, l := range own[string(id)].partFrom {
+		neighbors = append(neighbors, l.to)
+	}
+	entries, err := placeEntriesOf(g, v, neighbors)
+	if err != nil {
+		return nil, err
+	}
+	for k, e := range entries {
+		pg.places[k] = e
 	}
 	return pg, nil
 }

@@ -1,6 +1,7 @@
 package conclusionsummaries
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 
@@ -15,34 +16,56 @@ import (
 const maxPlaceEntries = 65536
 
 // placeEntry is what a chain read needs of one place: its shell, its period,
-// and its filed part_of and succeeded_by links in both directions with their
-// decoded dates. The fill reads only the place's values and its
-// place_relationship links, never the events and other links a city carries.
-// Values are shared and read only.
+// and the part_of links where it is the part, with their decoded dates. The
+// fill reads only the place's values and its place_relationship links, and
+// only those links' associations: never the events and other links a city
+// carries, and never the dates of a child's or a succession link. Values are
+// shared and read only.
 type placeEntry struct {
 	found    bool
 	shell    PlaceSummary
 	period   valuecompare.Window
 	partFrom []placeLink // this place is the part: part id → wholes
-	partTo   []placeLink // this place is the whole: whole id → parts
-	succFrom []placeLink // this place is the predecessor
-	succTo   []placeLink // this place is the successor
 	// inputs are the keys a summary row records for this place: its values, its
 	// part_of links at the part end and those links' associations.
 	inputs []graphcache.InputKey
 }
 
-// placeEntries holds one placeEntry per place id. A commit drops an entry
-// through its Inputs, so a write that touches neither a place nor its links
-// leaves it.
-var placeEntries graphcache.Keyed[placeEntry]
+// placePage is what only the place page and its parts and succession
+// questions read of one place: the links where it is the whole, the
+// predecessor and the successor, with their decoded dates. A chain read never
+// builds one, so a bad date on a child or succession link fails that place's
+// page and nothing else. Values are shared and read only.
+type placePage struct {
+	partTo   []placeLink // this place is the whole: whole id → parts
+	succFrom []placeLink // this place is the predecessor
+	succTo   []placeLink // this place is the successor
+	// inputs are the place's values and every link followed at the other three
+	// ends with its association.
+	inputs []graphcache.InputKey
+}
+
+// placeEntries holds one placeEntry per place id and placePages one placePage.
+// A commit drops an entry through its Inputs, so a write that touches neither
+// a place nor its links leaves it.
+var (
+	placeEntries graphcache.Keyed[placeEntry]
+	placePages   graphcache.Keyed[placePage]
+)
 
 func init() {
 	placeEntries = graphcache.RegisterKeyed(graphcache.KeyedEntry[placeEntry]{
 		Name:        "conclusionsummaries.places",
 		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
-		Inputs:      placeInputs,
+		Inputs:      func(_ []byte, e placeEntry) []graphcache.InputKey { return e.inputs },
 		Check:       checkPlaceEntry,
+		Cap:         maxPlaceEntries,
+	})
+	placePages = graphcache.RegisterKeyed(graphcache.KeyedEntry[placePage]{
+		Name:        "conclusionsummaries.placePages",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
+		Inputs:      func(_ []byte, p placePage) []graphcache.InputKey { return p.inputs },
+		Check:       checkPlacePage,
 		Cap:         maxPlaceEntries,
 	})
 }
@@ -56,39 +79,83 @@ func placeEntriesOf(g *graphcache.Graph, v vocab, ids [][]byte) (map[string]plac
 	})
 }
 
-// fillPlaceEntries reads the entries of ids with a narrow load: the places'
-// values and place_relationship links, then every link's association values.
-// A place with no entity row gets a found-false entry whose only input is its
-// own values, so a commit that creates it drops the entry.
-func fillPlaceEntries(g *graphcache.Graph, v vocab, ids [][]byte) (map[string]placeEntry, error) {
+// placePagesOf is placeEntriesOf for pages.
+func placePagesOf(g *graphcache.Graph, v vocab, ids [][]byte) (map[string]placePage, error) {
+	return placePages.GetMany(g, ids, func(missing [][]byte) (map[string]placePage, error) {
+		return fillPlacePages(g, v, missing)
+	})
+}
+
+// followedPlace is a narrow node of each place in ids (values and
+// place_relationship links) with the links each of hopList follows, and the
+// decoded link of each, oriented from part or predecessor to whole or
+// successor. A place with no entity row has no node.
+type followedPlace struct {
+	n        *graphcache.Node
+	links    [][]graphcache.Link // one list per hop, in hopList order
+	oriented [][]placeLink
+}
+
+// followHop is one hop followPlaces follows; selfOnly keeps only the links from
+// the place to itself.
+type followHop struct {
+	hop      hops.Hop
+	selfOnly bool
+}
+
+func followPlaces(g *graphcache.Graph, v vocab, ids [][]byte, hopList ...followHop) (map[string]*followedPlace, error) {
 	nodes, err := g.NodesOnBridges(ids, "place_relationship")
 	if err != nil {
 		return nil, err
 	}
-	type found struct {
-		n     *graphcache.Node
-		links [4][]graphcache.Link
-	}
-	byHop := [4]hops.Hop{hops.ParentsOfPlace, hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace}
-	have := map[string]*found{}
+	have := map[string]*followedPlace{}
 	var assocIDs [][]byte
 	for _, id := range ids {
 		n := nodes[string(id)]
 		if n == nil {
 			continue
 		}
-		f := &found{n: n}
-		for i, hop := range byHop {
-			if f.links[i], err = n.Follow(hop); err != nil {
+		f := &followedPlace{n: n, links: make([][]graphcache.Link, len(hopList)), oriented: make([][]placeLink, len(hopList))}
+		for i, h := range hopList {
+			links, err := n.Follow(h.hop)
+			if err != nil {
 				return nil, err
 			}
-			for _, l := range f.links[i] {
+			for _, l := range links {
+				if h.selfOnly && !bytes.Equal(l.Neighbor, id) {
+					continue
+				}
+				f.links[i] = append(f.links[i], l)
 				assocIDs = append(assocIDs, l.Association)
 			}
 		}
 		have[string(id)] = f
 	}
 	assocs, err := g.NodesOnBridges(assocIDs)
+	if err != nil {
+		return nil, err
+	}
+	for id, f := range have {
+		for i, links := range f.links {
+			for _, l := range links {
+				pl, err := orientPlaceLink(v, []byte(id), l, assocs)
+				if err != nil {
+					return nil, err
+				}
+				f.oriented[i] = append(f.oriented[i], pl)
+			}
+		}
+	}
+	return have, nil
+}
+
+// fillPlaceEntries reads the entries of ids with a narrow load: the places'
+// values and the place_relationship links where each is the part, then those
+// links' association values. A place with no entity row gets a found-false
+// entry whose only input is its own values, so a commit that creates it drops
+// the entry.
+func fillPlaceEntries(g *graphcache.Graph, v vocab, ids [][]byte) (map[string]placeEntry, error) {
+	have, err := followPlaces(g, v, ids, followHop{hop: hops.ParentsOfPlace})
 	if err != nil {
 		return nil, err
 	}
@@ -105,35 +172,65 @@ func fillPlaceEntries(g *graphcache.Graph, v vocab, ids [][]byte) (map[string]pl
 			return nil, err
 		}
 		e := placeEntry{found: true, shell: shell, period: periodWindow(shell.StartDate, shell.EndDate)}
-		part := map[string]bool{}
-		succ := map[string]bool{}
-		for i, links := range f.links {
-			for _, l := range links {
-				pl, err := orientPlaceLink(v, id, l, assocs)
-				if err != nil {
-					return nil, err
-				}
-				key := string(pl.from) + "\x00" + string(pl.to) + "\x00" + string(pl.association)
-				if i < 2 {
-					if part[key] {
-						continue
-					}
-					part[key] = true
-					e.partFrom, e.partTo = addPlaceLink(e.partFrom, e.partTo, id, pl)
-					continue
-				}
-				if succ[key] {
-					continue
-				}
-				succ[key] = true
-				e.succFrom, e.succTo = addPlaceLink(e.succFrom, e.succTo, id, pl)
-			}
-		}
+		e.partFrom = dedupePlaceLinks(f.oriented[0])
 		keys := append([]graphcache.InputKey{graphcache.NodeKey(id)}, graphcache.FollowKeys(id, hops.ParentsOfPlace, f.links[0])...)
-		e.inputs = sortedKeys(keys)
+		e.inputs = graphcache.UniqueInputKeys(keys)
 		out[string(id)] = e
 	}
 	return out, nil
+}
+
+// fillPlacePages reads the pages of ids the way fillPlaceEntries reads
+// entries, over the links where each place is the whole, the predecessor and
+// the successor. Its inputs come from the links it followed.
+func fillPlacePages(g *graphcache.Graph, v vocab, ids [][]byte) (map[string]placePage, error) {
+	// A place that is part of itself sits in its own list of parts as well as of
+	// wholes, and the graph follows that link from only one end: the page takes
+	// it from the part_of hop, and no other link of that hop.
+	pageHops := []followHop{
+		{hop: hops.PartsOfPlace}, {hop: hops.SuccessorsOfPlace}, {hop: hops.PredecessorsOfPlace},
+		{hop: hops.ParentsOfPlace, selfOnly: true},
+	}
+	have, err := followPlaces(g, v, ids, pageHops...)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]placePage, len(ids))
+	for _, id := range ids {
+		id = append([]byte(nil), id...)
+		f := have[string(id)]
+		keys := []graphcache.InputKey{graphcache.NodeKey(id)}
+		if f == nil {
+			out[string(id)] = placePage{inputs: keys}
+			continue
+		}
+		for i, h := range pageHops {
+			keys = append(keys, graphcache.FollowKeys(id, h.hop, f.links[i])...)
+		}
+		out[string(id)] = placePage{
+			partTo:   dedupePlaceLinks(append(f.oriented[0], f.oriented[3]...)),
+			succFrom: dedupePlaceLinks(f.oriented[1]),
+			succTo:   dedupePlaceLinks(f.oriented[2]),
+			inputs:   graphcache.UniqueInputKeys(keys),
+		}
+	}
+	return out, nil
+}
+
+// dedupePlaceLinks drops a link repeated on from, to and association, keeping
+// the first.
+func dedupePlaceLinks(links []placeLink) []placeLink {
+	seen := map[string]bool{}
+	var out []placeLink
+	for _, l := range links {
+		key := string(l.from) + "\x00" + string(l.to) + "\x00" + string(l.association)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, l)
+	}
+	return out
 }
 
 // orientPlaceLink makes the link l of place id a placeLink, from its part or
@@ -157,56 +254,6 @@ func orientPlaceLink(v vocab, id []byte, l graphcache.Link, assocs map[string]*g
 	}, nil
 }
 
-// addPlaceLink files pl in the list of the place it leaves and the list of the
-// place it enters, as id is either end: a self-loop sits in both.
-func addPlaceLink(fromList, toList []placeLink, id []byte, pl placeLink) (_, _ []placeLink) {
-	if string(pl.from) == string(id) {
-		fromList = append(fromList, pl)
-	}
-	if string(pl.to) == string(id) {
-		toList = append(toList, pl)
-	}
-	return fromList, toList
-}
-
-func sortedKeys(keys []graphcache.InputKey) []graphcache.InputKey {
-	seen := map[string]bool{}
-	out := keys[:0]
-	for _, k := range keys {
-		if mk := k.Key(); !seen[mk] {
-			seen[mk] = true
-			out = append(out, k)
-		}
-	}
-	graphcache.SortInputKeys(out)
-	return out
-}
-
-// placeInputs is everything the entry for id was built from: the keys a summary
-// row records (its values, its part_of links at the part end and their
-// associations) and the same for the links at the other three ends. A commit
-// that moves one drops the entry.
-func placeInputs(id []byte, e placeEntry) []graphcache.InputKey {
-	keys := []graphcache.InputKey{graphcache.NodeKey(id)}
-	if !e.found {
-		return keys
-	}
-	keys = append(keys, e.inputs...)
-	for _, set := range []struct {
-		hop   hops.Hop
-		links []placeLink
-	}{
-		{hops.PartsOfPlace, e.partTo}, {hops.SuccessorsOfPlace, e.succFrom}, {hops.PredecessorsOfPlace, e.succTo},
-	} {
-		links := make([]graphcache.Link, len(set.links))
-		for i, l := range set.links {
-			links[i] = graphcache.Link{Association: l.association}
-		}
-		keys = append(keys, graphcache.FollowKeys(id, set.hop, links)...)
-	}
-	return sortedKeys(keys)
-}
-
 // checkPlaceEntry rebuilds the entry of id from the committed rows and compares.
 func checkPlaceEntry(g *graphcache.Graph, id []byte, stored placeEntry) error {
 	v, err := vocabulary(g)
@@ -219,6 +266,22 @@ func checkPlaceEntry(g *graphcache.Graph, id []byte, stored placeEntry) error {
 	}
 	if !reflect.DeepEqual(fresh[string(id)], stored) {
 		return fmt.Errorf("conclusionsummaries: stored place entry %x does not match a fresh load", id)
+	}
+	return nil
+}
+
+// checkPlacePage rebuilds the page of id from the committed rows and compares.
+func checkPlacePage(g *graphcache.Graph, id []byte, stored placePage) error {
+	v, err := vocabulary(g)
+	if err != nil {
+		return err
+	}
+	fresh, err := fillPlacePages(g, v, [][]byte{id})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(fresh[string(id)], stored) {
+		return fmt.Errorf("conclusionsummaries: stored place page %x does not match a fresh load", id)
 	}
 	return nil
 }

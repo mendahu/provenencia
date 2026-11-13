@@ -55,6 +55,20 @@ func (f *fixture) chainWorld() *chainWorld {
 	return w
 }
 
+// breakDates makes every start and end date stored on a link undecodable. A
+// test that calls it dates no place, only links.
+func (f *fixture) breakDates() {
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
+	res, err := db.Exec(`UPDATE auto_reconciler_values SET value_date = x'ff'
+		WHERE value_date IS NOT NULL AND property_id IN (?, ?)`, f.Prop("start_date").ID, f.Prop("end_date").ID)
+	must(f.T, err)
+	if n, _ := res.RowsAffected(); n == 0 {
+		f.T.Fatal("no stored date to break")
+	}
+}
+
 // townChain reads the chain of the town, which holds the entries of all three
 // places, and returns it.
 func (f *fixture) townChain(w *chainWorld) []string {
@@ -141,19 +155,74 @@ func TestPlaceEntries(t *testing.T) {
 		}},
 		{"remove link", func(t *testing.T, f *fixture, w *chainWorld) {
 			g := f.C.Graph()
+			must(t, conclusionsummaries.FillPlacePagesForTest(g, w.city))
 			_, err := writes.Call(f.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				ch, err := subjects.Delete(tx, userID, w.townRel.ID)
 				return struct{}{}, ch, err
 			})
 			must(t, err)
-			for name, want := range map[string]bool{"town": false, "city": false, "region": true} {
+			for name, want := range map[string]bool{"town": false, "city": true, "region": true} {
 				id := map[string][]byte{"city": w.city, "town": w.town, "region": w.region}[name]
 				if got := conclusionsummaries.HeldPlaceEntryForTest(g, id); got != want {
 					t.Errorf("%s held %v, want %v", name, got, want)
 				}
 			}
+			if held, _ := conclusionsummaries.PlacePageForTest(g, w.city); held {
+				t.Error("the city's page is held after its child link was removed")
+			}
 			if got := f.townChain(w); len(got) != 0 {
 				t.Errorf("chain %v after the link was removed, want none", got)
+			}
+		}},
+		{"self-loop", func(t *testing.T, _ *fixture, _ *chainWorld) {
+			c := graphcachetest.OpenCatalog(t)
+			k := graphcachetest.NewCanon(t, c)
+			loop := k.Entity("place")
+			k.PartOf(loop, loop)
+			k.Commit(loop)
+			g := c.Graph()
+			g.Drop()
+			if got, err := conclusionsummaries.ParentsAtDate(c, loop, conclusionsummaries.TodayDate()); err != nil || len(got) != 0 {
+				t.Errorf("chain of a place that is part of itself: %v, %v", got, err)
+			}
+			h := conclusionsummaries.PlaceSummary{}
+			h.Entity.ID = loop
+			must(t, conclusionsummaries.AttachPlaceRelationships(c, &h))
+			if len(h.PartOf) != 1 || len(h.Contains) != 1 {
+				t.Errorf("part of %d, contains %d, want one each", len(h.PartOf), len(h.Contains))
+			}
+			db, err := c.DB()
+			must(t, err)
+			in := graphcache.Over(db).Inputs(nil)
+			if _, err := in.Node(loop); err != nil {
+				t.Fatal(err)
+			}
+			reads := func(hopList ...hops.Hop) []graphcache.InputKey {
+				in := graphcache.Over(db).Inputs(nil)
+				if _, err := in.Node(loop); err != nil {
+					t.Fatal(err)
+				}
+				for _, hop := range hopList {
+					links, err := in.Follow(loop, hop)
+					must(t, err)
+					for _, l := range links {
+						if _, err := in.Node(l.Association); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}
+				return in.Keys()
+			}
+			_, _, chain := conclusionsummaries.PlaceEntryForTest(g, loop)
+			_, page := conclusionsummaries.PlacePageForTest(g, loop)
+			if want := reads(hops.ParentsOfPlace); !slices.EqualFunc(chain, want, graphcache.InputKey.Equal) {
+				t.Errorf("chain inputs %+v, want %+v", chain, want)
+			}
+			if want := reads(hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace, hops.ParentsOfPlace); !slices.EqualFunc(page, want, graphcache.InputKey.Equal) {
+				t.Errorf("page inputs %+v, want %+v", page, want)
+			}
+			if err := g.Verify(); err != nil {
+				t.Errorf("Verify: %v", err)
 			}
 		}},
 		{"vocabulary", func(t *testing.T, f *fixture, w *chainWorld) {
@@ -170,6 +239,79 @@ func TestPlaceEntries(t *testing.T) {
 				t.Errorf("Verify error %v, want one naming the stored place entry", err)
 			}
 		}},
+		{"bad succession date", func(t *testing.T, f *fixture, w *chainWorld) {
+			g := f.C.Graph()
+			start := 1800
+			a := f.placeSubject("Alpha", nil, nil, 10, 0)
+			b := f.placeSubject("Beta", nil, nil, 12, 0)
+			f.placeRel(a, b, propertyterms.KeySucceededBy, &start, nil)
+			aID := f.promoteSubject(a)
+			f.promoteSubject(b)
+			before, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{aID})
+			must(t, err)
+			f.breakDates()
+			g.Drop()
+			list, err := conclusionsummaries.ListPlaces(f.C)
+			if err != nil {
+				t.Fatalf("ListPlaces: %v", err)
+			}
+			after := 0
+			for _, p := range list {
+				if bytes.Equal(p.Entity.ID, aID) {
+					after++
+					if !slices.Equal(p.Names, before[0].Names) {
+						t.Errorf("alpha reads %v, was %v", p.Names, before[0].Names)
+					}
+				}
+			}
+			if after != 1 {
+				t.Fatalf("alpha listed %d times", after)
+			}
+			if _, _, err := conclusionsummaries.SuccessionNames(f.C, aID); err == nil {
+				t.Error("SuccessionNames of alpha read a bad succession date without error")
+			}
+			h := conclusionsummaries.PlaceSummary{}
+			h.Entity.ID = aID
+			if err := conclusionsummaries.AttachPlaceRelationships(f.C, &h); err == nil {
+				t.Error("AttachPlaceRelationships read a bad succession date without error")
+			}
+		}},
+		{"bad part date", func(t *testing.T, f *fixture, w *chainWorld) {
+			g := f.C.Graph()
+			start := 1800
+			hill := f.placeSubject("Hill", nil, nil, 14, 0)
+			f.placeRel(hill, w.citySubject, propertyterms.KeyPartOf, &start, nil)
+			hillID := f.promoteSubject(hill)
+			f.breakDates()
+			g.Drop()
+			if _, err := conclusionsummaries.ParentsAtDate(f.C, w.city, conclusionsummaries.TodayDate()); err != nil {
+				t.Errorf("the city's chain: %v", err)
+			}
+			if _, err := conclusionsummaries.ParentsAtDate(f.C, w.town, conclusionsummaries.TodayDate()); err != nil {
+				t.Errorf("the town's chain does not climb the broken link: %v", err)
+			}
+			if _, err := conclusionsummaries.ParentsAtDate(f.C, hillID, conclusionsummaries.TodayDate()); err == nil {
+				t.Error("the hill's own chain climbs the broken link and read it without error")
+			}
+		}},
+		{"chain fills no page", func(t *testing.T, f *fixture, w *chainWorld) {
+			g := f.C.Graph()
+			g.Drop()
+			_, err := conclusionsummaries.ListPlaces(f.C)
+			must(t, err)
+			if n := g.KeyCounts()["conclusionsummaries.placePages"]; n != 0 {
+				t.Errorf("%d place pages held after a list, want 0", n)
+			}
+			if n := g.KeyCounts()["conclusionsummaries.places"]; n == 0 {
+				t.Error("the list held no place entries")
+			}
+			h := conclusionsummaries.PlaceSummary{}
+			h.Entity.ID = w.city
+			must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &h))
+			if n := g.KeyCounts()["conclusionsummaries.placePages"]; n != 1 {
+				t.Errorf("%d place pages held after the city's page, want 1", n)
+			}
+		}},
 		{"missing place", func(t *testing.T, f *fixture, w *chainWorld) {
 			g := f.C.Graph()
 			unknown := bytes.Repeat([]byte{0xee}, 16)
@@ -178,7 +320,7 @@ func TestPlaceEntries(t *testing.T) {
 			if len(got) != 0 {
 				t.Errorf("chain %v of an unknown place", got)
 			}
-			held, found, inputs, _ := conclusionsummaries.PlaceEntryForTest(g, unknown)
+			held, found, inputs := conclusionsummaries.PlaceEntryForTest(g, unknown)
 			if !held || found || !slices.EqualFunc(inputs, []graphcache.InputKey{{ID: unknown}}, graphcache.InputKey.Equal) {
 				t.Errorf("entry held %v found %v inputs %+v", held, found, inputs)
 			}
@@ -221,24 +363,26 @@ func TestPlaceEntries(t *testing.T) {
 }
 
 // TestPlaceEntriesFollowLinkMoves holds the three cases whose commits move a
-// place's links without writing the place.
+// place's links without writing the place. The city's page is held too, and a
+// link at it drops the page.
 func TestPlaceEntriesFollowLinkMoves(t *testing.T) {
 	tests := []struct {
 		name string
 		move func(k *graphcachetest.Canon, town, city, region []byte)
 		held [3]bool // town, city, region
+		page bool    // the city's page is held
 	}{
 		{"a location at the city", func(k *graphcachetest.Canon, town, city, region []byte) {
 			k.Commit(k.Location(k.Event(vocabkey.EventBirth), city))
-		}, [3]bool{true, true, true}},
+		}, [3]bool{true, true, true}, true},
 		{"a new part_of link at the city", func(k *graphcachetest.Canon, town, city, region []byte) {
 			k.Commit(k.PartOf(k.Entity("place"), city))
-		}, [3]bool{true, false, true}},
+		}, [3]bool{true, false, true}, false},
 		{"a merge of the region", func(k *graphcachetest.Canon, town, city, region []byte) {
 			into := k.Entity("place")
 			k.Merge(region, into)
 			k.Commit(region, into)
-		}, [3]bool{true, false, false}},
+		}, [3]bool{true, false, false}, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -250,11 +394,15 @@ func TestPlaceEntriesFollowLinkMoves(t *testing.T) {
 			k.Commit(town, city, region)
 			g := c.Graph()
 			must(t, conclusionsummaries.FillPlaceEntriesForTest(g, town, city, region))
+			must(t, conclusionsummaries.FillPlacePagesForTest(g, city))
 			tc.move(k, town, city, region)
 			for i, id := range [][]byte{town, city, region} {
 				if got := conclusionsummaries.HeldPlaceEntryForTest(g, id); got != tc.held[i] {
 					t.Errorf("%s held %v, want %v", []string{"town", "city", "region"}[i], got, tc.held[i])
 				}
+			}
+			if held, _ := conclusionsummaries.PlacePageForTest(g, city); held != tc.page {
+				t.Errorf("the city's page held %v, want %v", held, tc.page)
 			}
 		})
 	}
@@ -267,6 +415,7 @@ func TestPlaceEntryInputsMatchReads(t *testing.T) {
 	g := f.C.Graph()
 	g.Drop()
 	must(t, conclusionsummaries.FillPlaceEntriesForTest(g, w.town, w.city, w.region, unknown))
+	must(t, conclusionsummaries.FillPlacePagesForTest(g, w.town, w.city, w.region, unknown))
 	db, err := f.C.DB()
 	must(t, err)
 	// reads is what a scope records reading id and following hopList.
@@ -294,9 +443,10 @@ func TestPlaceEntryInputsMatchReads(t *testing.T) {
 	}
 	for name, id := range map[string][]byte{"town": w.town, "city": w.city, "region": w.region, "unknown": unknown} {
 		t.Run(name, func(t *testing.T) {
-			held, _, inputs, dropBy := conclusionsummaries.PlaceEntryForTest(g, id)
-			if !held {
-				t.Fatal("the entry is not held")
+			held, _, inputs := conclusionsummaries.PlaceEntryForTest(g, id)
+			pageHeld, pageInputs := conclusionsummaries.PlacePageForTest(g, id)
+			if !held || !pageHeld {
+				t.Fatalf("entry held %v, page held %v", held, pageHeld)
 			}
 			same := func(what string, got, want []graphcache.InputKey) {
 				t.Helper()
@@ -305,7 +455,7 @@ func TestPlaceEntryInputsMatchReads(t *testing.T) {
 				}
 			}
 			same("inputs", inputs, reads(id, hops.ParentsOfPlace))
-			same("drop inputs", dropBy, reads(id, hops.ParentsOfPlace, hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace))
+			same("page inputs", pageInputs, reads(id, hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace))
 		})
 	}
 }
@@ -314,10 +464,12 @@ func TestPlaceEntryInputsMatchReads(t *testing.T) {
 // 20,000 parts that is the lowest place of a chain of eight, and one event
 // located at the hub per 10 parts.
 type meshWorld struct {
-	c    *database.Catalog
-	k    *graphcachetest.Canon
-	hub  []byte
-	wide int
+	c         *database.Catalog
+	k         *graphcachetest.Canon
+	hub       []byte
+	part      []byte // the first part of the hub
+	partEvent []byte // an event located at it
+	wide      int
 }
 
 func newMeshWorld(tb testing.TB, parts int) *meshWorld {
@@ -333,7 +485,12 @@ func newMeshWorld(tb testing.TB, parts int) *meshWorld {
 			below = whole
 		}
 		for i := 0; i < parts; i++ {
-			w.k.PartOf(w.k.Entity("place"), w.hub)
+			part := w.k.Entity("place")
+			if i == 0 {
+				w.part, w.partEvent = part, w.k.Event(vocabkey.EventBirth)
+				w.k.Location(w.partEvent, part)
+			}
+			w.k.PartOf(part, w.hub)
 			if i%10 == 0 {
 				w.k.Location(w.k.Event(vocabkey.EventBirth), w.hub)
 			}
@@ -389,6 +546,21 @@ func BenchmarkPlaceMesh(b *testing.B) {
 		loc := w.k.Location(w.k.Event(vocabkey.EventBirth), w.hub)
 		w.k.Commit(loc)
 		b.ReportMetric(ms(list()), "ms")
+	})
+	b.Run("write-under-hub", func(b *testing.B) {
+		// A write's one-shot graph composes the rows of an event located at a part
+		// of the hub and of that part: its chain climbs into the hub, which has
+		// 20,000 parts.
+		db, err := w.c.DB()
+		if err != nil {
+			b.Fatal(err)
+		}
+		want := conclusionsummaries.Want{Events: [][]byte{w.partEvent}, Places: [][]byte{w.part}}
+		b.ReportMetric(ms(databasetest.Since(func() {
+			if _, err := conclusionsummaries.RowsForSearch(graphcache.Over(db), want); err != nil {
+				b.Fatal(err)
+			}
+		})), "ms")
 	})
 	b.Log(fmt.Sprintf("hub with %d parts", w.wide))
 }
