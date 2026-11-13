@@ -18,6 +18,10 @@ const (
 	budgetLinksCold   = 1500 * time.Millisecond
 	budgetLinksRepeat = 300 * time.Millisecond
 	budgetLinksPast   = 1500 * time.Millisecond // 65 graphs reload on every read
+	// budgetLinks80: S16-13 D-15, a repeat read at 80 graphs. The planning base
+	// read in 113 ms; 1.25 times that rounds up to 200 ms, below budgetLinksPast,
+	// so the budget is budgetLinksPast.
+	budgetLinks80 = budgetLinksPast // measured: S16-13 planning base
 )
 
 // households files n Sources "Household 1" to "Household n", each with the son
@@ -109,6 +113,17 @@ func TestRecordLinksBudgets(t *testing.T) {
 			return databasetest.Since(func() { g.recordLinks(son) })
 		})
 		databasetest.WithinBudget(t, "repeat read at 65 graphs", d, budgetLinksPast)
+	})
+
+	t.Run("80 graphs", func(t *testing.T) {
+		g := newFixture(t)
+		son := households(g, 80)
+		threeStrong(t, g.recordLinks(son), 80)
+		d := databasetest.Fastest(2, func() time.Duration {
+			runtime.GC()
+			return databasetest.Since(func() { g.recordLinks(son) })
+		})
+		databasetest.WithinBudget(t, "repeat read at 80 graphs", d, budgetLinks80)
 	})
 }
 
