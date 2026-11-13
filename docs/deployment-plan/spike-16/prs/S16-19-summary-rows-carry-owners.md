@@ -202,7 +202,7 @@ None — no catalog change.
 | `core/database/persondetail` `timeline.go`, `participants.go` | D-10 |
 | `api/ffi/handlers` `person_detail.go`, `source_read.go` | `personEventProto` reads `p.ID`; `source_read.go` calls `canonicalentities.FromNode` |
 
-Errors: none new. "location link … has no association" and "association %x is missing" go: the first becomes a skipped owner (D-4), the second goes with the association node read, and `PersonDerivedRows` skips an owner whose node is gone (D-5).
+Errors: none new. "location link of event %x to place %x has no association" and "association %x is missing" go: the first becomes a skipped owner (D-4), the second goes with the association node read, and `PersonDerivedRows` skips an owner whose node is gone (D-5).
 
 ### FFI
 
