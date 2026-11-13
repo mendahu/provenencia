@@ -60,7 +60,7 @@ type isolator struct {
 	t    testing.TB
 	g    *graphcache.Graph
 	id   []byte
-	seen map[string]graphcache.InputKey
+	seen []graphcache.InputKey
 }
 
 func newIsolator(t testing.TB, q Querier) *isolator {
@@ -69,9 +69,9 @@ func newIsolator(t testing.TB, q Querier) *isolator {
 		if k.Bridge == "" && bytes.Equal(k.ID, iso.id) {
 			return
 		}
-		iso.seen[k.Key()] = graphcache.InputKey{
+		iso.seen = append(iso.seen, graphcache.InputKey{
 			ID: append([]byte(nil), k.ID...), Bridge: k.Bridge, Endpoint: k.Endpoint,
-		}
+		})
 	})
 	return iso
 }
@@ -80,16 +80,11 @@ func newIsolator(t testing.TB, q Querier) *isolator {
 // own values.
 func (iso *isolator) row(kind string, id []byte) []graphcache.InputKey {
 	iso.t.Helper()
-	iso.id, iso.seen = id, map[string]graphcache.InputKey{}
+	iso.id, iso.seen = id, nil
 	if _, err := conclusionsummaries.RowsForSearch(iso.g, want(kind, [][]byte{id})); err != nil {
 		iso.t.Fatal(err)
 	}
-	out := make([]graphcache.InputKey, 0, len(iso.seen))
-	for _, k := range iso.seen {
-		out = append(out, k)
-	}
-	graphcache.SortInputKeys(out)
-	return out
+	return graphcache.UniqueInputKeys(iso.seen)
 }
 
 // Stats is how many keys the rows of each kind hold.

@@ -147,6 +147,21 @@ func SortInputKeys(keys []InputKey) {
 	})
 }
 
+// UniqueInputKeys returns keys once each (by Key), sorted by ID, Bridge,
+// Endpoint, as a new slice: it does not alias or reorder keys.
+func UniqueInputKeys(keys []InputKey) []InputKey {
+	seen := make(map[string]bool, len(keys))
+	out := make([]InputKey, 0, len(keys))
+	for _, k := range keys {
+		if mk := k.Key(); !seen[mk] {
+			seen[mk] = true
+			out = append(out, k)
+		}
+	}
+	SortInputKeys(out)
+	return out
+}
+
 // AssociationInputs returns, for each id that is an unmerged association of a
 // registered bridge, the keys of the handles at its ends: its rank-1 kept
 // value of each endpoint Property, as {end, bridge, endpoint}. An id that is
