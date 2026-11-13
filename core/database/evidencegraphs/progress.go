@@ -44,41 +44,30 @@ func (p *Progress) add(key, origin string, n, filed int32) {
 	}
 }
 
-// ListProgress returns per-graph counts. Graphs with all zeros are omitted.
+// ListProgress returns per-graph counts in List's order. Graphs with all zeros
+// are omitted.
 func ListProgress(c *database.Catalog) ([]Progress, error) {
-	db, err := c.DB()
+	idx, err := catalogIndex(c)
 	if err != nil {
 		return nil, err
 	}
-	byID, err := loadProgress(db, nil)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]Progress, 0, len(byID))
-	for _, p := range byID {
-		out = append(out, p)
-	}
-	return out, nil
+	return idx.AllProgress(), nil
 }
 
 // GetProgress returns counts for one Evidence graph. An unknown or empty graph
 // is zeros.
 func GetProgress(c *database.Catalog, graphID []byte) (Progress, error) {
-	db, err := c.DB()
-	if err != nil {
+	if _, err := c.DB(); err != nil {
 		return Progress{}, err
 	}
 	if len(graphID) != 16 {
 		return Progress{}, ErrInvalid
 	}
-	byID, err := loadProgress(db, [][]byte{graphID})
+	idx, err := IndexOf(c.Graph())
 	if err != nil {
 		return Progress{}, err
 	}
-	if p, ok := byID[string(graphID)]; ok {
-		return p, nil
-	}
-	return Progress{GraphID: append([]byte(nil), graphID...)}, nil
+	return idx.Progress(graphID), nil
 }
 
 // loadProgress counts the named graphs, or every graph when graphIDs is nil.

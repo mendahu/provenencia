@@ -338,6 +338,7 @@ func TestFiledCounts(t *testing.T) {
 	claim := func(sub subjects.Subject, status string) {
 		t.Helper()
 		entityN++
+		c.Graph().Drop() // the SQL below reports no effects
 		entityID := []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, byte(entityN)}
 		if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`,
 			entityID, sub.SubjectTypeID, "CNE-TEST"+string(rune('0'+entityN))); err != nil {
@@ -419,5 +420,32 @@ func TestFiledCounts(t *testing.T) {
 		if got.SubjectCount != 0 || got.FiledCount != 0 {
 			t.Fatalf("get %s %+v", src.Title, got)
 		}
+	}
+}
+
+// TestWarmReadsIssueNoQuery: once the catalog is warm, the progress and graph
+// list reads are map reads.
+func TestWarmReadsIssueNoQuery(t *testing.T) {
+	f := indexFixture(t)
+	c := f.r.C
+	if _, err := evidencegraphs.ListProgress(c); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	c.Graph().SetQueryCounterForTest(func() { n++ })
+	if _, err := evidencegraphs.ListProgress(c); err != nil {
+		t.Fatal(err)
+	}
+	if p, err := evidencegraphs.GetProgress(c, f.def.ID); err != nil || p.ObservationCount != 1 {
+		t.Fatalf("GetProgress = %+v, %v", p, err)
+	}
+	if _, err := evidencegraphs.List(c, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := evidencegraphs.List(c, f.r.Source.ID); err != nil || len(got) != 3 {
+		t.Fatalf("List = %d graphs, %v", len(got), err)
+	}
+	if n != 0 {
+		t.Fatalf("warm reads ran %d queries", n)
 	}
 }

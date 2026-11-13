@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"slices"
 	"testing"
@@ -117,6 +118,15 @@ func assertGraphEffects(t *testing.T, effects *engine.WriteEffects, sourceID str
 	}
 }
 
+func mustParseID(t *testing.T, s string) []byte {
+	t.Helper()
+	id, err := parseID(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func TestListEvidenceGraphs(t *testing.T) {
 	t.Run("bad proto", func(t *testing.T) {
 		if _, err := ListEvidenceGraphs([]byte{0xff}); err == nil {
@@ -125,7 +135,7 @@ func TestListEvidenceGraphs(t *testing.T) {
 	})
 	f := newGraphFixture(t)
 	f.createGraph(t, "Smith", f.page1)
-	f.otherSource(t)
+	otherID, _ := f.otherSource(t)
 
 	graphs := f.list(t)
 	var names []string
@@ -135,13 +145,19 @@ func TestListEvidenceGraphs(t *testing.T) {
 			t.Fatalf("graph %+v", g)
 		}
 	}
-	if !slices.Equal(names, []string{"Default", "Default", "Smith"}) {
-		t.Fatalf("names %v", names)
+	// The project is listed Sources by id, each in list order (D-4).
+	want := []string{"Default", "Smith", "Default"}
+	a, b := mustParseID(t, f.sourceID), mustParseID(t, otherID)
+	if bytes.Compare(b, a) < 0 {
+		want = []string{"Default", "Default", "Smith"}
 	}
-	a := f.graphsOf(t, f.sourceID)
-	if len(a) != 2 || a[0].GetName() != "Default" || a[1].GetName() != "Smith" ||
-		!slices.Equal(a[1].GetArtifactIds(), []string{f.page1}) || len(a[0].GetArtifactIds()) != 2 {
-		t.Fatalf("source A graphs %+v", a)
+	if !slices.Equal(names, want) {
+		t.Fatalf("names %v, want %v", names, want)
+	}
+	ga := f.graphsOf(t, f.sourceID)
+	if len(ga) != 2 || ga[0].GetName() != "Default" || ga[1].GetName() != "Smith" ||
+		!slices.Equal(ga[1].GetArtifactIds(), []string{f.page1}) || len(ga[0].GetArtifactIds()) != 2 {
+		t.Fatalf("source A graphs %+v", ga)
 	}
 }
 
