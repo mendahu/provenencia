@@ -1,7 +1,6 @@
 package persondetail_test
 
 import (
-	"runtime"
 	"testing"
 	"time"
 
@@ -47,11 +46,7 @@ func TestDetailBudgets(t *testing.T) {
 	})
 
 	t.Run("warm", func(t *testing.T) {
-		read()
-		d := databasetest.Fastest(5, func() time.Duration {
-			runtime.GC()
-			return databasetest.Since(func() { read() })
-		})
+		d := databasetest.Warm(func() { read() })
 		databasetest.WithinBudget(t, "warm detail read at 80 graphs", d, budgetDetailWarm)
 	})
 }

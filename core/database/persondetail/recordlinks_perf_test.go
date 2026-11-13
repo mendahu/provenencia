@@ -93,11 +93,7 @@ func TestRecordLinksBudgets(t *testing.T) {
 	})
 
 	t.Run("repeat", func(t *testing.T) {
-		read()
-		d := databasetest.Fastest(5, func() time.Duration {
-			runtime.GC()
-			return databasetest.Since(func() { read() })
-		})
+		d := databasetest.Warm(func() { read() })
 		databasetest.WithinBudget(t, "repeat read at 50 graphs", d, budgetLinksRepeat)
 	})
 

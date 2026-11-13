@@ -3,6 +3,7 @@
 package databasetest
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -26,6 +27,18 @@ func Since(call func()) time.Duration {
 	start := time.Now()
 	call()
 	return time.Since(start)
+}
+
+// Warm is the fastest of five timed calls of read after one warm-up call. Each
+// timed call is preceded by a collection, so a run pays for its own garbage and
+// not for what the runs before it left; five runs take the noise of a loaded
+// CI runner.
+func Warm(read func()) time.Duration {
+	read()
+	return Fastest(5, func() time.Duration {
+		runtime.GC()
+		return Since(read)
+	})
 }
 
 // WithinBudget logs what took got and fails the test when it is over budget.

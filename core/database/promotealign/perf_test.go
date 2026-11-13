@@ -3,7 +3,6 @@ package promotealign_test
 import (
 	"math/rand/v2"
 	"reflect"
-	"runtime"
 	"testing"
 	"time"
 
@@ -202,17 +201,11 @@ func TestLargeSourceBudgets(t *testing.T) {
 
 	// A warm proposal rebuilds the canon each time, about 120 MB of short-lived
 	// allocations over a heap of about 170 MB, so each run sets off one or two
-	// collections. Collecting before each timed run bills a run for its own
-	// garbage, not for what the subtests before it left; five runs take the
-	// noise of a loaded CI runner (2026-11-03, a best of three measured 388 ms
-	// there against 110 – 190 ms on a Mac). The cost itself is
+	// collections (2026-11-03, a best of three measured 388 ms on a loaded CI
+	// runner against 110 – 190 ms on a Mac). The cost itself is
 	// docs/ideas/promote-ranking.md#narrower-canon-walk.
 	t.Run("warm", func(t *testing.T) {
-		propose()
-		d := databasetest.Fastest(5, func() time.Duration {
-			runtime.GC()
-			return databasetest.Since(func() { propose() })
-		})
+		d := databasetest.Warm(func() { propose() })
 		databasetest.WithinBudget(t, "warm proposal", d, budgetWarm)
 	})
 
