@@ -576,7 +576,7 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 }
 
 // TestForEntityAfterSourceEdit: a Source rename, an Artifact relabel and a
-// credibility change reach the record shells.
+// credibility change reach the record through its Source record.
 func TestForEntityAfterSourceEdit(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Register")

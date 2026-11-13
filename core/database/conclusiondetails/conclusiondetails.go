@@ -459,7 +459,10 @@ func newRecordReader(g *graphcache.Graph, v graphcache.Vocabulary, nodes []*grap
 	}
 	var graphIDs [][]byte
 	for _, row := range rows {
-		if graph, ok := r.graphOf[string(row.SubjectID)]; ok && len(row.SubjectID) > 0 {
+		if len(row.SubjectID) == 0 {
+			continue
+		}
+		if graph, ok := r.graphOf[string(row.SubjectID)]; ok {
 			graphIDs = append(graphIDs, graph)
 		}
 	}
