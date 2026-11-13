@@ -5,13 +5,14 @@ import SwiftUI
 /// text). Deliberately not ported: `onRemove` and `interactive` (no caller
 /// yet; add them with the first one), and a built-in fixed size — a Tag shows
 /// data of any length, so it takes the width it is offered and truncates its
-/// text; a caller that must keep it whole adds `.fixedSize()`.
+/// text; a caller that must keep it whole adds `.fixedSize()`. The 3, 9 and 7pt
+/// measures are the web kit's own, so they stay literals.
 struct PVTag: View {
     let text: String
     var dot: Color = PVColor.textMuted
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: PVSpacing.space3) {
             Circle()
                 .fill(dot)
                 .frame(width: 7, height: 7)
@@ -23,7 +24,7 @@ struct PVTag: View {
         }
         .padding(.top, 3)
         .padding(.bottom, 3)
-        .padding(.leading, 8)
+        .padding(.leading, PVSpacing.space4)
         .padding(.trailing, 9)
         .background(Capsule().fill(PVColor.surfaceRaised))
         .overlay(Capsule().strokeBorder(PVColor.borderSubtle, lineWidth: 1))

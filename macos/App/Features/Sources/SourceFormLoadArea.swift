@@ -10,7 +10,7 @@ enum SourceFormLoadState: Equatable {
 /// The area of a Source-page form that waits on a read (the Copy form's parts,
 /// the graph form's kept links, an Artifact's graph links): skeleton bars
 /// with a caption while loading (three, or one half-width bar when `compact`,
-/// for a card), a compact danger callout with **Read again** when the read
+/// for the Artifact sheet), a compact danger callout with **Read again** when the read
 /// failed, and `ready` once it has a value. One body for every form.
 struct SourceFormLoadArea<Ready: View>: View {
     let state: SourceFormLoadState
