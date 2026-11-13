@@ -8,6 +8,8 @@ enum PVSymbol: String {
     /// Lucide `copy` — copy a value to the clipboard (`PVClipboardButton`).
     case copy = "doc.on.doc"
     case info = "info.circle"
+    /// Lucide `circle-help` — a help affordance with a tooltip (not an info glyph).
+    case circleHelp = "questionmark.circle"
     case chevronDown = "chevron.down"
     case chevronUp = "chevron.up"
     case chevronBack = "chevron.left"

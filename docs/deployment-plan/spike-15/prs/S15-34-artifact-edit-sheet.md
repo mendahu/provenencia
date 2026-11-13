@@ -1,6 +1,6 @@
 # S15-34 — Artifacts are edited in a sheet
 
-**Status:** Planned
+**Status:** Landed in [#819](https://github.com/mendahu/provenencia/pull/819) (2026-11-13)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D14](../design/S15-D14-source-page-artifacts.md) SA-4, SA-6, SA-8, SA-9, SA-12 – SA-15 and the Wide rows for the Metadata section and the sheet, board agreed 2026-11-13; plus the user's 2026-11-13 additions on the same board (the Metadata section header: help tooltip, no field count)
@@ -402,3 +402,17 @@ None.
 
 **Title:** S15-34 — Artifacts are edited in a sheet
 **Body:** objective in one sentence; what shipped against US-1 – US-5; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-15/prs/S15-34-artifact-edit-sheet.md`.
+
+## Landed
+
+- `ArtifactSheetModel`'s `onSaved` carries the reply rows as optional (`[CatalogMetadataEntry]?`, nil when the draft was nil) instead of D-4's non-optional array, so a text-only Save leaves the page's rows and the cached key alone, as D-7 says "when `metadata` is set".
+- The sheet model sets its graph choices and starts its lock read in `init` when the session's graph list is loaded (`graphsChanged()` is the one place both happen), instead of `openSheet` starting `linkLoadTask`.
+- `ArtifactSheetModel.subtitle` ("<Source ref> · <Source title>") is a model property the view's copy reads; `SourceArtifactsSection.copyDetails(for:)` reads a card's rows from the page's workspace.
+- `MetadataBoardModel` also clears a field's typed flag on a successful set (`applySet`) and on `cancelEdit`, not only in `dismissSuggestion`, `clear` and `resetDrafts`, so a filled suggestion cannot leave a stale flag that would block Save.
+- `MetadataBoardDialogs.openAdd`'s callers and the `MetadataBoardView` `onAdd` parameter are gone with the dialog; the `.page` placement's empty state has no button.
+- STEP-3 and STEP-4 are one commit (the header's Add field opens the inline row, so the two share code and strings).
+- The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
+- Review round 1, user's call of 2026-11-13: the add row uses the kit's `PVInlineEditActions(.iconRow)` ✓/✕ (ids `.addRow.save` / `.addRow.cancel`), takes Escape through the ✕'s `.cancelAction` and has no `.onExitCommand`, and its picker takes focus on open; this supersedes D-10's rejected ".cancelAction ✕". A suggestion row raises `.pvSheetInnerEdit` only while its input is focused with text, which supersedes D-2's `hasTypedText` signal.
+- Review round 1: a Save that stops with a message asks the scrolling body to scroll to the top (`ArtifactSheetModel.scrollTarget` / `scrollRequest`, passed to `pvFormDialog` as `scrollRequest`), and the body's first scroll waits for its first measured height. The save error and the fields share the top section's `.id`.
+- Review round 1: the Source page's graph read is one `SourcePageContext.evidenceGraphs` / `evidenceGraphsLoading`; the sheet's and the graph form's unlink-lock reads are one `UnlinkLocks` value both models hold, so the `structural-debt.md` row that deferred it to S15-11 is gone.
+- The sheet heading reads "Artifact metadata" (user, 2026-11-13), superseding AC-1.1's "Copy details" label.

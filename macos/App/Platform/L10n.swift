@@ -6339,14 +6339,6 @@ enum L10n {
             comment: "Inline error when DateValue millisecond is out of range"
         )
 
-        static func metadataFieldCount(_ count: Int) -> String {
-            return L10n.format(LocalizedStringResource(
-                "sources.page.metadataFieldCount",
-                defaultValue: "%lld fields",
-                comment: "Metadata section count; argument is saved field count"
-            ), count)
-        }
-
         static func artifactsCount(_ count: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifactsCount",
@@ -6526,19 +6518,19 @@ enum L10n {
         static let artifactGraphsLabel = LocalizedStringResource(
             "sources.page.artifact.graphs.label",
             defaultValue: "Evidence graphs",
-            comment: "Label of the evidence graph checkbox group in the Add artifact dialog and on an artifact card in edit"
+            comment: "Label of the evidence graph checkbox group in the Add artifact dialog and in the Artifact sheet"
         )
 
         static let artifactGraphsHint = LocalizedStringResource(
             "sources.page.artifact.graphs.hint",
             defaultValue: "Which evidence graphs can cite this artifact",
-            comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and on an artifact card in edit"
+            comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and in the Artifact sheet"
         )
 
         static let artifactGraphsNone = LocalizedStringResource(
             "sources.page.artifact.graphs.none",
             defaultValue: "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked.",
-            comment: "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked"
+            comment: "Muted line under the evidence graph group in the Add artifact dialog and in the Artifact sheet when no box is checked"
         )
 
         static let artifactNotInGraph = LocalizedStringResource(
@@ -6565,34 +6557,34 @@ enum L10n {
         static let artifactGraphsLoading = LocalizedStringResource(
             "sources.page.artifact.graphs.loading",
             defaultValue: "Reading the evidence graphs…",
-            comment: "Loading line on an artifact card in edit while its evidence graph links are read"
+            comment: "Loading line in the Artifact sheet while its evidence graph links are read"
         )
 
         static let artifactGraphsLoadErrorTitle = LocalizedStringResource(
             "sources.page.artifact.graphs.loadErrorTitle",
             defaultValue: "Couldn’t read the evidence graphs",
-            comment: "Callout title on an artifact card in edit when its evidence graph links fail to load"
+            comment: "Callout title in the Artifact sheet when its evidence graph links fail to load"
         )
 
         static func artifactGraphsLoadErrorMessage(_ error: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.graphs.loadErrorMessage",
                 defaultValue: "Label and description are kept. Read the evidence graphs again to change the links. %@",
-                comment: "Callout message on an artifact card in edit when its evidence graph links fail to load; argument is the error text"
+                comment: "Callout message in the Artifact sheet when its evidence graph links fail to load; argument is the error text"
             ), error)
         }
 
         static let artifactCardSaveErrorTitle = LocalizedStringResource(
             "sources.page.artifact.saveErrorTitle",
             defaultValue: "Couldn’t save the artifact",
-            comment: "Callout title on an artifact card in edit when saving it fails"
+            comment: "Callout title on the Artifact sheet when saving it fails"
         )
 
         static func artifactCardSaveErrorKept(_ error: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.saveErrorKept",
                 defaultValue: "Your changes are kept. %@",
-                comment: "Callout message on an artifact card in edit when saving it fails before anything was written; argument is the error text"
+                comment: "Callout message on the Artifact sheet when saving it fails before anything was written; argument is the error text"
             ), error)
         }
 
@@ -6600,7 +6592,7 @@ enum L10n {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.saveErrorGraphKeeps",
                 defaultValue: "%1$@ keeps this artifact. Your changes are kept. %2$@",
-                comment: "Callout message on an artifact card in edit when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text"
+                comment: "Callout message on the Artifact sheet when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text"
             ), graph, error)
         }
 
@@ -6627,13 +6619,13 @@ enum L10n {
         static let addMetadata = LocalizedStringResource(
             "sources.page.addMetadata",
             defaultValue: "Add field",
-            comment: "Button to open Add metadata field dialog"
+            comment: "Button that opens the inline Add field row"
         )
 
         static let metadataIntro = LocalizedStringResource(
             "sources.page.metadataIntro",
             defaultValue: "Metadata describes the source itself — what the record says about its own making: a registration number, a call number, the reel it sits on. Facts the record asserts about people or events are not metadata; those become citations and asserted facts, so they can move on to the entities they describe.",
-            comment: "Prose under the Metadata section heading"
+            comment: "Tooltip on the Metadata section's help icon"
         )
 
         static let metadataEmptyTitle = LocalizedStringResource(
@@ -6657,34 +6649,10 @@ enum L10n {
             ), field)
         }
 
-        static let addMetadataDialogTitle = LocalizedStringResource(
-            "sources.page.addMetadataDialogTitle",
-            defaultValue: "Add metadata",
-            comment: "Title of the Add metadata dialog"
-        )
-
-        static let addMetadataDialogSubtitle = LocalizedStringResource(
-            "sources.page.addMetadataDialogSubtitle",
-            defaultValue: "Pick any field from this project’s vocabulary, then enter the value as written on the record.",
-            comment: "Subtitle of the Add metadata dialog"
-        )
-
-        static let addMetadataConfirm = LocalizedStringResource(
-            "sources.page.addMetadataConfirm",
-            defaultValue: "Add",
-            comment: "Confirm button on the Add metadata dialog"
-        )
-
         static let metadataField = LocalizedStringResource(
             "sources.page.metadataField",
             defaultValue: "Field",
             comment: "Label for metadata field picker"
-        )
-
-        static let metadataFieldHint = LocalizedStringResource(
-            "sources.page.metadataFieldHint",
-            defaultValue: "Search the whole source metadata vocabulary",
-            comment: "Hint under metadata field picker"
         )
 
         static let metadataValue = LocalizedStringResource(
@@ -6693,22 +6661,30 @@ enum L10n {
             comment: "Label for metadata value entry"
         )
 
-        static let metadataValueHint = LocalizedStringResource(
-            "sources.page.metadataValueHint",
-            defaultValue: "Enter it as written on the record",
-            comment: "Hint under metadata value field"
+        static func metadataAddRowFieldTaken(field: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.metadataAddRowFieldTaken",
+                defaultValue: "%@ was added in another window. Pick another field.",
+                comment: "Notice under the inline Add field row when its picked field was added elsewhere; argument is the field label"
+            ), field)
+        }
+
+        static let metadataHelpLabel = LocalizedStringResource(
+            "sources.page.metadataHelpLabel",
+            defaultValue: "About metadata",
+            comment: "VoiceOver label for the help icon beside the Metadata heading"
         )
 
-        static let metadataFieldRequired = LocalizedStringResource(
-            "sources.page.metadataFieldRequired",
-            defaultValue: "Choose a field.",
-            comment: "Validation when Add metadata is submitted without a field"
+        static let metadataAddRowCancelLabel = LocalizedStringResource(
+            "sources.page.metadataAddRowCancelLabel",
+            defaultValue: "Stop adding a field",
+            comment: "VoiceOver label for the cancel on the inline Add field row"
         )
 
-        static let metadataValueRequired = LocalizedStringResource(
-            "sources.page.metadataValueRequired",
-            defaultValue: "Enter a value.",
-            comment: "Validation when Add metadata is submitted without a value"
+        static let metadataAddRowConfirmLabel = LocalizedStringResource(
+            "sources.page.metadataAddRowConfirmLabel",
+            defaultValue: "Add this field",
+            comment: "VoiceOver label for the check on the inline Add field row"
         )
 
         static let metadataSuggestionPlaceholder = LocalizedStringResource(
@@ -6783,12 +6759,6 @@ enum L10n {
             comment: "Validation when Add Artifact is submitted without a label"
         )
 
-        static let artifactCardLabelRequired = LocalizedStringResource(
-            "sources.page.artifactCardLabelRequired",
-            defaultValue: "An artifact needs a label",
-            comment: "Validation on an artifact card while the label is empty"
-        )
-
         static let artifactNoDescription = LocalizedStringResource(
             "sources.page.artifactNoDescription",
             defaultValue: "No description",
@@ -6817,8 +6787,8 @@ enum L10n {
         static func editArtifactLabel(ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.page.editArtifactLabel",
-                defaultValue: "Edit label and description of %@",
-                comment: "Tooltip and VoiceOver label for the pencil on an artifact card; argument is the ART- ref"
+                defaultValue: "Edit %@",
+                comment: "Tooltip and VoiceOver label for the pencil on an artifact card, and the Artifact sheet title; argument is the ART- ref"
             ), ref)
         }
 
@@ -6827,6 +6797,48 @@ enum L10n {
             defaultValue: "Save artifact",
             comment: "Button to save edited Artifact label and description"
         )
+
+        static let artifactCopyDetailsLabel = LocalizedStringResource(
+            "sources.page.artifactCopyDetailsLabel",
+            defaultValue: "Artifact metadata",
+            comment: "Label of the Artifact metadata section of the Artifact sheet"
+        )
+
+        static func artifactCopyDetailsMore(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsMore",
+                defaultValue: "+%lld more",
+                comment: "Button on an artifact card after its first copy details; argument is how many more it holds"
+            ), count)
+        }
+
+        static func artifactCopyDetailsMoreLabel(count: Int, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsMoreLabel",
+                defaultValue: "%#@details@ of %2$@",
+                comment: "VoiceOver label of the more button on an artifact card; %1$lld is how many more, %2$@ is the ART- ref"
+            ), count, ref)
+        }
+
+        static let artifactSheetFinishOpenField = LocalizedStringResource(
+            "sources.page.artifactSheetFinishOpenField",
+            defaultValue: "Finish the open field first: save its value or clear it.",
+            comment: "Callout on the Artifact sheet when Save is pressed while a copy-details field holds text not yet confirmed"
+        )
+
+        static let toastArtifactGoneTitle = LocalizedStringResource(
+            "sources.page.toastArtifactGoneTitle",
+            defaultValue: "Artifact no longer here",
+            comment: "Toast title when the Artifact whose sheet is open was deleted or moved in another window"
+        )
+
+        static func toastArtifactGoneBody(label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.toastArtifactGoneBody",
+                defaultValue: "“%@” was deleted or moved in another window.",
+                comment: "Toast body when the Artifact whose sheet is open is gone; argument is its label"
+            ), label)
+        }
 
         /// VoiceOver label for an artifact preview that has a file. Argument is the file name.
         static func openArtifactFile(name: String) -> String {

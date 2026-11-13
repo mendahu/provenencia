@@ -12,6 +12,9 @@ import SwiftUI
 struct PVFormDialogCopy {
     let title: LocalizedStringResource
     let subtitle: LocalizedStringResource?
+    /// Already-localized title, for copy that includes a ref ("Edit ART-7QK2M").
+    /// When set it is drawn instead of `title`.
+    let verbatimTitle: String?
     /// Already-localized subtitle, for copy that includes a ref or a name.
     let verbatimSubtitle: String?
     let confirm: LocalizedStringResource
@@ -25,7 +28,24 @@ struct PVFormDialogCopy {
         cancel: LocalizedStringResource
     ) {
         self.title = title
+        self.verbatimTitle = nil
         self.subtitle = subtitle
+        self.verbatimSubtitle = verbatimSubtitle
+        self.confirm = confirm
+        self.cancel = cancel
+    }
+
+    /// Copy whose title and subtitle are already localized strings.
+    init(
+        verbatimTitle: String,
+        verbatimSubtitle: String?,
+        confirm: LocalizedStringResource,
+        cancel: LocalizedStringResource
+    ) {
+        // `title` is never drawn when `verbatimTitle` is set.
+        self.title = LocalizedStringResource(stringLiteral: verbatimTitle)
+        self.verbatimTitle = verbatimTitle
+        self.subtitle = nil
         self.verbatimSubtitle = verbatimSubtitle
         self.confirm = confirm
         self.cancel = cancel
@@ -39,6 +59,12 @@ enum PVFormDialogControls {
 
     static func isConfirmDisabled(isRunning: Bool, confirmDisabled: Bool) -> Bool {
         isRunning || confirmDisabled
+    }
+
+    /// Return confirms the form, unless an inner edit (a row in edit, an add
+    /// row) is open: then Return belongs to that edit.
+    static func confirmShortcut(innerEditOpen: Bool) -> KeyboardShortcut? {
+        innerEditOpen ? nil : .defaultAction
     }
 }
 
@@ -65,7 +91,21 @@ struct PVFormDialogContent<Form: View>: View {
     let onCancel: () -> Void
     @ViewBuilder let form: () -> Form
 
+    /// The body scrolls between the fixed title and footer, up to
+    /// ``maxScrollingBodyHeight``.
+    let scrollsBody: Bool
+    /// The `.id` of the section the scrolling body opens at the top of.
+    let scrollTarget: AnyHashable?
+    /// A token the caller changes to scroll the body to `scrollTarget` again
+    /// (a refusal that sits at the top, say).
+    let scrollRequest: AnyHashable?
+
+    /// Tallest the scrolling body grows before it scrolls.
+    static var maxScrollingBodyHeight: CGFloat { 560 }
+
     @FocusState private var cancelFocused: Bool
+    @State private var bodyHeight: CGFloat = 0
+    @Environment(\.pvSheetInnerEditOpen) private var innerEditOpen
 
     init(
         copy: PVFormDialogCopy,
@@ -73,10 +113,16 @@ struct PVFormDialogContent<Form: View>: View {
         isRunning: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
+        scrollsBody: Bool = false,
+        scrollTarget: AnyHashable? = nil,
+        scrollRequest: AnyHashable? = nil,
         onConfirm: @escaping () -> Void,
         onCancel: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) {
+        self.scrollsBody = scrollsBody
+        self.scrollTarget = scrollTarget
+        self.scrollRequest = scrollRequest
         self.copy = copy
         self.width = width
         self.isRunning = isRunning
@@ -89,12 +135,12 @@ struct PVFormDialogContent<Form: View>: View {
 
     var body: some View {
         PVPanel(
-            title: Text(copy.title),
+            title: formDialogTitle(copy),
             subtitle: formDialogSubtitle(copy),
             width: width,
             footerChrome: .sunken
         ) {
-            form()
+            formBody
         } footer: {
             HStack(spacing: PVSpacing.space5) {
                 Spacer(minLength: PVSpacing.space8)
@@ -108,7 +154,7 @@ struct PVFormDialogContent<Form: View>: View {
                     ))
                 Button(L10n.string(copy.confirm)) { onConfirm() }
                     .buttonStyle(.pv(.primary, size: .lg))
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(PVFormDialogControls.confirmShortcut(innerEditOpen: innerEditOpen))
                     .disabled(PVFormDialogControls.isConfirmDisabled(
                         isRunning: isRunning,
                         confirmDisabled: confirmDisabled
@@ -127,6 +173,43 @@ struct PVFormDialogContent<Form: View>: View {
             }
         }
     }
+}
+
+/// What asks the scrolling body to scroll: its first measured height, or the caller's token.
+private struct BodyScrollRequest: Hashable {
+    let measured: Bool
+    let caller: AnyHashable?
+}
+
+extension PVFormDialogContent {
+    @ViewBuilder
+    fileprivate var formBody: some View {
+        if scrollsBody {
+            ScrollView(.vertical) {
+                form()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bodyHeight = $0 }
+            }
+            .frame(height: min(bodyHeight, Self.maxScrollingBodyHeight))
+            // The first scroll waits for the body's first measured height: before
+            // it the scroll view is 0pt tall and a scroll lands nowhere.
+            .pvScrollsRowIntoView(
+                scrollTarget,
+                anchor: .top,
+                animated: false,
+                whenRequested: AnyHashable(BodyScrollRequest(measured: bodyHeight > 0, caller: scrollRequest))
+            )
+        } else {
+            form()
+        }
+    }
+}
+
+private func formDialogTitle(_ copy: PVFormDialogCopy) -> Text {
+    if let verbatim = copy.verbatimTitle, !verbatim.isEmpty {
+        return Text(verbatim: verbatim)
+    }
+    return Text(copy.title)
 }
 
 private func formDialogSubtitle(_ copy: PVFormDialogCopy) -> Text? {
@@ -167,6 +250,9 @@ extension View {
         isDirty: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
+        scrollsBody: Bool = false,
+        scrollTarget: AnyHashable? = nil,
+        scrollRequest: AnyHashable? = nil,
         onConfirm: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) -> some View {
@@ -182,6 +268,9 @@ extension View {
                 isRunning: isRunning,
                 confirmDisabled: confirmDisabled,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+                scrollsBody: scrollsBody,
+                scrollTarget: scrollTarget,
+                scrollRequest: scrollRequest,
                 onConfirm: onConfirm,
                 onCancel: { isPresented.wrappedValue = false },
                 form: form
@@ -205,6 +294,9 @@ extension View {
         isDirty: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
+        scrollsBody: Bool = false,
+        scrollTarget: AnyHashable? = nil,
+        scrollRequest: AnyHashable? = nil,
         onConfirm: @escaping @MainActor (Model) async -> Bool,
         @ViewBuilder form: @escaping (Model) -> Form
     ) -> some View {
@@ -221,6 +313,9 @@ extension View {
             isDirty: isDirty,
             confirmDisabled: confirmDisabled,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            scrollsBody: scrollsBody,
+            scrollTarget: scrollTarget,
+            scrollRequest: scrollRequest,
             onConfirm: {
                 guard let current = item.wrappedValue else { return }
                 Task { @MainActor in
@@ -253,6 +348,32 @@ extension View {
             }
             PVField(label: "Title", marker: .required) {
                 PVInput(text: .constant(""))
+            }
+        }
+    }
+    .background(PVColor.surfaceCard)
+}
+
+#Preview("Form dialog — scrolling body") {
+    PVFormDialogContent(
+        copy: PVFormDialogCopy(
+            verbatimTitle: "Edit ART-7QK2M",
+            verbatimSubtitle: "SRC-4KD2P · 1880 U.S. census",
+            confirm: "Save artifact",
+            cancel: "Cancel"
+        ),
+        width: 560,
+        scrollsBody: true,
+        scrollTarget: 3,
+        onConfirm: {},
+        onCancel: {}
+    ) {
+        VStack(alignment: .leading, spacing: PVSpacing.space6) {
+            ForEach(0..<8, id: \.self) { index in
+                PVField(label: "Section \(index)") {
+                    Text(verbatim: String(repeating: "Body ", count: 40))
+                }
+                .id(index)
             }
         }
     }

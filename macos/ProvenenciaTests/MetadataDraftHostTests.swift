@@ -1,4 +1,6 @@
 import Foundation
+import Observation
+import os
 import Testing
 @testable import Provenencia
 
@@ -25,6 +27,21 @@ struct MetadataDraftHostTests {
     }
 
     private func ids(_ rows: [CatalogMetadataEntry]) -> [String] { rows.map(\.field.id) }
+
+    /// T-9: a view over a draft board redraws after each kind of change.
+    @Test func draftHostIsObservable() async {
+        func fires(_ change: (MetadataDraftHost) -> Void) -> Bool {
+            let host = makeHost()
+            let fired = OSAllocatedUnfairLock(initialState: false)
+            withObservationTracking { _ = host.entries } onChange: { fired.withLock { $0 = true } }
+            change(host)
+            return fired.withLock { $0 }
+        }
+        #expect(fires { _ = $0.clear(fieldID: "roll") })
+        #expect(fires { _ = $0.dismissSuggestion(fieldID: "provider") })
+        #expect(fires { _ = $0.reorder(fieldIDs: ["roll", "url", "provider"]) })
+        #expect(fires { _ = $0.set(fieldID: "provider", valueText: "Ancestry") })
+    }
 
     @Test func boardActionsBuildTheDraft() async throws {
         let host = makeHost()
@@ -197,6 +214,7 @@ struct MetadataDraftHostTests {
         let typedHere = MetadataBoardModel(host: makeHost())
         typedHere.beginEdit(fieldID: "roll")
         typedHere.drafts["roll"] = "13"
+        typedHere.setTyped(true, fieldID: "roll")
         #expect(typedHere.showRefusal(invalid(["roll"])))
         #expect(typedHere.drafts["roll"] == "13")
         #expect(typedHere.editingFieldID == "roll")
@@ -205,6 +223,7 @@ struct MetadataDraftHostTests {
         let typedElsewhere = MetadataBoardModel(host: makeHost())
         typedElsewhere.beginEdit(fieldID: "url")
         typedElsewhere.drafts["url"] = "https://example.org/typed"
+        typedElsewhere.setTyped(true, fieldID: "url")
         #expect(!typedElsewhere.showRefusal(invalid(["roll"])))
         #expect(typedElsewhere.drafts["url"] == "https://example.org/typed")
         #expect(typedElsewhere.editingFieldID == "url")

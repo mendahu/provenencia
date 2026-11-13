@@ -89,6 +89,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 never a raw `.sheet`. It gives the sheet Escape, a click outside, and the
 discard question for a dirty form, all from one rule (`PVSheetDismiss`). Do not
 add `.pvOutsideClick` or `.keyboardShortcut(.cancelAction)` to a sheet yourself.
+A control that owns an open edit inside a sheet raises `.pvSheetInnerEdit(isOpen)` and takes Escape with a `.cancelAction` Cancel. `PVInlineEdit` does both. `PVInlineEditActions` gives only the Cancel, so a control built on it raises the signal itself (as `MetadataBoardAddRowView` does). An input whose only inner edit is typed text raises it while focused with text and clears on `.onExitCommand` (the suggestion row).
 
 Kit components announce themselves: a toast speaks its title and message, and an error callout or error line passes `announces: true`; no call site posts its own. A sheet's content closes its sheet through `@Environment(\.pvSheetClose)`, and a form that asks "Discard changes?" before a step holds the step in a `PVDiscardGate`.
 

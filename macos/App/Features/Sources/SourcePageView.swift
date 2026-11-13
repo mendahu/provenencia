@@ -161,24 +161,9 @@ private struct SourcePageContent: View {
         ) {
             SourcePageArtifactsView(model: model).addFileForm
         }
-        .pvFormDialog(
-            isPresented: addMetadataPresented,
-            copy: PVFormDialogCopy(
-                title: L10n.Sources.addMetadataDialogTitle,
-                subtitle: L10n.Sources.addMetadataDialogSubtitle,
-                confirm: L10n.Sources.addMetadataConfirm,
-                cancel: L10n.Sources.cancelAction
-            ),
-            isRunning: model.metadataDialogs.isSavingAdd,
-            isDirty: model.metadataDialogs.addSheetIsDirty,
-            confirmDisabled: !model.metadataDialogs.canSubmitAdd,
-            accessibilityIdentifierPrefix: "sources.page.addMetadata",
-            onConfirm: { Task { await model.metadataDialogs.createFromAdd() } }
-        ) {
-            MetadataBoardAddForm(dialogs: model.metadataDialogs, accessibilityIdentifierPrefix: "sources.page.addMetadata")
-        }
         .sourceCopyDialog($model.copying)
         .sourceGraphFormDialog($model.graphs.form)
+        .artifactSheet($model.artifacts.sheet)
         .sourceDateDialog($model.identity.dateForm)
         .pvConfirm(
             item: Binding(
@@ -196,18 +181,6 @@ private struct SourcePageContent: View {
             isRunning: model.metadataDialogs.isClearing,
             accessibilityIdentifierPrefix: "sources.page.metadata.delete",
             onConfirm: { Task { await model.metadataDialogs.confirmClear() } }
-        ) { _ in
-            EmptyView()
-        }
-        .pvConfirm(
-            item: Binding(
-                get: { model.artifacts.pendingEditSwitch },
-                set: { if $0 == nil { model.artifacts.cancelEditSwitch() } }
-            ),
-            copy: { _ in .discardChanges },
-            tone: .danger,
-            accessibilityIdentifierPrefix: "sources.page.artifact.discard",
-            onConfirm: { model.artifacts.confirmEditSwitch() }
         ) { _ in
             EmptyView()
         }
@@ -306,20 +279,6 @@ private struct SourcePageContent: View {
             }
         )
     }
-
-    private var addMetadataPresented: Binding<Bool> {
-        Binding(
-            get: { model.metadataDialogs.isAdding },
-            set: { presented in
-                if presented {
-                    model.metadataDialogs.openAdd(on: model.metadata)
-                } else {
-                    model.metadataDialogs.cancelAdd()
-                }
-            }
-        )
-    }
-
 }
 
 /// The page's sections as four fixed subviews for `SourcePageOverviewLayout`: the page error,

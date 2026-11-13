@@ -1,17 +1,19 @@
 import Foundation
+import Observation
 
 /// A board over rows no write has saved: a form's copy details, sent with its
 /// owner's one write as `draft`. Its writes change only its own rows.
 @MainActor
+@Observable
 final class MetadataDraftHost: MetadataBoardHost {
     var entries: [CatalogMetadataEntry]
-    let fields: [CatalogMetadataField]
+    @ObservationIgnored let fields: [CatalogMetadataField]
     /// The rows the host opened with: what `isChanged` compares against.
-    private let opened: [CatalogMetadataEntry]
+    @ObservationIgnored private let opened: [CatalogMetadataEntry]
     /// Suggestions the researcher dismissed, in order; each is sent as a dismissed layout row.
     private var dismissed: [String] = []
 
-    var confirmsClear: Bool { false }
+    @ObservationIgnored var confirmsClear: Bool { false }
 
     init(entries: [CatalogMetadataEntry], fields: [CatalogMetadataField]) {
         self.entries = entries
