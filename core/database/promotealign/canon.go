@@ -49,7 +49,6 @@ func loadCanon(g *graphcache.Graph, graphID []byte, m *matchIndex, layer graphal
 	}
 	eventTypeProp := vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)
 	handles := map[string]*graphcache.Node{}
-	kinds := map[string]string{}
 	var seeds [][]byte
 	candidates := map[string][][]byte{}
 	add := func(id []byte) error {
@@ -64,12 +63,10 @@ func loadCanon(g *graphcache.Graph, graphID []byte, m *matchIndex, layer graphal
 		if err != nil || n == nil || n.Merged {
 			return err
 		}
-		h, ok := m.handles[string(id)]
-		if !ok {
+		if _, ok := m.handles[string(id)]; !ok {
 			return nil
 		}
 		handles[string(id)] = n
-		kinds[string(id)] = h.Kind
 		seeds = append(seeds, id)
 		return nil
 	}
@@ -137,7 +134,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, m *matchIndex, layer graphal
 				continue
 			}
 			walked[string(id)] = true
-			if kinds[string(id)] == vocabkey.Person {
+			if m.handles[string(id)].Kind == vocabkey.Person {
 				walkedPeople = append(walkedPeople, id)
 			}
 			n, err := g.Node(id)
@@ -165,17 +162,14 @@ func loadCanon(g *graphcache.Graph, graphID []byte, m *matchIndex, layer graphal
 				if neighbor == nil || neighbor.Merged {
 					continue
 				}
-				nh, primary := m.handles[string(neighbor.ID)]
-				if !primary {
+				if _, primary := m.handles[string(neighbor.ID)]; !primary {
 					continue
 				}
-				nKind := nh.Kind
 				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, eventTypeProp, terms); ok {
 					set.Add(kinship.Link{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
 					handles[string(neighbor.ID)] = neighbor
-					kinds[string(neighbor.ID)] = nKind
 					queue = append(queue, neighbor.ID)
 				}
 			}

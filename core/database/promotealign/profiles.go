@@ -41,7 +41,6 @@ type profiler struct {
 	metas       subjectcompare.Metas
 	types       map[string][]byte // subject type key -> id
 	typeKeys    map[string]string // subject type id -> key
-	rules       subjectcompare.Rules
 	reconcile   valuecompare.Rules
 	namePattern string
 	cfg         graphalign.Config
@@ -64,7 +63,7 @@ func newProfiler(g *graphcache.Graph) (*profiler, error) {
 	}
 	return &profiler{
 		g: g, props: vocab.PropertiesByID(), terms: vocab.TermsByID(), metas: metas,
-		types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(), rules: cfg.Subject,
+		types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(),
 		reconcile: autoreconciler.ValueRules, namePattern: namePattern, cfg: cfg,
 	}, nil
 }
@@ -82,7 +81,7 @@ func (p *profiler) holds(n *graphcache.Node) bool {
 // derivesLife reports whether a kind reads its life from the events it takes
 // part in (a Lifespans rule): its profile reads other handles' profiles.
 func (p *profiler) derivesLife(kind vocabkey.SubjectType) bool {
-	return len(p.rules.Lifespans[kind]) > 0
+	return len(p.cfg.Subject.Lifespans[kind]) > 0
 }
 
 // subjects builds the nodes' profiles into built, overwriting a held one. A nil
@@ -186,7 +185,7 @@ func (p *profiler) subject(n *graphcache.Node, built map[string]subjectcompare.S
 			}
 		}
 	}
-	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
+	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, p.cfg.Subject.Lifespans[kind], subjectprofile.Options{})
 	if err != nil {
 		return subjectcompare.Subject{}, err
 	}

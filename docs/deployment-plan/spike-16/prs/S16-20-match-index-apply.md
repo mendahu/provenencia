@@ -27,6 +27,8 @@
 - D-4's "`filed`'s key strings share their bytes with `byKey`'s" holds from fix round 1: `Index` keeps each key once, on its `posting{key, ids}`, and `filing.keys` names those strings. The saving is 2.8 MB at 16,000 persons, not the whole copy: `filed` still holds a slice header per handle and a string header per key.
 - Fix round 1 also added `profiler.holds` (the one rule for which handles the index holds) and `TestIndexPatchesEqualBuild`.
 - `promote-graph-alignment.md` §8's open-time warms bullet also says "the match index is built at open" in the sentence between the two the plan named.
+- D-9's `kinds` map went in fix round 2 (MNT-4, user 2026-11-13); `loadCanon` reads the held Subject's `Kind`.
+- `profiler.rules` went in fix round 2 (MNT-5, user 2026-11-13); profiles read `cfg.Subject`.
 - The §10 manual check was not run by the implementer.
 
 ### Implementer — read this first
