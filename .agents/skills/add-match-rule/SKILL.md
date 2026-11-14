@@ -68,7 +68,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 ## Add a shortlist key
 
 1. Add the lead to `Words` or a kind to `Dated` in `core/matchregistry/alignment.go`.
-2. The lead is a catalog property, never a derived one (`Lifespans`): `keyValues` builds no life (`TestShortlistSection`).
+2. The lead is a catalog property, never a derived one (`Lifespans`): a derived lead's keys would move with every edit to the events it is read from, so an event edit would refile all its participants (`TestShortlistSection`).
 3. Add its inventory row (`alignment.Shortlist.Words`, `alignment.Shortlist.Dated.<kind>.Type` / `.Date`).
 4. A value type the lead uses implements `wordKeys` (index and lookup lists) or has a `YearReach`; extend `TestWordKeysShareOnSameOrEquivalent`'s or `TestYearReachCoversEveryRelatedPair`'s corpus.
 

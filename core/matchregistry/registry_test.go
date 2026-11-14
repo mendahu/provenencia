@@ -43,7 +43,7 @@ func TestWesternPatternCoversEveryPartType(t *testing.T) {
 }
 
 // Every lead shortlisting keys by is a catalog property the subject section
-// weighs, not a derived lead: the index builds no life.
+// weighs, not a derived lead: its keys would move with every event edit.
 func TestShortlistSection(t *testing.T) {
 	reg := Default()
 	rules := reg.Alignment.Shortlist
@@ -59,7 +59,7 @@ func TestShortlistSection(t *testing.T) {
 			t.Errorf("%s lead %s has no weights in the subject section", kind, lead)
 		}
 		if reg.Subject.Derived(kind, lead) {
-			t.Errorf("%s lead %s is derived (a lifespan): the shortlist builds no life", kind, lead)
+			t.Errorf("%s lead %s is derived (a lifespan): its keys would move with every event edit", kind, lead)
 		}
 	}
 	for kind, leads := range rules.Words {

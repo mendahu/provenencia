@@ -12,13 +12,8 @@ import (
 // Subject is one primary Subject on the Evidence layer.
 type Subject = subjectcompare.Subject
 
-// Handle is one canonical entity in the prefetched canon neighborhood.
-type Handle struct {
-	ID     []byte
-	Ref    string
-	Kind   string
-	Values subjectcompare.Values
-}
+// Handle is one canonical entity in the canon: a Subject whose ID is a handle's.
+type Handle = subjectcompare.Subject
 
 // CanonEdge is one filed association hop, or a link the kinship patterns
 // imply, between handles.

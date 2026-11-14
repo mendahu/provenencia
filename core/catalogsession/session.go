@@ -80,10 +80,10 @@ func warmGraph(c *database.Catalog) error {
 
 // WarmOnOpen loads what Promote and the lists read on every call onto the
 // catalog graph when a project opens: the built alias index and the default
-// name format (warmGraph), then matching's shortlist kinds and index. Both
+// name format (warmGraph), then matching's match index. Both
 // registry entries live with the catalog connection, so a Drop or a
 // vocabulary commit leaves them and nothing warms them again. Matching's error
-// is ignored: a value that does not decode leaves the shortlist index unbuilt,
+// is ignored: a value that does not decode leaves the match index unbuilt,
 // and the next proposal builds it and reports the error. WarmOnOpen returns
 // warmGraph's error only. One list, so a catalog opened for a test warms what
 // the app does.
@@ -110,7 +110,7 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 	if err := ReconcileOnOpen(c); err != nil {
 		return nil, err
 	}
-	// What scoring reads stays warm for the life of this project, the shortlist
+	// What scoring reads stays warm for the life of this project, the match
 	// index too when it builds. Close drops it.
 	if err := WarmOnOpen(c); err != nil {
 		return nil, err

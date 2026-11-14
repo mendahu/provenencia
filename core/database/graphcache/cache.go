@@ -559,6 +559,10 @@ func (w Whole[T]) held(g *Graph) (T, bool) {
 
 type wholeValue[T any] struct{ v T }
 
+// Peek returns the held value and never builds one, as Keyed.Peek: false when
+// the entry is empty, whatever its Build.
+func (w Whole[T]) Peek(g *Graph) (T, bool) { return w.held(g) }
+
 // Get returns the held value, else runs the entry's Build, stores and returns
 // it. With no Build it returns false and the owner stores with Set. A first
 // fill by Build empties no reader. On a write's graph (Over) a catalog entry

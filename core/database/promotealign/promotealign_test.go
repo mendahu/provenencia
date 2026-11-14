@@ -77,25 +77,6 @@ func rowFor(p graphalign.Proposal, subjectID []byte) graphalign.Row {
 	return graphalign.Row{}
 }
 
-// A Source whose only Subject is fixed has nothing to seed, so Propose does not
-// read every node to build the shortlist index.
-func TestProposeWithOnlyFixedSubjectsBuildsNoIndex(t *testing.T) {
-	f := newFixture(t)
-	aPerson := f.Person(f.source, f.artifact, "Gracie")
-	per := f.promote(aPerson)
-	srcB, artB := f.NewSource("Obituary")
-	bPerson := f.Person(srcB, artB, "Gracie")
-
-	f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
-	if _, ok, _ := promotealign.MatchIndex.Get(f.c.Graph()); ok {
-		t.Error("Propose built the match index with no Subject to seed")
-	}
-	f.propose(f.Graph(srcB), nil)
-	if _, ok, _ := promotealign.MatchIndex.Get(f.c.Graph()); !ok {
-		t.Error("Propose with an unfixed Subject did not build the match index")
-	}
-}
-
 // Seed from an already-promoted birth: the unpromoted person on a new Source
 // should accept the matching Gracie handle through the participation edge.
 func TestProposeSeedFromPromotedNeighbor(t *testing.T) {
@@ -928,34 +909,6 @@ func TestProposeQueryCountStaysFlatWhenWarm(t *testing.T) {
 	t.Logf("%d queries per warm proposal", small)
 	if small != large {
 		t.Fatalf("2 people took %d warm queries, 6 took %d; a read grew with the layer", small, large)
-	}
-}
-
-// A cold proposal profiles only the handles the shortlist offers, and the ones
-// the walk reaches from them: not the life of every person in the catalog.
-func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
-	f := newFixture(t)
-	ann := f.Person(f.source, f.artifact, "Ann Ames")
-	annBirth := f.DatedBirth(f.source, f.artifact, 1850)
-	f.Participation(f.source, f.artifact, ann, annBirth, "subject")
-	annH, annBirthH := f.promote(ann), f.promote(annBirth)
-	for i := 1; i <= 6; i++ {
-		p := f.Person(f.source, f.artifact, fmt.Sprintf("Unrelated %d", i))
-		b := f.DatedBirth(f.source, f.artifact, 1900+i)
-		f.Participation(f.source, f.artifact, p, b, "subject")
-		f.promote(p)
-		f.promote(b)
-	}
-	srcB, artB := f.NewSource("Obituary")
-	f.Person(srcB, artB, "Ann Ames")
-
-	f.c.Graph().Drop()
-	got, err := promotealign.ProfiledRefsForTest(f.c, f.Graph(srcB))
-	must(t, err)
-	want := []string{annH.Entity.Ref, annBirthH.Entity.Ref}
-	slices.Sort(want)
-	if !slices.Equal(got, want) {
-		t.Fatalf("profiled %v, want only %v", got, want)
 	}
 }
 

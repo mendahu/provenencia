@@ -15,13 +15,16 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -85,6 +88,13 @@ const (
 	// compose that creeps toward it again is a real slowdown to investigate,
 	// not a reason to raise it again.
 	budgetComposeAll = 900 * time.Millisecond
+	// decided: S16-20 D-12. A commit patches the match index by re-profiling
+	// its roots and the people at root events: an event with 500 participants
+	// is 501 profiles, and a father of 2,000 births is one profile reading 2,000
+	// life events. Profiles cost about 7 us each, so these are a few
+	// milliseconds; the ceiling catches only a quadratic slip.
+	ceilingEditEventOf500   = 250 * time.Millisecond
+	ceilingEditFatherOf2000 = 250 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -318,11 +328,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 			e := events[i]
 			i++
 			return databasetest.Since(func() {
-				_, err := writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					ch, err := promote.Unpromote(tx, userID, e.ID)
-					return struct{}{}, ch, err
-				})
-				must(t, err)
+				f.unpromote(t, e)
 			})
 		})
 		t.Logf("unpromote one located event at the city: %v", d)
@@ -453,5 +459,70 @@ func TestLargeSourceBudgets(t *testing.T) {
 		d := databasetest.Since(func() { must(t, searchindex.ReprojectHandles(db, ids)) })
 		t.Logf("reindex of %d handles: %v", len(ids), d)
 		t.Logf("catalog_search_inputs rows after the reindex: %d", count())
+	})
+}
+
+// indexSurvived fails the test when a commit dropped the match index instead of
+// patching it.
+func indexSurvived(t *testing.T, g *graphcache.Graph) {
+	t.Helper()
+	if _, ok := promotealign.MatchIndex.Peek(g); !ok {
+		t.Fatal("the commit dropped the match index")
+	}
+}
+
+// D-12 (rule "Apply states its fan-out"): the match index's Apply re-profiles
+// what a commit reaches and no more. Crafted at bar 2's sizes: an event with
+// 500 participants, and a person who is the father of 2,000 births.
+func TestMatchIndexApplyFanOut(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	must(t, nameformats.Install(c))
+	must(t, namealiases.Install(c))
+	k := graphcachetest.NewCanon(t, c)
+	var marriage, father []byte
+	k.Bulk(func() {
+		marriage = k.Event(vocabkey.EventMarriage)
+		for i := 0; i < 500; i++ {
+			k.Join(k.Person(), marriage, "witness")
+		}
+		father = k.Person()
+		for i := 0; i < 2000; i++ {
+			k.Birth(k.Person(), father, nil)
+		}
+	})
+	k.Commit(marriage, father)
+	must(t, catalogsession.WarmOnOpen(c))
+	g := c.Graph()
+	if _, ok := promotealign.MatchIndex.Peek(g); !ok {
+		t.Fatal("setup: WarmOnOpen built no match index")
+	}
+
+	t.Run("an event with 500 participants has its date edited", func(t *testing.T) {
+		year := 1850
+		d := databasetest.Fastest(3, func() time.Duration {
+			year++
+			k.Date(marriage, "date", *datevaluetest.YMD(year, 0, 0))
+			d := databasetest.Since(func() { k.Commit(marriage) })
+			indexSurvived(t, g)
+			return d
+		})
+		t.Logf("edit the date of an event with 500 participants: %v", d)
+		databasetest.WithinBudget(t, "edit an event with 500 participants", d, ceilingEditEventOf500)
+		must(t, g.Verify())
+	})
+
+	t.Run("a father of 2,000 births has his gender retyped", func(t *testing.T) {
+		terms := []string{vocabkey.GenderWoman, vocabkey.GenderMan, vocabkey.GenderWoman}
+		i := 0
+		d := databasetest.Fastest(3, func() time.Duration {
+			k.Retype(father, "gender", terms[i])
+			i++
+			d := databasetest.Since(func() { k.Commit(father) })
+			indexSurvived(t, g)
+			return d
+		})
+		t.Logf("retype the gender of a father of 2,000 births: %v", d)
+		databasetest.WithinBudget(t, "retype a father of 2,000 births", d, ceilingEditFatherOf2000)
+		must(t, g.Verify())
 	})
 }
