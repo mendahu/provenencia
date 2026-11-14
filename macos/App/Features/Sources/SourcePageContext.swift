@@ -133,6 +133,17 @@ final class SourcePageContext {
         return handle?.value ?? []
     }
 
+    /// The rows a new owner's form starts its copy details board with: each suggestion the Source's
+    /// type makes at `level`, empty. Read once when the form opens, so it is not a cached query
+    /// (a form's rows live as long as the form). A Source with no type has no suggestions.
+    func unsavedMetadataRows(level: Level) async throws -> [CatalogMetadataEntry] {
+        guard let typeID = source?.sourceTypeID, !typeID.isEmpty else { return [] }
+        let suggestions = try await store.listTypeSuggestions(
+            projectDir: projectDir, typeID: typeID, level: level
+        )
+        return MetadataDraftHost.unsavedRows(from: suggestions)
+    }
+
     /// Applies an enriched Source (cover fields included) to the workspace and
     /// list cache. Pass `typeChanged` when the write moved the Source to another
     /// type, so its suggested metadata rows and per-type counts refetch. The

@@ -95,7 +95,7 @@ final class SourcePageModel {
 
     /// The content pane takes a file drop when no sheet is already up.
     var acceptsArtifactPageDrop: Bool {
-        !artifacts.isAdding
+        !artifacts.isOpeningAdd
             && !artifacts.isAttaching
             && metadataDialogs.pendingDelete == nil
             && notes.pendingDelete == nil
@@ -165,7 +165,9 @@ final class SourcePageModel {
         if previous?.notes != workspace.notes {
             notes.reset()
         }
-        if previous?.artifacts != workspace.artifacts {
+        // `shown` too: an Artifact the Artifact sheet made reached the page without
+        // reaching `previous`, and its leaving must still close that sheet.
+        if previous?.artifacts != workspace.artifacts || shown?.artifacts != workspace.artifacts {
             artifacts.workspaceChanged()
         }
         appliedWorkspace = workspace

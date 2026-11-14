@@ -8125,7 +8125,7 @@
       }
     },
     "sources.page.addArtifact": {
-      "comment": "Button to open the Add Artifact dialog",
+      "comment": "Button to open the Artifact sheet in add mode",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8137,7 +8137,7 @@
       }
     },
     "sources.page.addArtifactConfirm": {
-      "comment": "Confirm button on the Add Artifact dialog",
+      "comment": "Confirm button on the Artifact sheet in add mode",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8148,20 +8148,8 @@
         }
       }
     },
-    "sources.page.addArtifactDialogSubtitle": {
-      "comment": "Subtitle of the Add Artifact dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A concrete representation of this source — scan, photo, or physical-only stand-in."
-          }
-        }
-      }
-    },
     "sources.page.addArtifactDialogTitle": {
-      "comment": "Title of the Add Artifact dialog",
+      "comment": "Title of the Artifact sheet in add mode",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8300,18 +8288,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Label"
-          }
-        }
-      }
-    },
-    "sources.page.artifactLabelHint": {
-      "comment": "Hint under Artifact label field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name it so the row is recognisable in the list"
           }
         }
       }
@@ -9685,7 +9661,7 @@
       }
     },
     "sources.page.ingestDropIdleCreate": {
-      "comment": "Idle drop hint in Add Artifact when no file is chosen",
+      "comment": "Idle drop hint in the Artifact sheet in add mode when no file is chosen",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9949,7 +9925,7 @@
       }
     },
     "sources.page.optionalFile": {
-      "comment": "Label for optional file pick on Add Artifact",
+      "comment": "Label for the optional file field in the Artifact sheet in add mode",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23142,7 +23118,7 @@
       }
     },
     "sources.page.artifact.graphs.label": {
-      "comment": "Label of the evidence graph checkbox group in the Add artifact dialog and in the Artifact sheet",
+      "comment": "Label of the evidence graph checkbox group in the Artifact sheet",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23154,7 +23130,7 @@
       }
     },
     "sources.page.artifact.graphs.hint": {
-      "comment": "Hint under the evidence graph checkbox group label in the Add artifact dialog and in the Artifact sheet",
+      "comment": "Hint under the evidence graph checkbox group label in the Artifact sheet",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23382,7 +23358,7 @@
       }
     },
     "sources.page.artifact.graphs.none": {
-      "comment": "Muted line under the evidence graph group in the Add artifact dialog and in the Artifact sheet when no box is checked",
+      "comment": "Muted line under the evidence graph group in the Artifact sheet when no box is checked",
       "extractionState": "manual",
       "localizations": {
         "en": {

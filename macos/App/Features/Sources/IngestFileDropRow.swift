@@ -4,9 +4,8 @@ import SwiftUI
 /// Bound to one `IngestFileChoice`, it draws the refused-file Callout under its caption.
 struct IngestFileDropRow: View {
     let fileName: String?
-    let isRejected: Bool
     let reject: L10n.Errors.IngestCallout?
-    let rejectAccessibilityIdentifier: String?
+    let rejectAccessibilityIdentifier: String
     let isBusy: Bool
     let idleHint: LocalizedStringResource
     let onChoose: () -> Void
@@ -20,7 +19,6 @@ struct IngestFileDropRow: View {
         rejectAccessibilityIdentifier: String
     ) {
         fileName = file.wrappedValue.fileName
-        isRejected = file.wrappedValue.reject != nil
         reject = file.wrappedValue.reject
         self.rejectAccessibilityIdentifier = rejectAccessibilityIdentifier
         self.isBusy = isBusy
@@ -30,25 +28,7 @@ struct IngestFileDropRow: View {
         onDropURLs = { file.wrappedValue.choose($0) }
     }
 
-    init(
-        fileName: String?,
-        isRejected: Bool,
-        isBusy: Bool,
-        idleHint: LocalizedStringResource,
-        onChoose: @escaping () -> Void,
-        onClear: @escaping () -> Void,
-        onDropURLs: @escaping ([URL]) -> Void
-    ) {
-        self.fileName = fileName
-        self.isRejected = isRejected
-        reject = nil
-        rejectAccessibilityIdentifier = nil
-        self.isBusy = isBusy
-        self.idleHint = idleHint
-        self.onChoose = onChoose
-        self.onClear = onClear
-        self.onDropURLs = onDropURLs
-    }
+    private var isRejected: Bool { reject != nil }
 
     @State private var isTargeted = false
 
@@ -106,7 +86,7 @@ struct IngestFileDropRow: View {
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
 
-            if let reject, let rejectAccessibilityIdentifier {
+            if let reject {
                 PVCallout(tone: .danger, title: reject.title, message: reject.message)
                     .accessibilityIdentifier(rejectAccessibilityIdentifier)
             }
