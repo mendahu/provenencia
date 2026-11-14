@@ -2,7 +2,7 @@
 
 Every cache the app keeps over the catalog, with what fills it, what updates it and what it costs. The Go caches are one registry (`core/database/graphcache/cache.go`): an owner registers a typed handle in `init()` and reads and writes only through it. `TestCacheDocListsEveryEntry` (`core/catalogsession/cache_doc_test.go`) holds the first table to the registry, so a PR that registers a cache adds its row here in the same change. `BenchmarkCacheSizes` (`core/database/promotealign/bench_test.go`) measures the sizes; a PR that adds an entry adds its fill to the benchmark.
 
-Rule: every cache names the signal that updates it, and updates exactly. The signal is a field of `effects.Set` that the entry's Apply reads, a moved key among its declared `Inputs` (the `InputKey`s summary rows use), or a `DerivedFrom` declaration (the vocabulary, or an earlier whole entry). A cache that empties itself on any write is a known exception, listed below.
+Rule: every cache names the signal that updates it, and updates exactly. The signal is a field of `effects.Set` that the entry's Apply reads (`Handles` through the commit's roots, as the map's rule says), a moved key among its declared `Inputs` (the `InputKey`s summary rows use), or a `DerivedFrom` declaration (the vocabulary, or an earlier whole entry). A cache that empties itself on any write would be a known exception, listed below.
 
 ## Registry entries
 
@@ -19,8 +19,8 @@ Sizes are `runtime.MemStats.HeapAlloc` after a GC, before and after the fill, on
 | `evidencelayer.layers` | `core/database/evidencelayer/evidencelayer.go` · `Layers` | Evidence graph id | `evidencelayer.Load`: the loaded graph, then `Build` | `DerivedFrom` the vocabulary and `nameformats.default`; Apply drops the graphs in `effects.Set.EvidenceGraphs` | graph | 64 | with `graphfill.graphs` and `promotealign.candidates`: 34.5 / 45.0 MB (one proposal; 34.6 / 44.6 MB before, as the store with its memos) |
 | `namealiases.index` | `core/database/namealiases/namealiases.go` · `Index` | one value | Build: every alias table, at open (`namealiases.Warm`) or on first read | none; `Invalidate` drops it | catalog | none | 0.77 / 0.77 MB |
 | `nameformats.default` | `core/database/nameformats/nameformats.go` · `Default` | one value | Build: the project's default name format, at open (`nameformats.Warm`) or on first read | none; `Invalidate` drops it | catalog | none | 1.5 KB / 1.5 KB |
-| `promotealign.candidates` | `core/database/promotealign/canon.go` · `candidates` | Evidence graph id | `loadCandidatesMemo`: `rankCandidates` for the Subjects not yet ranked | `DerivedFrom` the vocabulary and `nameformats.default`; Apply drops the graphs in `effects.Set.EvidenceGraphs`; a memo ranked against an older match index generation is not used | graph | 64 | see `evidencelayer.layers` |
-| `promotealign.matchindex` | `core/database/promotealign/index.go` · `MatchIndex` | one value | The owner stores it (`loadShortlist`, the profiler's `keep`); no Build until S16-20 | `DerivedFrom` the vocabulary, `namealiases.index` and `nameformats.default`; Apply drops it on any commit that names a handle (known exception) | graph | none | 6.2 / 9.8 MB |
+| `promotealign.candidates` | `core/database/promotealign/canon.go` · `candidates` | Evidence graph id | `loadCandidatesMemo`: `rankCandidates` for the Subjects not yet ranked | `DerivedFrom` `promotealign.matchindex`; Apply drops the graphs in `effects.Set.EvidenceGraphs` | graph | 64 | see `evidencelayer.layers` |
+| `promotealign.matchindex` | `core/database/promotealign/index.go` · `MatchIndex` | one value | Build (`buildMatchIndex`): every unmerged person, event and place profile and the shortlist postings filed from them; `promotealign.Warm` fills it at open | `DerivedFrom` the vocabulary, `namealiases.index` and `nameformats.default`; Apply re-profiles the commit's roots and the people at root events and refiles the handles whose profile changed, then `Set` | graph | none | 35.5 / 57.9 MB |
 | `sources.records` | `core/database/sources/records.go` · `Records` | one value | Build: two queries (every Source with its grade, every Artifact), on first read | Apply reloads the Sources in `effects.Set.SourceScopes`, then `Set` | graph | none | 16 KB / 16 KB on the large fixture (one Source); 5.7 MB at 3,000 Sources of 10 Artifacts (`BenchmarkSourceRecords`) |
 
 Past its Cap a keyed entry drops its least recently used key. A whole entry has no cap: it is bounded by what it is built from. On a write's graph (`graphcache.Over`) a catalog-lifetime entry builds once through the write's transaction and lives with that graph; a graph-lifetime entry is neither built nor stored there, and is read through `database.ReadWhole`, which returns `database.ErrWholeOnWrite` for a write's graph and `database.ErrClosed` for a nil one.
@@ -62,4 +62,4 @@ Sizes are not measured. S16-24 – S16-29 reshape these.
 
 ## Known exceptions
 
-The drop-on-any-handle Apply of `promotealign.matchindex` (S16-20 patches it instead) is the registry's known exception to updating exactly.
+None. Every registry entry updates from a named signal.
