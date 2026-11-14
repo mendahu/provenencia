@@ -324,6 +324,14 @@ func TestIndexPut(t *testing.T) {
 			t.Error("postings depend on the order handles were put in")
 		}
 	})
+	t.Run("a handle's keys share the bytes of the postings' keys", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, person(1, "James Robins"), person(2, "James Smith"))
+		ix.Put(vocabkey.Person, []byte{3}, person(3, "James Robins").v)
+		ix.Put(vocabkey.Person, []byte{1}, person(1, "James Robins Smith").v)
+		if !ix.FiledKeysShared() {
+			t.Error("a handle's filing holds its own copy of a key string")
+		}
+	})
 	var nilIndex *shortlist.Index
 	nilIndex.Put(vocabkey.Person, []byte{1}, person(1, "James Robins").v)
 	nilIndex.Remove([]byte{1})

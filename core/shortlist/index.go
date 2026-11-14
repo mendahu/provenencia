@@ -19,20 +19,27 @@ type Index struct {
 	subject subjectcompare.Rules
 	value   valuecompare.Rules
 	metas   subjectcompare.Metas
-	byKey   map[vocabkey.SubjectType]map[string][][]byte
+	byKey   map[vocabkey.SubjectType]map[string]posting
 	filed   map[string]filing
+}
+
+// posting is the ids filed under one key. It holds the key string the byKey map
+// is keyed by, so the filings that name the key share its bytes.
+type posting struct {
+	key string
+	ids [][]byte // sorted by bytes.Compare
 }
 
 // filing is where one handle is filed.
 type filing struct {
 	kind vocabkey.SubjectType
-	keys []string // the index keys id is filed under, sorted
+	keys []string // the index keys id is filed under, sorted; each is a posting's key
 }
 
 // NewIndex is an empty index under the given rules.
 func NewIndex(r Rules, subject subjectcompare.Rules, value valuecompare.Rules, metas subjectcompare.Metas) *Index {
 	return &Index{rules: r, subject: subject, value: value, metas: metas,
-		byKey: map[vocabkey.SubjectType]map[string][][]byte{}, filed: map[string]filing{}}
+		byKey: map[vocabkey.SubjectType]map[string]posting{}, filed: map[string]filing{}}
 }
 
 // Put files a copy of id under each index key of v, in place of wherever it
@@ -62,17 +69,23 @@ func (x *Index) Put(kind vocabkey.SubjectType, id []byte, v subjectcompare.Value
 	}
 	id = bytes.Clone(id)
 	if x.byKey[kind] == nil {
-		x.byKey[kind] = map[string][][]byte{}
+		x.byKey[kind] = map[string]posting{}
 	}
-	for _, k := range keys {
+	shared := make([]string, len(keys))
+	for i, k := range keys {
+		post, ok := x.byKey[kind][k]
+		if !ok {
+			post.key = k
+		}
+		shared[i] = post.key
 		if _, found := slices.BinarySearch(old.keys, k); found {
 			continue
 		}
-		post := x.byKey[kind][k]
-		at, _ := slices.BinarySearchFunc(post, id, bytes.Compare)
-		x.byKey[kind][k] = slices.Insert(post, at, id)
+		at, _ := slices.BinarySearchFunc(post.ids, id, bytes.Compare)
+		post.ids = slices.Insert(post.ids, at, id)
+		x.byKey[kind][post.key] = post // by post.key: assigning k would replace the map's key string
 	}
-	x.filed[string(id)] = filing{kind: kind, keys: keys}
+	x.filed[string(id)] = filing{kind: kind, keys: shared}
 }
 
 // Remove takes id out of every posting it is filed in. A nil index ignores it.
@@ -94,19 +107,19 @@ func (x *Index) Remove(id []byte) {
 // emptied kind map.
 func (x *Index) unfile(kind vocabkey.SubjectType, key string, id []byte) {
 	post := x.byKey[kind][key]
-	at, found := slices.BinarySearchFunc(post, id, bytes.Compare)
+	at, found := slices.BinarySearchFunc(post.ids, id, bytes.Compare)
 	if !found {
 		return
 	}
-	post = slices.Delete(post, at, at+1)
-	if len(post) == 0 {
+	post.ids = slices.Delete(post.ids, at, at+1)
+	if len(post.ids) == 0 {
 		delete(x.byKey[kind], key)
 		if len(x.byKey[kind]) == 0 {
 			delete(x.byKey, kind)
 		}
 		return
 	}
-	x.byKey[kind][key] = post
+	x.byKey[kind][post.key] = post
 }
 
 // Lookup is the ids filed under any lookup key of v: deduplicated, sorted by
@@ -120,7 +133,7 @@ func (x *Index) Lookup(kind vocabkey.SubjectType, v subjectcompare.Values) [][]b
 	seen := map[string]bool{}
 	var out [][]byte
 	for _, k := range keys {
-		for _, id := range x.byKey[kind][k] {
+		for _, id := range x.byKey[kind][k].ids {
 			if !seen[string(id)] {
 				seen[string(id)] = true
 				out = append(out, bytes.Clone(id))
