@@ -1,7 +1,7 @@
 # Ship log — S15-10 Adding an Artifact asks for its copy details
 
 **Plan:** [`S15-10-artifact-sheet-add-mode.md`](S15-10-artifact-sheet-add-mode.md) · **Branch:** `s15-10-artifact-sheet-add-mode` · **PR:** #829
-**State:** ready
+**State:** fixing (user-requested F-6)
 
 ## Round 0 — implement
 Head `0ea1c9765`. Gate PASS (orchestrator run, against `36d6ec21d`). Report deviations: (1) `SourcePageModel.apply` also calls `artifacts.workspaceChanged()` when the page's shown Artifacts differ from the new workspace, so an Artifact the sheet made and then deleted elsewhere closes the sheet (AC-4.4, T-11); a file the plan did not name. (2) `IngestFileDropRow` stores values and closures from one `init(file:…)`, no `@Binding`. (3) § 10 manual check not run (no GUI session).
@@ -17,7 +17,7 @@ Reviewers: CON, MNT, UX, SEC+PRF. UX: the diff touches `macos/App/**` and `Local
 | MNT-2 | MNT | minor | Artifact close check compares two baselines where `shown` suffices | Fix now → F-4 | verified: `SourcePageModel.swift:170` ORs `previous` and `shown`; the metadata reset above uses `shown` alone; the only Artifact removal (`confirmResourceDelete`) goes through `apply`. T-11 `anAddSheetCloseRule` and `artifactGoneClosesTheSheet` prove it |
 | CON-2 | CON | nit→minor | `artifactLabelRequired` comment still says "when Add Artifact is submitted" | Fix now → F-5 | stale comment in files this PR changes (`L10n.swift`, `Localizable.xcstrings`) |
 | MNT-5 | MNT | nit→minor | `visibleGraphs` doc still says "(the link checkboxes show)" | Fix now → F-5 | stale comment in `SourceArtifactsSection.swift`, which this PR changes |
-| UX-2 | UX | minor | After the create succeeds, a non-`ingest.*` ingest failure says "Couldn't save the artifact … Your changes are kept." | To user (finish report) | verified: `ArtifactSheetModel.save()` catch falls to `saveErrorBody` when `file.refuse` is false, and `saveErrorBody`'s doc says "Nothing was written". But D-8 sets this exact catch order and rejects "a new error copy for add mode". The old dialog showed the raw message as a label error, no better. Rare path (non-`ingest.*` errors from `IngestArtifactFile`: already attached, Artifact gone, write failure) |
+| UX-2 | UX | minor | After the create succeeds, a non-`ingest.*` ingest failure says "Couldn't save the artifact … Your changes are kept." | To user → user (2026-11-14): "Fix it here" → F-6 | verified: `ArtifactSheetModel.save()` catch falls to `saveErrorBody` when `file.refuse` is false, and `saveErrorBody`'s doc says "Nothing was written". But D-8 sets this exact catch order and rejects "a new error copy for add mode". The old dialog showed the raw message as a label error, no better. Rare path (non-`ingest.*` errors from `IngestArtifactFile`: already attached, Artifact gone, write failure) |
 | SEC/PRF | SEC+PRF | — | No findings | — | — |
 
 Nits (logged): `UX-3 · SourcePageArtifactsView.swift:16 · no feedback while Add artifact's suggestion read runs` · `MNT-3 · ArtifactSheetModel.swift:239,266,285 · label trimmed in three places` · `MNT-4 · SourceArtifactGraphLinks.swift:12-13 · locked/isDisabled defaults only served the deleted addForm` · `MNT-6 · SourceArtifactsSection.stagePageDrop · repeats openAdd's guard` · `MNT-7 · ArtifactSheetModel.swift:146,221 · create mode excluded twice; isCreate mixed with switch mode` · `CON-3 · ArtifactSheet.swift:176 · no-graph line still shows under locked boxes after a refused file`
@@ -61,6 +61,20 @@ UX-1: **Resolved** — `IngestFileDropRow.swift:90` passes `announces: true`; bo
 MNT-2, CON-2, MNT-5 (minors): **Resolved** — read `SourcePageModel.swift:170` (`shown` alone; Landed note matches) and the corrected `artifactLabelRequired` and `visibleGraphs` comments.
 
 No new findings. Nits (logged): `MNT-8 · S15-10 plan:274 · T-1 still names a private temp-file helper (the Landed note records F-2 superseding it)` · `MNT-9 · FakeStore.swift:194 · listTypeSuggestionsHold has no doc comment, unlike updateArtifactHold` · older private `uniqueProjectDir()` + `write` copies in `ThumbnailCacheTests` and `ArtifactViewerModelTests`, untouched by this PR
+
+### Fix plan 3 (user-requested, UX-2)
+The user answered UX-2 "Fix it here" (2026-11-14). This narrows D-8: its "(e) save-error" arm no longer covers a failure of the ingest step after the Artifact exists; the plan's Landed note records it.
+
+**F-6 — A file that fails after the create says the Artifact was added** (from UX-2)
+Files: `macos/App/Features/Sources/ArtifactSheetModel.swift`, `macos/App/Features/Sources/IngestFileChoice.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/SourcePageModelTests.swift`, `macos/ProvenenciaTests/IngestFileChoiceTests.swift`, the plan's Landed note. Skills: `add-localized-string`, `add-swift-test`.
+Failing test first: `SourcePageModelTests.aFileFailureAfterTheCreateSaysTheArtifactWasAdded` — open the add sheet, choose a temp PNG (`ArtifactFileFixtures.writeStubPNG()`), label it, set `store.ingestArtifactFileError` to a coded error whose code is not `ingest.*` (e.g. `CoreInvokeError.coded(status: 1, code: "artifacts.file_already_attached", kind: .user, params: [])`, or a plain `OtherError` if `context.fail` needs it uncoded) → `save()` false; the sheet stays; `sheet.saveError == nil`; `sheet.file.reject?.title` is the new title and its message contains the error's message; `sheet.file.filePath` still set (a retry re-ingests); the made Artifact is in `model.artifacts.items`. Then clear the error and Save again → true, one more `ingestArtifactFile` call, no `createArtifact` call. Plus `IngestFileChoiceTests.aFailureAfterTheCreateKeepsThePath` for the new `IngestFileChoice` method.
+Do:
+- Only the **ingest step** of `saveCreate` gets the new copy. A failure of the retry's `writeUpdate` (the Artifact's own fields did not save) keeps today's save-error copy, as D-8 says. Mark the ingest failure at its source: wrap the `ingestArtifactFile` call in `saveCreate` so a non-refusal error reaches `save()`'s catch distinguishable (a private error wrapper, e.g. `struct FileNotAttached: Error { let underlying: Error }`, rethrown only when `file.refuse(ifIngestRefusal:)` would return false; refusals keep today's arm (a)).
+- In `save()`'s catch, after (a): unwrap `FileNotAttached`, run `context.fail(underlying)` as (b) does (a gone Source still returns true), then `file.failAfterCreate(message:)`, `scrollToTop()`, return false. No `saveError`.
+- `IngestFileChoice.failAfterCreate(message:)` sets `reject` to an `IngestCallout(title: L10n.Sources.artifactFileNotAttachedTitle, message: L10n.Sources.artifactFileNotAttachedBody(message))` and keeps `filePath` and `fileName`. The drop row already announces it (F-1).
+- New strings (`add-localized-string`, `sources.page.artifactSheet.` family): title "The file wasn’t attached"; body "The artifact was added without it. %@ Choose Add artifact to try the file again." (comment: the argument is the engine's error message).
+- Correct `saveErrorBody`'s doc ("Nothing was written") only if it is still true for every caller after this change; it should be.
+Check: the two tests pass; `aRefusedFileKeepsTheCreatedArtifactAndARetryAttachesToIt`, `aRetryWithChangesUpdatesOnce`, `aRetryWithNoChangeOnlyIngests` still pass unchanged; scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS (head `2c18daed2`, `main` unmoved at `36d6ec21d`) · CI green · open: none · follow-ups: none · to user: UX-2 (D-8's save-error copy after a created Artifact's non-`ingest.*` file failure), § 10 manual check
