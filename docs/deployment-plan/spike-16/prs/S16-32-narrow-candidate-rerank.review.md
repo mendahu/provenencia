@@ -1,6 +1,6 @@
 # Review — S16-32 Promote re-ranks only the Subjects a write moved
 
-**Verdict:** (round 2 pending)
+**Verdict:** Fits with changes — Ready with changes (round 2; every finding Fixed, no open blocker)
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
@@ -59,3 +59,30 @@
 
 ### X-8 · nit · cache-architecture line numbers
 **Answer:** Fixed — STEP-8's Files line names line 67 by its bullet.
+
+## Round 2
+
+Maintainability: every round-1 answer holds; one new blocker. Executability: every round-1 answer holds; no new blocker.
+
+### M-7 · blocker · `Patched` only when the moved-key set is non-empty
+A handle filed under no key (an undated event) changes the held value but moves no key; skipping `Patched` then leaves any reader without `Narrow` stale, and makes the producer decide by its one reader's needs.
+**Answer:** Fixed — D-5 keeps `changed` and calls `w.Patched(g, moved)` whenever it is true; D-6's `forgetCandidates` returns at once on an empty change; T-10 adds `Patched(g, nil)` emptying a reader without `Narrow`; T-1 adds "an undated event filed" (all held).
+
+Below-the-bar notes, also applied: `Index.Lookup` goes (no production caller left; tests read `Find(LookupKeys)` through a helper) — D-2, STEP-4; `Patched` and `Set`/`Drop` share one reader walk (`dropReaders` → `readers`) — D-3; T-6 uses `Collected` — §8; the `graphcache` package doc and the maintainability lens's Known trap name `Narrow` — STEP-3; the record-links subtest is "past the cache" — §4, D-9.
+
+### X-9 · major · Who writes the ship log and the figures
+**Answer:** Fixed — STEP-1, STEP-7, AC-1.3 and the DoD: the implementer reports the figures in its hand-back and the PR description; the orchestrator copies them into the ship log (as S16-20's Landed note records).
+
+### X-10 · minor · `Narrow` edge cases
+**Answer:** Fixed — D-3: `RegisterKeyed` panics on `Narrow` without a whole `DerivedFrom` (`TestRegisterRejects` case); a keyed entry has no readers; `Patched` follows `Set`'s write-graph guard.
+
+### X-11 · minor · T-11 and T-5 not writable from their rows
+**Answer:** Fixed — T-11 gives the sleeping read, the call log and the bound, and the file's build tag and package; T-5 names `idA`–`idC` and the registry snapshot.
+
+### X-12 · minor · T-1 near-copies `newEntriesWorld`
+**Answer:** Fixed — T-1 uses `newEntriesWorld` and names the helpers' real signatures.
+
+### X-13 · minor · Stop condition covers only over-forgetting
+**Answer:** Fixed — §11: a Subject expected forgotten that stays held is reported the same way.
+
+Notes not taken as findings: the DoD sweep's `).` pattern matches the old sentence only, which is its job; `runtime`'s import in `recordlinks_perf_test.go` goes when unused (the compiler says so).
