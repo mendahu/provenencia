@@ -77,12 +77,11 @@ func Propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 // inputs is what a proposal reads first: the Evidence graph's layer and the
 // rules and vocabulary it was built with.
 type inputs struct {
-	graphID     []byte
-	cfg         graphalign.Config
-	namePattern string
-	terms       segmentcompare.Terms
-	evidence    evidencelayer.Layer
-	layer       graphalign.Layer
+	graphID  []byte
+	cfg      graphalign.Config
+	terms    segmentcompare.Terms
+	evidence evidencelayer.Layer
+	layer    graphalign.Layer
 }
 
 // loadConfig is the alignment config a proposal ranks with and the shortlist
@@ -116,7 +115,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 		return inputs{}, promote.ErrInvalid
 	}
 
-	cfg, namePattern, err := loadConfig(c.Graph())
+	cfg, _, err := loadConfig(c.Graph())
 	if err != nil {
 		return inputs{}, err
 	}
@@ -133,7 +132,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	return inputs{graphID: graphID, cfg: cfg, namePattern: namePattern, terms: terms, evidence: evidence, layer: layer}, nil
+	return inputs{graphID: graphID, cfg: cfg, terms: terms, evidence: evidence, layer: layer}, nil
 }
 
 // alignLayer is the evidence layer with the value metas graphalign compares by.
