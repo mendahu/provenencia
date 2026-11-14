@@ -14,8 +14,24 @@ private struct ArtifactSheetModifier: ViewModifier {
     @Binding var model: ArtifactSheetModel?
 
     private var copy: PVFormDialogCopy {
+        switch model?.mode {
+        case .create:
+            PVFormDialogCopy(
+                title: L10n.Sources.addArtifactDialogTitle,
+                verbatimSubtitle: model?.subtitle,
+                confirm: L10n.Sources.addArtifactConfirm,
+                cancel: L10n.Sources.cancelAction
+            )
+        case .edit(let art):
+            editCopy(ref: art.ref)
+        case nil:
+            editCopy(ref: "")
+        }
+    }
+
+    private func editCopy(ref: String) -> PVFormDialogCopy {
         PVFormDialogCopy(
-            verbatimTitle: L10n.Sources.editArtifactLabel(ref: model?.artifact.ref ?? ""),
+            verbatimTitle: L10n.Sources.editArtifactLabel(ref: ref),
             verbatimSubtitle: model?.subtitle,
             confirm: L10n.Sources.saveArtifact,
             cancel: L10n.Sources.cancelAction

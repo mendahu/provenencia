@@ -1730,7 +1730,7 @@ struct SourcePageModelTests {
         #expect(sheet?.isDirty == false)
         // Only one sheet at a time, and none for an Artifact that is not there.
         model.artifacts.openSheet(artifactID: "P4")
-        #expect(model.artifacts.sheet?.artifact.id == "P3")
+        #expect(model.artifacts.sheet?.artifactID == "P3")
         model.artifacts.sheet = nil
         model.artifacts.openSheet(artifactID: "nope")
         #expect(model.artifacts.sheet == nil)

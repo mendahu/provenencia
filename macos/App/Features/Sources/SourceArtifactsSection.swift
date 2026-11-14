@@ -156,7 +156,7 @@ final class SourceArtifactsSection {
     /// The page's workspace changed: a sheet whose Artifact is no longer on the
     /// page closes with its draft and says so. An Artifact still there keeps its draft.
     func workspaceChanged() {
-        guard let sheet, !items.contains(where: { $0.id == sheet.artifact.id }) else { return }
+        guard let sheet, let id = sheet.artifactID, !items.contains(where: { $0.id == id }) else { return }
         self.sheet = nil
         context.toast = VocabularyToast(
             title: L10n.string(L10n.Sources.toastArtifactGoneTitle),

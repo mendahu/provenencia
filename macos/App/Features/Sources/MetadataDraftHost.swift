@@ -8,8 +8,8 @@ import Observation
 final class MetadataDraftHost: MetadataBoardHost {
     var entries: [CatalogMetadataEntry]
     @ObservationIgnored let fields: [CatalogMetadataField]
-    /// The rows the host opened with: what `isChanged` compares against.
-    @ObservationIgnored private let opened: [CatalogMetadataEntry]
+    /// The rows the host opened with, or last saved: what `isChanged` compares against.
+    @ObservationIgnored private var opened: [CatalogMetadataEntry]
     /// Suggestions the researcher dismissed, in order; each is sent as a dismissed layout row.
     private var dismissed: [String] = []
 
@@ -19,6 +19,15 @@ final class MetadataDraftHost: MetadataBoardHost {
         self.entries = entries
         self.fields = fields
         self.opened = entries
+    }
+
+    /// The owner's write stored what the board shows: later changes are measured from here. A
+    /// later `draft` carries only changes since, and no longer lists a suggestion dismissed before
+    /// the mark; that is safe because `sourcemetadata.apply` writes layout inserts and updates only,
+    /// never deletes, so the dismissed layout row the write stored stays.
+    func markSaved() {
+        opened = entries
+        dismissed = []
     }
 
     /// The starting rows of a board for an owner that holds no values and no layout yet:

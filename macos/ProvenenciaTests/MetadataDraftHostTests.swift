@@ -43,6 +43,30 @@ struct MetadataDraftHostTests {
         #expect(fires { _ = $0.set(fieldID: "provider", valueText: "Ancestry") })
     }
 
+    /// T-13: after the owner's write the board's baseline moves to what it shows.
+    @Test func markSavedMovesTheBaseline() async throws {
+        let host = MetadataDraftHost(
+            entries: MetadataDraftHost.unsavedRows(from: [
+                CatalogTypeSuggestion(field: provider, sortOrder: 0),
+                CatalogTypeSuggestion(field: url, sortOrder: 1),
+                CatalogTypeSuggestion(field: roll, sortOrder: 2),
+            ]),
+            fields: [provider, url, roll, film]
+        )
+        _ = host.set(fieldID: "provider", valueText: "Ancestry")
+        _ = host.dismissSuggestion(fieldID: "url")
+        #expect(host.draft != nil)
+
+        host.markSaved()
+        #expect(!host.isChanged)
+        #expect(host.draft == nil)
+
+        _ = host.set(fieldID: "roll", valueText: "12")
+        let draft = try #require(host.draft)
+        #expect(draft.values.map(\.fieldID) == ["provider", "roll"])
+        #expect(!draft.layout.contains { $0.dismissed })
+    }
+
     @Test func boardActionsBuildTheDraft() async throws {
         let host = makeHost()
         let board = MetadataBoardModel(host: host)
