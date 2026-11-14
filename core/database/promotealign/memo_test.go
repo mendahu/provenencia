@@ -102,22 +102,29 @@ func TestMemoFollowsCommit(t *testing.T) {
 	t.Run("a handle merged", func(t *testing.T) {
 		w := newWarmFixture(t)
 		compare(t, w, func() {
-			other := w.f.Person(w.f.source, w.f.artifact, "Somebody Else")
-			into := w.f.promote(other).Entity.ID
-			db, err := w.f.c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into, w.personHandle); err != nil {
-				t.Fatal(err)
-			}
-			if err := w.f.c.Graph().OnCommit(effects.Commit{
-				Activity: effects.Activity{Revision: 1 << 40}, Effects: effects.Set{Handles: [][]byte{w.personHandle}},
-			}); err != nil {
-				t.Fatal(err)
-			}
+			w.mergePerson(t)
 		})
 	})
+}
+
+// mergePerson merges the person's handle into another promoted person's and
+// tells the graph.
+func (w *warmFixture) mergePerson(t *testing.T) {
+	t.Helper()
+	other := w.f.Person(w.f.source, w.f.artifact, "Somebody Else")
+	into := w.f.promote(other).Entity.ID
+	db, err := w.f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into, w.personHandle); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.f.c.Graph().OnCommit(effects.Commit{
+		Activity: effects.Activity{Revision: 1 << 40}, Effects: effects.Set{Handles: [][]byte{w.personHandle}},
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // renameMember edits the member's name Observation to name.
@@ -442,9 +449,9 @@ func TestMatchIndexHoldsEveryHandle(t *testing.T) {
 }
 
 // unpromote deletes the handle of a promoted Subject.
-func (w *warmFixture) unpromote(t *testing.T, s subjects.Subject) {
+func (f *fixture) unpromote(t *testing.T, s subjects.Subject) {
 	t.Helper()
-	_, err := writes.Call(w.f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	_, err := writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := promote.Unpromote(tx, userID, s.ID)
 		return struct{}{}, ch, err
 	})
@@ -496,26 +503,13 @@ func TestMatchIndexFollowsCommits(t *testing.T) {
 			w.f.promote(d)
 		}},
 		{"a handle merged", func(t *testing.T, w *warmFixture) {
-			other := w.f.Person(w.f.source, w.f.artifact, "Somebody Else")
-			into := w.f.promote(other).Entity.ID
-			db, err := w.f.c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into, w.personHandle); err != nil {
-				t.Fatal(err)
-			}
-			if err := w.f.c.Graph().OnCommit(effects.Commit{
-				Activity: effects.Activity{Revision: 1 << 40}, Effects: effects.Set{Handles: [][]byte{w.personHandle}},
-			}); err != nil {
-				t.Fatal(err)
-			}
+			w.mergePerson(t)
 			if _, ok := promotealign.HandleForTest(w.f.c.Graph(), w.personHandle); ok {
 				t.Error("the merged handle is still held")
 			}
 		}},
 		{"a Subject unpromoted", func(t *testing.T, w *warmFixture) {
-			w.unpromote(t, w.member)
+			w.f.unpromote(t, w.member)
 			if _, ok := promotealign.HandleForTest(w.f.c.Graph(), w.personHandle); ok {
 				t.Error("the deleted handle is still held")
 			}
@@ -528,7 +522,7 @@ func TestMatchIndexFollowsCommits(t *testing.T) {
 			})
 		}},
 		{"an event deleted", func(t *testing.T, w *warmFixture) {
-			w.unpromote(t, w.memberBirth)
+			w.f.unpromote(t, w.memberBirth)
 			if _, ok := promotealign.HandleForTest(w.f.c.Graph(), w.birthHandle); ok {
 				t.Error("the deleted event handle is still held")
 			}

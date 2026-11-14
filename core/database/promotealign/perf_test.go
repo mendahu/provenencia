@@ -18,7 +18,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
@@ -328,11 +327,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 			e := events[i]
 			i++
 			return databasetest.Since(func() {
-				_, err := writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					ch, err := promote.Unpromote(tx, userID, e.ID)
-					return struct{}{}, ch, err
-				})
-				must(t, err)
+				f.unpromote(t, e)
 			})
 		})
 		t.Logf("unpromote one located event at the city: %v", d)
