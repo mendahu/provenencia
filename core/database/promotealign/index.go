@@ -80,7 +80,11 @@ func buildMatchIndex(g *graphcache.Graph) (*matchIndex, error) {
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, ns...)
+		for _, n := range ns {
+			if p.holds(n) {
+				nodes = append(nodes, n)
+			}
+		}
 	}
 	handles := make(map[string]subjectcompare.Subject, len(nodes))
 	if err := p.subjects(nodes, handles); err != nil {
@@ -139,7 +143,7 @@ func applyMatchIndex(g *graphcache.Graph, w graphcache.Whole[*matchIndex], roots
 		if err != nil {
 			return err
 		}
-		if n == nil || n.Merged || !vocabkey.IsPrimaryKind(string(p.kind(n))) {
+		if !p.holds(n) {
 			if _, held := m.handles[string(id)]; held {
 				delete(m.handles, string(id))
 				m.shortlist.Remove(id)

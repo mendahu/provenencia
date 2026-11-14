@@ -73,6 +73,12 @@ func (p *profiler) kind(n *graphcache.Node) vocabkey.SubjectType {
 	return vocabkey.SubjectType(p.typeKeys[string(n.SubjectTypeID)])
 }
 
+// holds reports whether the match index holds a handle's profile: a node that
+// is present, not merged, and of a primary kind.
+func (p *profiler) holds(n *graphcache.Node) bool {
+	return n != nil && !n.Merged && vocabkey.IsPrimaryKind(string(p.kind(n)))
+}
+
 // derivesLife reports whether a kind reads its life from the events it takes
 // part in (a Lifespans rule): its profile reads other handles' profiles.
 func (p *profiler) derivesLife(kind vocabkey.SubjectType) bool {
