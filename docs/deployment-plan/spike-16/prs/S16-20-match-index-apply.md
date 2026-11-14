@@ -17,13 +17,15 @@
 
 ## Landed
 
-- The ship log was not edited by the implementer (the orchestrator owns it), so the STEP-1 and STEP-6 figures are in the PR description: `after-commit-ms` 557.9 / 919.9 before and 390.8 / 666.9 after at 4,000 / 16,000 persons; `warm-ms` 112.5 / 124.5 before and 114.1 / 124.2 after; `matchIndex-B` 6.2 / 9.7 MB before and 35.5 / 57.9 MB after (under the 60 MB stop at 16,000); `WarmOnOpen` at 16,000, best of three, 791 ms before and 835 ms after; the Go caches' total at 16,000, 162 MB before and 179 MB after. They ran on an Apple M1 (`Jakes-M1-Macbook-Pro.local`), not the planning base's Xeon, with the base measured from `c09b83b9e`.
+- The ship log was not edited by the implementer (the orchestrator owns it), so the STEP-1 and STEP-6 figures are in the PR description: `after-commit-ms` 557.9 / 919.9 before and 390.8 / 666.9 after at 4,000 / 16,000 persons; `warm-ms` 112.5 / 124.5 before and 114.1 / 124.2 after; `matchIndex-B` 6.2 / 9.7 MB before and 34.0 / 55.1 MB after fix round 1 (33,979,848 and 55,095,528; 35.5 / 57.9 MB before it; under the 60 MB stop at 16,000); `WarmOnOpen` at 16,000, best of three, 791 ms before and 835 ms after; the Go caches' total at 16,000, 162 MB before and 176 MB after fix round 1 (179 MB before it). They ran on an Apple M1 (`Jakes-M1-Macbook-Pro.local`), not the planning base's Xeon, with the base measured from `c09b83b9e`.
 - `main` had moved from the Planned commit to `c09b83b9e`; no **Current state** row changed.
 - `profiler.readers` reads a neighbor's kind from `Link.NeighborTypeKey`, not from a loaded node.
 - No test hook returns the held index as a pointer: `TestMatchIndexHoldsEveryHandle` and `TestWarmBuildsTheIndex` compare two `MatchIndex.Peek` results.
 - `TestMatchIndexFollowsCommits` and `TestMatchIndexHoldsEveryHandle` set `PROVENENCIA_GRAPH_VERIFY=1` for the test, so each commit in them is verified as well as the explicit `g.Verify()`.
 - `Index.Put` diffs the new keys against the filed ones and touches only the postings that moved; it returns early when the keys are unchanged.
-- `inputs.namePattern` stays in `promotealign.go`: `Propose` no longer reads it, and removing it was not a Step.
+- `inputs.namePattern` was deleted in fix round 1 (`Propose` was its last reader); `profiler.namePattern` stays (D-3).
+- D-4's "`filed`'s key strings share their bytes with `byKey`'s" holds from fix round 1: `Index` keeps each key once, on its `posting{key, ids}`, and `filing.keys` names those strings. The saving is 2.8 MB at 16,000 persons, not the whole copy: `filed` still holds a slice header per handle and a string header per key.
+- Fix round 1 also added `profiler.holds` (the one rule for which handles the index holds) and `TestIndexPatchesEqualBuild`.
 - `promote-graph-alignment.md` §8's open-time warms bullet also says "the match index is built at open" in the sentence between the two the plan named.
 - The §10 manual check was not run by the implementer.
 
