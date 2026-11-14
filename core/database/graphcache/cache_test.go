@@ -286,6 +286,9 @@ func TestEntryBuild(t *testing.T) {
 	c := graphcachetest.OpenCatalog(t)
 	g := c.Graph()
 	r.Set(g, "reader")
+	if _, ok := w.Peek(g); ok || builds != 0 {
+		t.Fatalf("Peek on an empty entry with a Build returned %v after %d builds, want false and none", ok, builds)
+	}
 	for i := 0; i < 2; i++ {
 		if v, ok, err := w.Get(g); err != nil || !ok || v != "built" {
 			t.Fatalf("Get = %q, %v, %v", v, ok, err)
@@ -293,6 +296,9 @@ func TestEntryBuild(t *testing.T) {
 	}
 	if builds != 1 {
 		t.Errorf("Build ran %d times, want 1", builds)
+	}
+	if v, ok := w.Peek(g); !ok || v != "built" {
+		t.Errorf("Peek of a held entry = %q, %v, want built and true", v, ok)
 	}
 	if _, ok, _ := r.Get(g); !ok {
 		t.Error("a first fill by Build emptied a reader")
