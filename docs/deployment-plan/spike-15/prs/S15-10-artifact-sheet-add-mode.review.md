@@ -1,7 +1,7 @@
 # Review — S15-10 Adding an Artifact asks for its copy details
 
-**Verdict:** (round 2 pending)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 2's "Not ready" items are all Fixed below)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -9,7 +9,7 @@
 ## Writer's own calls
 - If the `artifact`-level suggestion read fails, no sheet opens and the page banner shows the error (D-2). The alternative, opening with no suggestions, would hide that the type suggests fields.
 - A new Artifact's reply rows always go on the page, even when the draft was nil (D-7), so its edit sheet shows the suggestions at once.
-- After a create whose file was refused, the sheet's baselines move to what the create wrote (D-7, D-16): a retry writes only what changed since, and Escape on an unchanged sheet closes it without a confirm.
+- After a create whose file was refused, the sheet's baselines move to what the create wrote (D-7, D-16): a retry writes only what changed since, and Escape on an unchanged sheet closes it without a confirm. Graph boxes count as a change only before the first write; after it they are locked and not compared (M-11).
 - The file code for Add artifact and Add file becomes one `IngestFileChoice` value with one refusal mapping, and `IngestFileDropRow` binds it (D-11, D-13). The Add file dialog's code changes, not its behavior.
 - Out, not planned: the board's ingest progress bar and the old Add dialog's frames (SA-7 and the inventory ship today's drop row). The cover reload after an add goes to `docs/ideas/structural-debt.md` (M-9).
 
@@ -84,7 +84,7 @@ The reviewer's version kept re-sending the dismissed ids. That is not needed: `s
 **Answer:** Fixed. D-11 adds `IngestFileChoice.refuse(ifIngestRefusal:)`; both callers use it, and T-1 tests it.
 
 ### M-6 · minor · Per-mode copy belongs in the modifier
-**Answer:** Fixed. D-10 switches on `model?.mode` in `ArtifactSheetModifier.copy`, as the graph form does. The model gains only `editedRef` and `isCreate`.
+**Answer:** Fixed. D-10 switches on `model?.mode` in `ArtifactSheetModifier.copy`, as the graph form does. The model gains only `isCreate`; the edit title reads `.edit(let art)`'s ref (round 2).
 
 ### M-7 · minor · One per-mode "links" test instead of branches in each graph property
 **Answer:** Fixed. D-6 adds `links(_:)`.
@@ -97,3 +97,38 @@ The reviewer's version kept re-sending the dismissed ids. That is not needed: `s
 
 ### M-10 · nit · `addArtifactDialogTitle` keeps "Dialog" in its name
 **Answer:** Logged. The name stays: a rename would churn the string catalog for no change in copy.
+
+## Round 2
+
+The maintainability reviewer confirmed the round-1 answers M-1 to M-10 against the code. That includes D-16's safety: `apply` deletes only value rows, and `artifact_metadata_layout` has no unique `sort_order`. The executability reviewer confirmed X-1 to X-12.
+
+### M-11 · blocker · After a refused file, `isDirty` still counts the graph boxes against a re-read that has not landed (also X-14, major)
+**Answer:** Fixed. In create mode `isDirty` counts graphs only while `created == nil` (D-9). D-6's `links(_:)` answers `true` in create mode, and the made Artifact's links are never compared. T-7 asserts `!isDirty` right after a refused file, on three graphs with no graph effects scripted.
+
+### X-13 · blocker · STEP-4 leaves the views calling deleted members, so the app does not build
+**Answer:** Fixed. STEP-4 now takes every view deletion (`addForm`, the Add dialog, its binding), the async Add buttons and drop call, and the old `IngestFileDropRow` init. STEP-5 keeps only the File section, `isDisabled` and the doc comments.
+
+### X-15 · major · T-1 relies on helpers that are private to other files
+**Answer:** Fixed. T-1 brings its own private temp-PNG helper and error type.
+
+### X-16 · major · STEP-2 rewires Add file with no test covering it
+**Answer:** Fixed. T-14 (`anAttachRefusalKeepsTheDialog`) is in STEP-2, and `SourcePageModelTests.swift` is in its Files.
+
+### X-17 · minor · `addFileForm`'s own refusal Callout would stay as a second one
+**Answer:** Fixed. STEP-2 deletes it.
+
+### X-18 · minor · T-5 needs scripted reply rows
+**Answer:** Fixed. T-5 scripts them as T-4 does.
+
+### X-19 · minor · STEP-3's check cannot reach create mode
+**Answer:** Fixed. The check runs `MetadataDraftHostTests` (T-13) and says create mode is first checked in STEP-4.
+
+### X-20 · minor · § 11 names the round-1 shapes (`editedArtifact`, `sent`)
+**Answer:** Fixed. Both rows use the current names. (The maintainability reviewer also noted this.)
+
+### X-21 · nit · The copy flips to "Edit" on the closing frame
+**Answer:** Logged. D-10 accepts it, as the graph form's modifier does.
+
+### Not raised as findings (round 2 takes blockers only)
+- `editedRef` duplicated `mode`'s Artifact: fixed, D-10 reads `.edit(let art)`. `isCreate` stays as the view's one read of the mode.
+- A parity scenario for "mark saved, then write again" in `draft_board_scenarios.json`: not added. T-13 pins the Swift side, and the engine rule it rests on (`apply` never deletes layout) is cited in D-16. Logged here for S15-11, if its form grows a retry.
