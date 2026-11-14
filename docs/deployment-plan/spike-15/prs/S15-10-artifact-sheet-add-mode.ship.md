@@ -1,7 +1,7 @@
 # Ship log — S15-10 Adding an Artifact asks for its copy details
 
 **Plan:** [`S15-10-artifact-sheet-add-mode.md`](S15-10-artifact-sheet-add-mode.md) · **Branch:** `s15-10-artifact-sheet-add-mode` · **PR:** #829
-**State:** fixing (user-requested F-6)
+**State:** ready
 
 ## Round 0 — implement
 Head `0ea1c9765`. Gate PASS (orchestrator run, against `36d6ec21d`). Report deviations: (1) `SourcePageModel.apply` also calls `artifacts.workspaceChanged()` when the page's shown Artifacts differ from the new workspace, so an Artifact the sheet made and then deleted elsewhere closes the sheet (AC-4.4, T-11); a file the plan did not name. (2) `IngestFileDropRow` stores values and closures from one `init(file:…)`, no `@Binding`. (3) § 10 manual check not run (no GUI session).
@@ -76,5 +76,10 @@ Do:
 - Correct `saveErrorBody`'s doc ("Nothing was written") only if it is still true for every caller after this change; it should be.
 Check: the two tests pass; `aRefusedFileKeepsTheCreatedArtifactAndARetryAttachesToIt`, `aRetryWithChangesUpdatesOnce`, `aRetryWithNoChangeOnlyIngests` still pass unchanged; scripts/check-pr.sh PASS.
 
+## Round 3 — fix (user-requested)
+Head `ae09782d7`. F-6 done: `saveCreate` wraps a non-refusal ingest failure in a private `FileNotAttached`; `save()`'s catch shows it in the file row through `IngestFileChoice.failAfterCreate(message:)` (path kept, no `saveError`); new strings `sources.page.artifactSheet.fileNotAttachedTitle`/`Body`. Deviations: `IngestFileChoice.isRefused` (`reject != nil && filePath == nil`) replaces `file.reject != nil` in `canSave` and `save()`, or the retry the Callout asks for could not run; tests were not run red first; the retry is asserted by state (`fileID` empty → set, one Artifact), as `FakeStore` has no call counters. Read by the orchestrator: matches F-6; a retry's `writeUpdate` failure still takes D-8's save-error arm.
+Gate: first implementer run failed once on `anEditSheetOpenedDuringTheReadIsKept` (the 2 s wait for the hold under load, code from F-3) → G-1: 15 s `try #require` wait, as `CatalogCountsTests.swift:103` does. Head `a6a5b380b`, gate PASS (orchestrator run).
+Merged `origin/main` (`b22fc2cff`, docs only for S16-32); gate PASS again. Not re-reviewed: round caps are two, and the user asked for this change.
+
 ## Result
-Gate PASS (head `2c18daed2`, `main` unmoved at `36d6ec21d`) · CI green · open: none · follow-ups: none · to user: UX-2 (D-8's save-error copy after a created Artifact's non-`ingest.*` file failure), § 10 manual check
+Gate PASS (after merging `main` at `b22fc2cff`) · CI green · open: none · follow-ups: none · to user: UX-2 answered "Fix it here" → F-6; § 10 manual check
