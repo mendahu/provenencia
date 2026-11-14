@@ -626,6 +626,38 @@ struct SourcePageModelTests {
         #expect(!model.artifacts.canSubmitDraft)
     }
 
+    @Test func anAttachRefusalKeepsTheDialog() async throws {
+        let url = try writeTempPNG()
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Front", description: "", file: nil
+                ),
+            ]
+        )
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.artifacts.openAttach(to: "a1")
+        model.artifacts.attachDraft.file.choose(url)
+
+        await model.artifacts.confirmAttach()
+
+        #expect(model.artifacts.isAttaching)
+        #expect(model.artifacts.attachDraft.file.reject != nil)
+        #expect(model.artifacts.attachDraft.file.filePath == nil)
+
+        store.ingestArtifactFileError = nil
+        model.artifacts.attachDraft.file.choose(url)
+        await model.artifacts.confirmAttach()
+
+        #expect(!model.artifacts.isAttaching)
+        #expect(model.toast != nil)
+    }
+
     @Test func ingestThenRejectSecondAttach() async throws {
         let store = makeStore()
         let model = makeModel(store: store)

@@ -32,9 +32,7 @@ final class SourceArtifactsSection {
     struct AttachDraft: Equatable {
         var artifactID = ""
         var artifactRef = ""
-        var filePath: String?
-        var fileName: String?
-        var reject: L10n.Errors.IngestCallout?
+        var file = IngestFileChoice()
     }
 
     // MARK: Add dialog
@@ -95,8 +93,8 @@ final class SourceArtifactsSection {
 
     var canSubmitAttach: Bool {
         !isSavingAttach
-            && attachDraft.filePath != nil
-            && attachDraft.reject == nil
+            && attachDraft.file.filePath != nil
+            && attachDraft.file.reject == nil
     }
 
     var addSheetIsDirty: Bool {
@@ -115,7 +113,7 @@ final class SourceArtifactsSection {
 
     /// The artifact the file will attach to is a seed. A chosen file is an edit.
     var attachSheetIsDirty: Bool {
-        attachDraft.filePath != nil
+        attachDraft.file.filePath != nil
     }
 
     /// What an Artifact row's graph line shows, by Artifact id. Empty until the session has the
@@ -228,16 +226,9 @@ final class SourceArtifactsSection {
         let name = url.lastPathComponent
         switch IngestMediaPolicy.validate(url: url) {
         case .ok:
-            switch target {
-            case .create:
-                draft.filePath = url.path
-                draft.fileName = name
-                draft.reject = nil
-            case .attach:
-                attachDraft.filePath = url.path
-                attachDraft.fileName = name
-                attachDraft.reject = nil
-            }
+            draft.filePath = url.path
+            draft.fileName = name
+            draft.reject = nil
         case .reject(let reason):
             let size = reason == .tooLarge
                 ? IngestMediaPolicy.formatByteSize(IngestMediaPolicy.byteSize(of: url))
@@ -375,7 +366,6 @@ final class SourceArtifactsSection {
 
     enum FilePickTarget {
         case create
-        case attach
     }
 
     func openAttach(to id: String) {
@@ -390,24 +380,9 @@ final class SourceArtifactsSection {
         attachDraft = AttachDraft()
     }
 
-    func pickAttachFile() {
-        let path = ProjectFiles.pickFileForIngest(
-            prompt: L10n.string(L10n.Sources.filePickPrompt),
-            message: L10n.string(L10n.Sources.filePickMessage)
-        )
-        guard let path else { return }
-        applyPickedFile(url: URL(fileURLWithPath: path), into: .attach)
-    }
-
-    func clearAttachFile() {
-        attachDraft.filePath = nil
-        attachDraft.fileName = nil
-        attachDraft.reject = nil
-    }
-
     func confirmAttach() async {
         guard canSubmitAttach else { return }
-        guard let path = attachDraft.filePath else { return }
+        guard let path = attachDraft.file.filePath else { return }
         let id = attachDraft.artifactID
         isSavingAttach = true
         defer { isSavingAttach = false }
@@ -429,12 +404,8 @@ final class SourceArtifactsSection {
                 tone: .success
             )
         } catch {
-            if let coded = error as? CoreInvokeError, let code = coded.code,
-               let callout = L10n.Errors.ingestCallout(code: code, params: coded.params)
-            {
-                attachDraft.reject = callout
-                attachDraft.filePath = nil
-            } else if context.showFailure(error) {
+            // A refused file keeps the dialog open with the refusal under the row.
+            if !attachDraft.file.refuse(ifIngestRefusal: error), context.showFailure(error) {
                 isAttaching = false
             }
         }
@@ -464,16 +435,9 @@ final class SourceArtifactsSection {
         fileName: String?,
         into target: FilePickTarget
     ) {
-        switch target {
-        case .create:
-            draft.filePath = nil
-            draft.fileName = fileName
-            draft.reject = callout
-        case .attach:
-            attachDraft.filePath = nil
-            attachDraft.fileName = fileName
-            attachDraft.reject = callout
-        }
+        draft.filePath = nil
+        draft.fileName = fileName
+        draft.reject = callout
     }
 
     /// Puts a written Artifact on the page, appended when new: the one apply

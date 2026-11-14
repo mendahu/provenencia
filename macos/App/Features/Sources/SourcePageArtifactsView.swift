@@ -121,18 +121,11 @@ struct SourcePageArtifactsView: View {
                     .foregroundStyle(PVColor.textMuted)
             }
             IngestFileDropRow(
-                fileName: model.artifacts.attachDraft.fileName,
-                isRejected: model.artifacts.attachDraft.reject != nil,
+                file: $model.artifacts.attachDraft.file,
                 isBusy: model.artifacts.isSavingAttach,
                 idleHint: L10n.Sources.ingestDropIdleAttach,
-                onChoose: { model.artifacts.pickAttachFile() },
-                onClear: { model.artifacts.clearAttachFile() },
-                onDropURLs: { model.artifacts.applyDroppedURLs($0, into: .attach) }
+                rejectAccessibilityIdentifier: "sources.page.addFile.ingestReject"
             )
-            if let reject = model.artifacts.attachDraft.reject {
-                PVCallout(tone: .danger, title: reject.title, message: reject.message)
-                    .accessibilityIdentifier("sources.page.addFile.ingestReject")
-            }
         }
     }
 }

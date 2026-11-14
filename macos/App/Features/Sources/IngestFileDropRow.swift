@@ -1,14 +1,54 @@
 import SwiftUI
 
-/// Choose-file / drop row for Add Artifact and Add File modals.
+/// Choose-file / drop row for the Artifact sheet's File field and the Add file dialog.
+/// Bound to one `IngestFileChoice`, it draws the refused-file Callout under its caption.
 struct IngestFileDropRow: View {
     let fileName: String?
     let isRejected: Bool
+    let reject: L10n.Errors.IngestCallout?
+    let rejectAccessibilityIdentifier: String?
     let isBusy: Bool
     let idleHint: LocalizedStringResource
     let onChoose: () -> Void
     let onClear: () -> Void
     let onDropURLs: ([URL]) -> Void
+
+    init(
+        file: Binding<IngestFileChoice>,
+        isBusy: Bool,
+        idleHint: LocalizedStringResource,
+        rejectAccessibilityIdentifier: String
+    ) {
+        fileName = file.wrappedValue.fileName
+        isRejected = file.wrappedValue.reject != nil
+        reject = file.wrappedValue.reject
+        self.rejectAccessibilityIdentifier = rejectAccessibilityIdentifier
+        self.isBusy = isBusy
+        self.idleHint = idleHint
+        onChoose = { file.wrappedValue.pick() }
+        onClear = { file.wrappedValue.clear() }
+        onDropURLs = { file.wrappedValue.choose($0) }
+    }
+
+    init(
+        fileName: String?,
+        isRejected: Bool,
+        isBusy: Bool,
+        idleHint: LocalizedStringResource,
+        onChoose: @escaping () -> Void,
+        onClear: @escaping () -> Void,
+        onDropURLs: @escaping ([URL]) -> Void
+    ) {
+        self.fileName = fileName
+        self.isRejected = isRejected
+        reject = nil
+        rejectAccessibilityIdentifier = nil
+        self.isBusy = isBusy
+        self.idleHint = idleHint
+        self.onChoose = onChoose
+        self.onClear = onClear
+        self.onDropURLs = onDropURLs
+    }
 
     @State private var isTargeted = false
 
@@ -65,6 +105,11 @@ struct IngestFileDropRow: View {
             Text(L10n.Sources.ingestAllowedTypesCaption)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
+
+            if let reject, let rejectAccessibilityIdentifier {
+                PVCallout(tone: .danger, title: reject.title, message: reject.message)
+                    .accessibilityIdentifier(rejectAccessibilityIdentifier)
+            }
         }
     }
 
