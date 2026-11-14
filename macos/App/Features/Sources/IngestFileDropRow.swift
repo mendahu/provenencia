@@ -87,7 +87,7 @@ struct IngestFileDropRow: View {
                 .foregroundStyle(PVColor.textMuted)
 
             if let reject {
-                PVCallout(tone: .danger, title: reject.title, message: reject.message)
+                PVCallout(tone: .danger, title: reject.title, message: reject.message, announces: true)
                     .accessibilityIdentifier(rejectAccessibilityIdentifier)
             }
         }
