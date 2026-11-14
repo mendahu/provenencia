@@ -1,6 +1,6 @@
 # S15-10 — Adding an Artifact asks for its copy details
 
-**Status:** Planned
+**Status:** Landed in [#829](https://github.com/mendahu/provenencia/pull/829) (2026-11-14)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D14](../design/S15-D14-source-page-artifacts.md) SA-7 (and frame 13's empty board, SA-13), board agreed 2026-11-13
@@ -346,3 +346,9 @@ None.
 
 **Title:** S15-10 — Adding an Artifact asks for its copy details
 **Body:** objective in one sentence; what shipped against US-1 – US-4; AC evidence (test names); deviations from the plan; the manual check, including the SQL step; `Plan: docs/deployment-plan/spike-15/prs/S15-10-artifact-sheet-add-mode.md`.
+
+## Landed
+
+- `SourcePageModel.apply` calls `artifacts.workspaceChanged()` when the page's shown Artifacts (`context.workspace` before the new one) differ from the new workspace, as well as when the last applied workspace's do. An Artifact the sheet made reaches the page through `show` and not the applied workspace, so without it another window deleting the made Artifact never closed the sheet (AC-4.4, T-11).
+- `IngestFileDropRow` keeps its fields and a second `init(file:…)`; the old six-parameter init and `isRejected` as a stored property are gone, `isRejected` is computed from `reject`.
+- The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
