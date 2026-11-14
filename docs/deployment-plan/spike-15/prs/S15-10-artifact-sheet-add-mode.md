@@ -349,6 +349,6 @@ None.
 
 ## Landed
 
-- `SourcePageModel.apply` calls `artifacts.workspaceChanged()` when the page's shown Artifacts (`context.workspace` before the new one) differ from the new workspace, as well as when the last applied workspace's do. An Artifact the sheet made reaches the page through `show` and not the applied workspace, so without it another window deleting the made Artifact never closed the sheet (AC-4.4, T-11).
+- `SourcePageModel.apply` calls `artifacts.workspaceChanged()` when the page's shown Artifacts (`context.workspace` before the new one) differ from the new workspace, in place of comparing the last applied workspace's. An Artifact the sheet made reaches the page through `show` and not the applied workspace, so without it another window deleting the made Artifact never closed the sheet (AC-4.4, T-11).
 - `IngestFileDropRow` keeps its fields and a second `init(file:…)`; the old six-parameter init and `isRejected` as a stored property are gone, `isRejected` is computed from `reject`.
 - The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
