@@ -43,13 +43,8 @@ func init() {
 		Lifetime:    graphcache.LifeGraph,
 		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}, namealiases.Index, nameformats.Default},
 		Build:       buildMatchIndex,
-		Apply: func(g *graphcache.Graph, w graphcache.Whole[*matchIndex], roots [][]byte, _ effects.Set) error {
-			if len(roots) > 0 {
-				w.Drop(g)
-			}
-			return nil
-		},
-		Check: checkMatchIndex,
+		Apply:       applyMatchIndex,
+		Check:       checkMatchIndex,
 	})
 	candidates = graphcache.RegisterKeyed(graphcache.KeyedEntry[candidatesMemo]{
 		Name:        "promotealign.candidates",
@@ -102,6 +97,81 @@ func buildMatchIndex(g *graphcache.Graph) (*matchIndex, error) {
 		ix.Put(vocabkey.SubjectType(s.Kind), s.ID, s.Values)
 	}
 	return &matchIndex{handles: handles, shortlist: ix}, nil
+}
+
+// applyMatchIndex patches the held index after a commit: it re-profiles the
+// commit's roots and the people at the root events (readers), drops the handles
+// that left (a merged, deleted or non-primary node), and refiles only the
+// handles whose profile changed. It stores the index with Set, which empties
+// the candidates derived from it, only when something changed. A commit with no
+// roots changes nothing a profile reads.
+func applyMatchIndex(g *graphcache.Graph, w graphcache.Whole[*matchIndex], roots [][]byte, _ effects.Set) error {
+	if len(roots) == 0 {
+		return nil
+	}
+	m, err := matchIndexOf(g)
+	if err != nil {
+		return err
+	}
+	p, err := newProfiler(g)
+	if err != nil {
+		return err
+	}
+	// The roots load first: readers classifies them by their nodes.
+	if err := g.Nodes(roots); err != nil {
+		return err
+	}
+	more, err := p.readers(roots)
+	if err != nil {
+		return err
+	}
+	if err := g.Nodes(more); err != nil {
+		return err
+	}
+	var live []*graphcache.Node
+	liveIDs := map[string]bool{}
+	changed := false
+	for _, id := range append(slices.Clone(roots), more...) {
+		if liveIDs[string(id)] {
+			continue
+		}
+		n, err := g.Node(id)
+		if err != nil {
+			return err
+		}
+		if n == nil || n.Merged || !vocabkey.IsPrimaryKind(string(p.kind(n))) {
+			if _, held := m.handles[string(id)]; held {
+				delete(m.handles, string(id))
+				m.shortlist.Remove(id)
+				changed = true
+			}
+			continue
+		}
+		liveIDs[string(id)] = true
+		live = append(live, n)
+	}
+	old := make(map[string]subjectcompare.Subject, len(live))
+	for _, n := range live {
+		if s, ok := m.handles[string(n.ID)]; ok {
+			old[string(n.ID)] = s
+		}
+	}
+	// subjects builds events before the people that read their life.
+	if err := p.subjects(live, m.handles); err != nil {
+		return err
+	}
+	for _, n := range live {
+		s := m.handles[string(n.ID)]
+		if was, ok := old[string(n.ID)]; ok && reflect.DeepEqual(s, was) {
+			continue
+		}
+		m.shortlist.Put(vocabkey.SubjectType(s.Kind), s.ID, s.Values)
+		changed = true
+	}
+	if changed {
+		w.Set(g, m)
+	}
+	return nil
 }
 
 // checkMatchIndex compares the stored index with a fresh build.

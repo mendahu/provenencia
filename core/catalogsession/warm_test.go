@@ -71,8 +71,8 @@ func TestDoWarmsMatching(t *testing.T) {
 // The alias index and name format live with the catalog connection: a vocabulary
 // commit, a Drop, a handle commit and a failed call leave them, and no call
 // warms them again. The match index follows its declarations: a vocabulary
-// commit, a Drop and a handle commit empty it, and a Source vocabulary commit
-// does not.
+// commit and a Drop empty it, and a handle commit (which patches it) and a
+// Source vocabulary commit do not.
 func TestDoKeepsWarmEntries(t *testing.T) {
 	handle := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	cases := []struct {
@@ -88,7 +88,7 @@ func TestDoKeepsWarmEntries(t *testing.T) {
 		{"drop", func(c *database.Catalog) error { c.Graph().Drop(); return nil }, false, false, true},
 		{"handle commit", func(c *database.Catalog) error {
 			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Handles: [][]byte{handle}}})
-		}, false, false, false},
+		}, false, true, false},
 		{"source vocabulary commit", func(c *database.Catalog) error {
 			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListSourceVocabulary}}})
 		}, false, true, false},

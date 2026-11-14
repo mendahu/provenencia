@@ -24,8 +24,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -439,6 +441,147 @@ func TestMatchIndexHoldsEveryHandle(t *testing.T) {
 	}
 }
 
+// unpromote deletes the handle of a promoted Subject.
+func (w *warmFixture) unpromote(t *testing.T, s subjects.Subject) {
+	t.Helper()
+	_, err := writes.Call(w.f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := promote.Unpromote(tx, userID, s.ID)
+		return struct{}{}, ch, err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// AC-1.1, AC-1.2, AC-1.3: a commit patches the match index instead of dropping
+// it. After each write the index is held, Verify finds it equal to a fresh
+// build, and the next proposal equals one on a dropped graph.
+func TestMatchIndexFollowsCommits(t *testing.T) {
+	t.Setenv("PROVENENCIA_GRAPH_VERIFY", "1")
+	tests := []struct {
+		name  string
+		write func(t *testing.T, w *warmFixture)
+	}{
+		{"a new filed person", func(t *testing.T, w *warmFixture) {
+			srcC, artC := w.f.NewSource("Parish register")
+			w.f.filedBirth(srcC, artC, "Jane Doe", 1820, nil, nil)
+		}},
+		{"a name edited", func(t *testing.T, w *warmFixture) {
+			g := w.f.c.Graph()
+			before, ok := promotealign.HandleForTest(g, w.personHandle)
+			if !ok {
+				t.Fatal("the person handle is not held")
+			}
+			w.renameMember(t, "Jon Smyth")
+			after, ok := promotealign.HandleForTest(g, w.personHandle)
+			if !ok || reflect.DeepEqual(before.Values, after.Values) {
+				t.Fatalf("the held profile did not change: before %+v, after %+v (held %v)", before.Values, after.Values, ok)
+			}
+			found := false
+			for _, id := range promotealign.IndexedForTest(g, "person", after.Values) {
+				found = found || bytes.Equal(id, w.personHandle)
+			}
+			if !found {
+				t.Error("a Lookup with the new profile's values does not return the handle")
+			}
+		}},
+		{"an event date edited", func(t *testing.T, w *warmFixture) {
+			w.f.Cite(w.f.artifact, w.memberBirth, observations.Input{
+				PropertyID: w.f.Prop("date").ID, Date: datevaluetest.YMD(1818, 0, 0),
+			})
+		}},
+		{"a participation added", func(t *testing.T, w *warmFixture) {
+			d := w.f.DatedOn(w.f.source, w.f.artifact, "death", 1880, 0, 0)
+			w.f.Participation(w.f.source, w.f.artifact, w.member, d, "subject")
+			w.f.promote(d)
+		}},
+		{"a handle merged", func(t *testing.T, w *warmFixture) {
+			other := w.f.Person(w.f.source, w.f.artifact, "Somebody Else")
+			into := w.f.promote(other).Entity.ID
+			db, err := w.f.c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into, w.personHandle); err != nil {
+				t.Fatal(err)
+			}
+			if err := w.f.c.Graph().OnCommit(effects.Commit{
+				Activity: effects.Activity{Revision: 1 << 40}, Effects: effects.Set{Handles: [][]byte{w.personHandle}},
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := promotealign.HandleForTest(w.f.c.Graph(), w.personHandle); ok {
+				t.Error("the merged handle is still held")
+			}
+		}},
+		{"a Subject unpromoted", func(t *testing.T, w *warmFixture) {
+			w.unpromote(t, w.member)
+			if _, ok := promotealign.HandleForTest(w.f.c.Graph(), w.personHandle); ok {
+				t.Error("the deleted handle is still held")
+			}
+		}},
+		{"a place renamed", func(t *testing.T, w *warmFixture) {
+			place := w.f.Place(w.f.source, w.f.artifact, "Springfield")
+			w.f.promote(place)
+			w.f.Cite(w.f.artifact, place, observations.Input{
+				PropertyID: w.f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("Shelbyville"),
+			})
+		}},
+		{"an event deleted", func(t *testing.T, w *warmFixture) {
+			w.unpromote(t, w.memberBirth)
+			if _, ok := promotealign.HandleForTest(w.f.c.Graph(), w.birthHandle); ok {
+				t.Error("the deleted event handle is still held")
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newWarmFixture(t)
+			c := w.f.c
+			g := c.Graph()
+			g.Drop()
+			if err := promotealign.Warm(c); err != nil {
+				t.Fatal(err)
+			}
+			tc.write(t, w)
+			if !stored(g) {
+				t.Fatal("the write emptied the match index")
+			}
+			if err := g.Verify(); err != nil {
+				t.Fatalf("Verify after the write: %v", err)
+			}
+			warm := w.f.propose(w.f.Graph(w.srcB), nil)
+			g.Drop()
+			fresh := w.f.propose(w.f.Graph(w.srcB), nil)
+			if !reflect.DeepEqual(warm, fresh) {
+				t.Errorf("the proposal after the write differs from one on a dropped graph:\nwarm  %+v\nfresh %+v", warm, fresh)
+			}
+		})
+	}
+
+	t.Run("a commit that changes no profile", func(t *testing.T) {
+		w := newWarmFixture(t)
+		g := w.f.c.Graph()
+		graphB := w.f.Graph(w.srcB)
+		w.f.propose(graphB, nil)
+		before, _ := promotealign.MatchIndex.Peek(g)
+		if !promotealign.CandidatesHeldForTest(g, graphB) {
+			t.Fatal("setup: the proposal held no candidates")
+		}
+		if err := g.OnCommit(effects.Commit{
+			Activity: effects.Activity{Revision: 1 << 41}, Effects: effects.Set{Handles: [][]byte{w.personHandle}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if after, _ := promotealign.MatchIndex.Peek(g); after != before {
+			t.Error("a commit that changed nothing replaced the match index")
+		}
+		if !promotealign.CandidatesHeldForTest(g, graphB) {
+			t.Error("a commit that changed no profile emptied the candidates")
+		}
+	})
+}
+
 // S11-21 D-8 (AC-4.1, AC-4.2, AC-4.3): a Subject's remembered candidates never
 // outlive the index or the Source edit they were ranked against: the next
 // proposal equals one on a dropped graph.
@@ -522,8 +665,9 @@ func TestWarmBuildsTheIndex(t *testing.T) {
 	}
 }
 
-// The match index drops as it is declared: a Source-only commit keeps it; a
-// handle commit, a vocabulary commit, a new alias index and Drop empty it.
+// The match index drops as it is declared: a Source-only commit and a handle
+// commit (which patches it) keep it; a vocabulary commit, a new alias index and
+// Drop empty it.
 func TestMatchIndexDrops(t *testing.T) {
 	w := newWarmFixture(t)
 	c := w.f.c
@@ -552,8 +696,8 @@ func TestMatchIndexDrops(t *testing.T) {
 		t.Error("a Source-only commit dropped the match index")
 	}
 	commit(effects.Set{Handles: [][]byte{w.personHandle}})
-	if stored(g) {
-		t.Error("a handle commit left the match index")
+	if !stored(g) {
+		t.Error("a handle commit dropped the match index")
 	}
 	warm()
 	commit(effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}})
