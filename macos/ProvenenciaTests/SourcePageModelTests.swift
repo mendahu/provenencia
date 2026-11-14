@@ -413,10 +413,7 @@ struct SourcePageModelTests {
         await model.warmFromSession()
         let sheet = try await openAddSheet(model)
         sheet.draft.label = "Deed"
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("deed-\(UUID().uuidString).pdf").path
-        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
-        sheet.file.choose(URL(fileURLWithPath: path))
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF-1.1".utf8), named: "deed.pdf"))
         _ = await sheet.save()
         #expect(model.artifacts.items.count == 1)
         #expect(model.source?.coverMode == "type_icon")
@@ -443,10 +440,7 @@ struct SourcePageModelTests {
 
         let sheet = try await openAddSheet(model)
         sheet.draft.label = "Scan"
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
-        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
-        sheet.file.choose(URL(fileURLWithPath: path))
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF-1.1".utf8), named: "scan.pdf"))
         _ = await sheet.save()
 
         guard let artID = store.artifactsBySource[sourceID]?.last?.id else {
@@ -469,13 +463,10 @@ struct SourcePageModelTests {
         await model.warmFromSession()
         let sheet = try await openAddSheet(model)
         sheet.draft.label = "Scan"
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).png").path
         // Minimal valid PNG so FakeStore marks a raster thumb path.
-        try Data([
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-        ]).write(to: URL(fileURLWithPath: path))
-        sheet.file.choose(URL(fileURLWithPath: path))
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(
+            Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), named: "scan.png"
+        ))
         _ = await sheet.save()
         let first = try #require(model.artifacts.items.first)
         #expect(!model.artifacts.isCover(first))
@@ -490,10 +481,7 @@ struct SourcePageModelTests {
         model.artifacts.sheet = nil // the dialog closed after the first Save
         let sheet2 = try await openAddSheet(model)
         sheet2.draft.label = "Other"
-        let path2 = FileManager.default.temporaryDirectory
-            .appendingPathComponent("other-\(UUID().uuidString).pdf").path
-        try Data("%PDF".utf8).write(to: URL(fileURLWithPath: path2))
-        sheet2.file.choose(URL(fileURLWithPath: path2))
+        sheet2.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF".utf8), named: "other.pdf"))
         _ = await sheet2.save()
         let second = try #require(model.artifacts.items.last)
         #expect(!model.artifacts.isCover(second))
@@ -572,10 +560,7 @@ struct SourcePageModelTests {
         #expect(entryGraphLocation(model)?.graphId == "g-1")
 
         store.ingestArtifactFileError = nil
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
-        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
-        sheet.file.choose(URL(fileURLWithPath: path))
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF-1.1".utf8), named: "scan.pdf"))
         sheet.draft.label = "Scan, front"
 
         let retried = await sheet.save()
@@ -610,7 +595,7 @@ struct SourcePageModelTests {
     }
 
     @Test func anAttachRefusalKeepsTheDialog() async throws {
-        let url = try writeTempPNG()
+        let url = try ArtifactFileFixtures.writeStubPNG()
         let store = makeStore(
             artifacts: [
                 CatalogArtifact(
@@ -650,9 +635,7 @@ struct SourcePageModelTests {
         _ = await sheet.save()
         let artID = try #require(model.artifacts.items.first?.id)
 
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).bin").path
-        try Data("bytes".utf8).write(to: URL(fileURLWithPath: path))
+        let path = try ArtifactFileFixtures.writeTemp(Data("bytes".utf8), named: "scan.bin").path
 
         let first = try await store.ingestArtifactFile(
             projectDir: projectDir, userID: userID, artifactID: artID, path: path
@@ -1151,7 +1134,7 @@ struct SourcePageModelTests {
     }
 
     @Test func pageDropStagesFileWithoutCreating() async throws {
-        let url = try writeTempPNG()
+        let url = try ArtifactFileFixtures.writeStubPNG()
         let store = makeStore(
             artifacts: [
                 CatalogArtifact(
@@ -1205,13 +1188,6 @@ struct SourcePageModelTests {
     private func openAddSheet(_ model: SourcePageModel) async throws -> ArtifactSheetModel {
         await model.artifacts.openAdd()
         return try #require(model.artifacts.sheet)
-    }
-
-    private func writeTempPNG() throws -> URL {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("s10-18-\(UUID().uuidString).png")
-        try Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]).write(to: url)
-        return url
     }
 
     @Test func askDeleteSourcePresentsAllowedImpact() async {
@@ -1851,7 +1827,7 @@ struct SourcePageModelTests {
         #expect(!sheet.isDirty)
 
         store.ingestArtifactFileError = nil
-        sheet.file.choose(try writeTempPNG())
+        sheet.file.choose(try ArtifactFileFixtures.writeStubPNG())
         sheet.board.drafts["provider"] = "Ancestry"
         await sheet.board.save(fieldID: "provider")
         let retried = await sheet.save()
@@ -1874,7 +1850,7 @@ struct SourcePageModelTests {
         _ = await sheet.save()
 
         store.ingestArtifactFileError = nil
-        sheet.file.choose(try writeTempPNG())
+        sheet.file.choose(try ArtifactFileFixtures.writeStubPNG())
         let retried = await sheet.save()
 
         #expect(retried)
@@ -1892,7 +1868,7 @@ struct SourcePageModelTests {
         #expect(sheet.isDirty)
         #expect(sheet.canSave)
         sheet.draft.label = ""
-        sheet.file.choose(try writeTempPNG())
+        sheet.file.choose(try ArtifactFileFixtures.writeStubPNG())
         #expect(sheet.isDirty)
         sheet.file.choose(URL(fileURLWithPath: "/tmp/notes.xlsx"))
         #expect(!sheet.canSave)
@@ -2322,6 +2298,28 @@ struct SourcePageModelTests {
         #expect(await sheet.save() == false)
         #expect(model.artifacts.sheet === sheet)
         #expect(sheet.saveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
+    }
+
+    @Test func anEditSheetOpenedDuringTheReadIsKept() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.sheet = nil
+        store.listTypeSuggestionsHold.isOn = true
+        let firstOpen = Task { await model.artifacts.openAdd() }
+        #expect(await waitUntil { store.listTypeSuggestionsHold.count == 1 })
+        #expect(!model.acceptsArtifactPageDrop)
+        let secondOpen = Task { await model.artifacts.openAdd() }
+        // A second open must not start its own read.
+        #expect(!(await waitUntil(timeout: .milliseconds(300)) { store.listTypeSuggestionsHold.count == 2 }))
+
+        model.artifacts.openSheet(artifactID: "P3")
+        let edit = model.artifacts.sheet
+        store.listTypeSuggestionsHold.release()
+        store.listTypeSuggestionsHold.release()
+
+        #expect(await secondOpen.value == nil)
+        #expect(await firstOpen.value == nil)
+        #expect(model.artifacts.sheet === edit)
+        #expect(edit?.artifactID == "P3")
     }
 
     @Test func sheetSavingDisablesSaveAndHoldsTheWrite() async {

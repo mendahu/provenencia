@@ -5,38 +5,38 @@ import UniformTypeIdentifiers
 
 struct IngestMediaPolicyTests {
     @Test func acceptsCSVAndMarkdownExtensions() throws {
-        let csv = try writeTemp(name: "people.csv", data: Data("a,b\n1,2\n".utf8))
+        let csv = try ArtifactFileFixtures.writeTemp(Data("a,b\n1,2\n".utf8), named: "people.csv")
         #expect(IngestMediaPolicy.validate(url: csv) == .ok)
-        let md = try writeTemp(name: "notes.md", data: Data("# Hi\n".utf8))
+        let md = try ArtifactFileFixtures.writeTemp(Data("# Hi\n".utf8), named: "notes.md")
         #expect(IngestMediaPolicy.validate(url: md) == .ok)
     }
 
     @Test func rejectsOfficeExtension() throws {
-        let url = try writeTemp(name: "notes.xlsx", data: Data("PK\u{0003}\u{0004}xxxx".utf8))
+        let url = try ArtifactFileFixtures.writeTemp(Data("PK\u{0003}\u{0004}xxxx".utf8), named: "notes.xlsx")
         #expect(IngestMediaPolicy.validate(url: url) == .reject(.office))
     }
 
     @Test func acceptsWordExtensions() throws {
-        let docx = try writeTemp(name: "letter.docx", data: Data("PK\u{0003}\u{0004}xxxx".utf8))
+        let docx = try ArtifactFileFixtures.writeTemp(Data("PK\u{0003}\u{0004}xxxx".utf8), named: "letter.docx")
         #expect(IngestMediaPolicy.validate(url: docx) == .ok)
-        let doc = try writeTemp(name: "letter.doc", data: Data(" helloid".utf8))
+        let doc = try ArtifactFileFixtures.writeTemp(Data(" helloid".utf8), named: "letter.doc")
         #expect(IngestMediaPolicy.validate(url: doc) == .ok)
     }
 
     @Test func rejectsEmpty() throws {
-        let url = try writeTemp(name: "empty.txt", data: Data())
+        let url = try ArtifactFileFixtures.writeTemp(Data(), named: "empty.txt")
         #expect(IngestMediaPolicy.validate(url: url) == .reject(.empty))
     }
 
     @Test func rejectsUnknownExtension() throws {
-        let url = try writeTemp(name: "blob.xyz", data: Data("hello".utf8))
+        let url = try ArtifactFileFixtures.writeTemp(Data("hello".utf8), named: "blob.xyz")
         #expect(IngestMediaPolicy.validate(url: url) == .reject(.genericType))
     }
 
     @Test func rejectsALinkFileAsAGenericType() throws {
         // A stored link or Terminal file is not a program, so ingest keeps the generic message.
         for name in ["x.webloc", "x.terminal"] {
-            let url = try writeTemp(name: name, data: Data("hello".utf8))
+            let url = try ArtifactFileFixtures.writeTemp(Data("hello".utf8), named: name)
             #expect(IngestMediaPolicy.validate(url: url) == .reject(.genericType), "\(name)")
         }
     }
@@ -84,14 +84,5 @@ struct IngestMediaPolicyTests {
         }
         #expect(!IngestMediaPolicy.opensAnotherItem(.pdf))
         #expect(!IngestMediaPolicy.opensAnotherItem(.shellScript))
-    }
-
-    private func writeTemp(name: String, data: Data) throws -> URL {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ingest-policy-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let url = dir.appendingPathComponent(name)
-        try data.write(to: url)
-        return url
     }
 }
