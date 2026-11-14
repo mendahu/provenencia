@@ -63,4 +63,4 @@ MNT-2, CON-2, MNT-5 (minors): **Resolved** — read `SourcePageModel.swift:170` 
 No new findings. Nits (logged): `MNT-8 · S15-10 plan:274 · T-1 still names a private temp-file helper (the Landed note records F-2 superseding it)` · `MNT-9 · FakeStore.swift:194 · listTypeSuggestionsHold has no doc comment, unlike updateArtifactHold` · older private `uniqueProjectDir()` + `write` copies in `ThumbnailCacheTests` and `ArtifactViewerModelTests`, untouched by this PR
 
 ## Result
-Gate PASS (head `2c18daed2`, `main` unmoved at `36d6ec21d`) · CI pending · open: none · follow-ups: none · to user: UX-2 (D-8's save-error copy after a created Artifact's non-`ingest.*` file failure), § 10 manual check
+Gate PASS (head `2c18daed2`, `main` unmoved at `36d6ec21d`) · CI green · open: none · follow-ups: none · to user: UX-2 (D-8's save-error copy after a created Artifact's non-`ingest.*` file failure), § 10 manual check
