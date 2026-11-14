@@ -191,6 +191,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// While on, `updateArtifact` suspends after recording the call and before it
     /// throws or writes, so a test can act mid-save.
     let updateArtifactHold = FakeHold()
+    let listTypeSuggestionsHold = FakeHold()
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
@@ -1225,6 +1226,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func listTypeSuggestions(projectDir _: String, typeID: String, level: Level) async throws
         -> [CatalogTypeSuggestion]
     {
+        await listTypeSuggestionsHold.wait()
         return try withState {
             listTypeSuggestionsLevels.append(level)
             if let listTypeSuggestionsError { throw listTypeSuggestionsError }
