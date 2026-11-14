@@ -2162,14 +2162,57 @@ struct SourcePageModelTests {
         #expect(withSuggestion.shown.map(\.field.id) == ["f1"] && withSuggestion.more == 0)
     }
 
-    @Test func restingCardMarksAnArtifactInNoGraph() async {
+    @Test func restingRowMarksAnArtifactInNoGraph() async {
         let (model, _, _) = await makeCensus(graphs: [
             graph("g-j", "Jones household", ["P3", "P4"]),
             graph("g-s", "Smith household", ["P3", "P9"]),
         ])
-        #expect(model.artifacts.inNoGraph == ["P6"])
+        #expect(model.artifacts.graphLines["P6"] == ArtifactGraphLine.none)
         let (bare, _, _) = await makeCensus(graphs: [])
-        #expect(bare.artifacts.inNoGraph.isEmpty)
+        #expect(!bare.artifacts.graphLines.values.contains(ArtifactGraphLine.none))
+    }
+
+    @Test func artifactGraphLinesFollowTheGraphList() async {
+        let (model, _, _) = await makeCensus(graphs: [
+            graph("g-s", "Smith household", ["P3", "P9"]),
+            graph("g-j", "Jones household", ["P3", "P4"]),
+            graph("g-b", "Brown household", ["P3", "P9"]),
+        ])
+        let lines = model.artifacts.graphLines
+        #expect(lines["P3"] == .graphs(
+            all: ["Smith household", "Jones household", "Brown household"],
+            shown: ["Smith household", "Jones household"],
+            more: 1
+        ))
+        #expect(lines["P4"] == .graphs(all: ["Jones household"], shown: ["Jones household"], more: 0))
+        #expect(lines["P6"] == ArtifactGraphLine.none)
+        let unread = makeModel(store: makeStore(artifacts: [catalogArtifact("P3", sourceID: sourceID, label: "Page 3")]))
+        #expect(unread.artifacts.graphLines.isEmpty)
+    }
+
+    @Test func artifactRowActionsAndWidths() {
+        #expect(ArtifactRowAction.menuActions(canSetCover: true) == [.edit, .setCover, .delete])
+        #expect(ArtifactRowAction.menuActions(canSetCover: false) == [.edit, .delete])
+        #expect(L10n.string(ArtifactRowAction.edit.title) == "Edit…")
+        #expect(L10n.string(ArtifactRowAction.delete.title) == "Delete…")
+        #expect(L10n.string(ArtifactRowAction.setCover.title) == "Set cover")
+        #expect(SourcePageArtifactRow.copyDetailsWidth(.regular) == 320)
+        #expect(SourcePageArtifactRow.copyDetailsWidth(.wide) == 440)
+    }
+
+    @Test func artifactThumbnailFallsBackToTheSourceType() async {
+        let store = makeStore(artifacts: [
+            catalogArtifact("P7", sourceID: sourceID, label: "Page 7"),
+        ])
+        store.sourceTypesByProject[projectDir]![0].iconKey = "type_photo"
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
+        await model.warmFromSession()
+        let bare = model.artifacts.items[0]
+        #expect(model.artifacts.thumbnailTypeIconKey(for: bare) == "type_photo")
+        let withFile = catalogFileArtifact("P8", sourceID: sourceID)
+        #expect(model.artifacts.thumbnailTypeIconKey(for: withFile) == nil)
     }
 
     @Test func addArtifactRetryIgnoresGraphChoice() async {

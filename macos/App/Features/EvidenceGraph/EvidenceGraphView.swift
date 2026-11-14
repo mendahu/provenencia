@@ -1102,8 +1102,7 @@ private struct EvidenceGraphFileMenuRow: View {
                 relPath: row.thumbnailRelPath,
                 mediaType: row.mediaType,
                 originalFilename: row.filename,
-                size: 48,
-                layout: .tile
+                size: 48
             )
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: PVSpacing.space3) {

@@ -53,7 +53,20 @@ extension View {
         items: [PVActionMenuItem]
     ) -> some View {
         modifier(PVRightClickMenuModifier(
-            title: title,
+            heading: title.map { Text($0) },
+            accessibilityIdentifier: accessibilityIdentifier,
+            items: items
+        ))
+    }
+
+    /// The same menu with a title that is data (a ref), drawn as given.
+    func pvRightClickMenu(
+        verbatimTitle: String,
+        accessibilityIdentifier: String?,
+        items: [PVActionMenuItem]
+    ) -> some View {
+        modifier(PVRightClickMenuModifier(
+            heading: Text(verbatim: verbatimTitle),
             accessibilityIdentifier: accessibilityIdentifier,
             items: items
         ))
@@ -61,7 +74,7 @@ extension View {
 }
 
 private struct PVRightClickMenuModifier: ViewModifier {
-    let title: LocalizedStringResource?
+    let heading: Text?
     let accessibilityIdentifier: String?
     let items: [PVActionMenuItem]
 
@@ -82,7 +95,7 @@ private struct PVRightClickMenuModifier: ViewModifier {
                 keyboard: titles == nil ? nil : $keyboard,
                 keyboardTitles: titles
             ) {
-                PVContextMenuPanel(title: title, accessibilityIdentifier: accessibilityIdentifier) {
+                PVContextMenuPanel(heading: heading, accessibilityIdentifier: accessibilityIdentifier) {
                     PVActionMenuRows(items: items)
                 }
             }

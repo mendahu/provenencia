@@ -28,7 +28,6 @@ struct PersonSourcesContent: Equatable {
         var helpTitle: String
         /// Nil when the type id is not in the types list.
         var typeLabel: String?
-        var typeIconKey: String?
         var ref: String
         /// The row as one VoiceOver element: "Hamburg census 1867, Census, date not recorded, SRC-9TQ2M".
         var accessibilityLabel: String
@@ -149,7 +148,6 @@ struct PersonSourcesContent: Equatable {
                 title: title,
                 helpTitle: title.text,
                 typeLabel: typeLabel,
-                typeIconKey: sourceTypes.iconKey(forTypeID: group.sourceTypeID),
                 ref: group.sourceRef,
                 accessibilityLabel: L10n.DesignSystem.spokenJoin([
                     title.text, typeLabel ?? "", date, group.sourceRef,

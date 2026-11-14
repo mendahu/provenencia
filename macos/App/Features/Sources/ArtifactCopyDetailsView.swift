@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// An Artifact card's saved copy details, read-only: the first four rows with a
+/// An Artifact row's saved copy details, read-only: the first four rows with a
 /// value as field name and value, and "+n more" past them, which opens the
-/// Artifact sheet at its copy details. Nothing draws for an Artifact with none.
+/// Artifact sheet at its copy details. An Artifact with none draws nothing inside its column.
 struct ArtifactCopyDetailsView: View {
     static let shownCount = 4
+    /// The field-name column.
+    static let labelWidth: CGFloat = 96
 
     let rows: [CatalogMetadataEntry]
     let ref: String
@@ -21,13 +23,16 @@ struct ArtifactCopyDetailsView: View {
         let (shown, more) = Self.shown(rows)
         if !shown.isEmpty {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Grid(alignment: .topLeading, horizontalSpacing: PVSpacing.space4, verticalSpacing: PVSpacing.space1) {
+                Grid(alignment: .topLeading, horizontalSpacing: PVSpacing.space5, verticalSpacing: PVSpacing.space1) {
                     ForEach(shown) { entry in
                         GridRow {
                             Text(verbatim: entry.field.label)
                                 .font(PVFont.body(size: PVTypeScale.caption))
                                 .foregroundStyle(PVColor.textMuted)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
+                                .help(entry.field.label)
+                                .frame(width: Self.labelWidth, alignment: .leading)
                                 .gridColumnAlignment(.leading)
                             MetadataValueText(
                                 entry: entry,

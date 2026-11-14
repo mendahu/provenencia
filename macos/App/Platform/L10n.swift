@@ -150,22 +150,22 @@ enum L10n {
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
             defaultValue: "Discard changes?",
-            comment: "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
+            comment: "Title of the confirm shown when a form sheet with unsaved edits is about to drop them (outside click, Escape, a row that navigates)"
         )
         static let formDialogDiscardMessage = LocalizedStringResource(
             "designSystem.formDialog.discardMessage",
             defaultValue: "Your changes will be lost.",
-            comment: "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
+            comment: "Body of the confirm shown when a form sheet with unsaved edits is about to drop them (outside click, Escape, a row that navigates)"
         )
         static let formDialogDiscardConfirm = LocalizedStringResource(
             "designSystem.formDialog.discardConfirm",
             defaultValue: "Discard",
-            comment: "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)"
+            comment: "Confirms dropping the edits of a form sheet with unsaved edits (outside click, Escape, a row that navigates)"
         )
         static let formDialogDiscardKeep = LocalizedStringResource(
             "designSystem.formDialog.discardKeep",
             defaultValue: "Keep editing",
-            comment: "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)"
+            comment: "Keeps the edits of a form sheet with unsaved edits and returns to the form (outside click, Escape, a row that navigates)"
         )
 
         static let toastDismiss = LocalizedStringResource(
@@ -6536,13 +6536,13 @@ enum L10n {
         static let artifactNotInGraph = LocalizedStringResource(
             "sources.page.artifact.notInGraph",
             defaultValue: "Not in an evidence graph",
-            comment: "Badge on a resting artifact card when no evidence graph links the artifact"
+            comment: "Badge on an Artifact row when no evidence graph links the artifact"
         )
 
         static let artifactLinkToGraph = LocalizedStringResource(
             "sources.page.artifact.linkToGraph",
             defaultValue: "Link to a graph",
-            comment: "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes"
+            comment: "Button on an Artifact row in no evidence graph; opens the Artifact sheet at its graph boxes"
         )
 
         /// Argument is the ART- ref.
@@ -6759,11 +6759,26 @@ enum L10n {
             comment: "Validation when Add Artifact is submitted without a label"
         )
 
-        static let artifactNoDescription = LocalizedStringResource(
-            "sources.page.artifactNoDescription",
-            defaultValue: "No description",
-            comment: "Placeholder on an artifact card when the description is empty"
+        static let artifactMenuEdit = LocalizedStringResource(
+            "sources.page.artifact.menu.edit",
+            defaultValue: "Edit…",
+            comment: "Artifact row menu item that opens the Artifact sheet"
         )
+
+        static let artifactMenuDelete = LocalizedStringResource(
+            "sources.page.artifact.menu.delete",
+            defaultValue: "Delete…",
+            comment: "Artifact row menu item that asks to delete the Artifact"
+        )
+
+        /// Argument is the graph names, already joined for speech.
+        static func artifactGraphsSpoken(names: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifact.graphsSpoken",
+                defaultValue: "Evidence graphs: %@",
+                comment: "VoiceOver label of an Artifact row's graph line; argument is the graph names"
+            ), names)
+        }
 
         static let artifactOpenFileTip = LocalizedStringResource(
             "sources.page.artifactOpenFileTip",
@@ -6783,12 +6798,12 @@ enum L10n {
             comment: "Status shown while a file is dragged over the Source page"
         )
 
-        /// Pencil on an artifact card. Argument is the ART- ref.
+        /// Pencil on an Artifact row. Argument is the ART- ref.
         static func editArtifactLabel(ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.page.editArtifactLabel",
                 defaultValue: "Edit %@",
-                comment: "Tooltip and VoiceOver label for the pencil on an artifact card, and the Artifact sheet title; argument is the ART- ref"
+                comment: "Tooltip and VoiceOver label for the pencil on an Artifact row, and the Artifact sheet title; argument is the ART- ref"
             ), ref)
         }
 
@@ -6808,7 +6823,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "sources.page.artifactCopyDetailsMore",
                 defaultValue: "+%lld more",
-                comment: "Button on an artifact card after its first copy details; argument is how many more it holds"
+                comment: "Button on an Artifact row after its first copy details; argument is how many more it holds"
             ), count)
         }
 
@@ -6816,7 +6831,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "sources.page.artifactCopyDetailsMoreLabel",
                 defaultValue: "%#@details@ of %2$@",
-                comment: "VoiceOver label of the more button on an artifact card; %1$lld is how many more, %2$@ is the ART- ref"
+                comment: "VoiceOver label of the more button on an Artifact row; %1$lld is how many more, %2$@ is the ART- ref"
             ), count, ref)
         }
 
@@ -7072,7 +7087,7 @@ enum L10n {
         static let useAsThumbnail = LocalizedStringResource(
             "sources.page.useAsThumbnail",
             defaultValue: "Set cover",
-            comment: "Button to pin an Artifact as the Source list/identity cover"
+            comment: "Button and row menu item that pins an Artifact as the Source cover"
         )
 
         static let thumbnailMenuTitle = LocalizedStringResource(

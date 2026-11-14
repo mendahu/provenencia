@@ -6,18 +6,9 @@ import SwiftUI
 ///
 /// Preference: raster → fallback mark → type icon → MIME glyph → empty.
 struct CachedThumbnail: View {
-    /// Square list tile, or a frame-filling well whose raster covers and whose glyph stays 56pt.
-    enum Layout {
-        case tile
-        case well
-    }
-
     /// A gallery picture's stored crop in the `.small` tile look (`GalleryTileLook.small`): the Event and Place
     /// Pictures. The Person's Gallery draws its tiles at 160.
     static let pictureCrop: CGFloat = 96
-
-    /// Glyph size inside a card well. The board draws the type or file mark at 56.
-    static let wellGlyph: CGFloat = 56
 
     let projectDir: String
     let relPath: String
@@ -27,34 +18,26 @@ struct CachedThumbnail: View {
     var typeIconKey: String? = nil
     var size: CGFloat = 44
     var cornerRadius: CGFloat = PVRadius.sm
-    var layout: Layout = .tile
     /// A mark the caller holds (a Person's `subject_*` mark) to show when there is
     /// no raster; it wins over the type icon and the MIME glyph.
     var fallbackMark: PVMarkKey? = nil
     /// Spoken label of `fallbackMark`.
     var fallbackLabel: LocalizedStringResource? = nil
-    /// Spoken label while a raster shows (`.tile` layout); a formatted string, not a resource.
+    /// Spoken label while a raster shows; a formatted string, not a resource.
     var imageLabel: String? = nil
-    /// Tint and line for the `.tile` thumb (a Person's gender treatment).
+    /// Tint and line for the thumb (a Person's gender treatment).
     var colors: PVThumbnail.Colors? = nil
-    /// Tint and line for the `.tile` thumb only while no raster shows (a gallery tile's gender
+    /// Tint and line for the thumb only while no raster shows (a gallery tile's gender
     /// treatment on its fallback mark); a raster wears none.
     var fallbackColors: PVThumbnail.Colors? = nil
 
     @State private var content: PVThumbnail.Content = .empty
 
     var body: some View {
-        Group {
-            switch layout {
-            case .tile:
-                tileBody
-            case .well:
-                wellBody
+        tileBody
+            .task(id: taskID) {
+                await load()
             }
-        }
-        .task(id: taskID) {
-            await load()
-        }
     }
 
     private var tileBody: some View {
@@ -70,31 +53,6 @@ struct CachedThumbnail: View {
                 PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: tint)
             }
         }
-    }
-
-    /// Fills the parent. A raster cover-crops. A mark or empty state stays centered, without tile chrome.
-    private var wellBody: some View {
-        ZStack {
-            if content.loading {
-                ProgressView()
-            } else if let image = content.image {
-                image
-                    .resizable()
-                    .scaledToFill()
-            } else if case .mark(let key)? = content.glyph {
-                PVMark(key, size: Self.wellGlyph, showLabel: false, decorative: true)
-                    .foregroundStyle(PVColor.textMuted)
-            } else {
-                Text(verbatim: "—")
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textFaint)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
-        // Clipping hides a cropped image's overflow but leaves it hit-testable.
-        .contentShape(Rectangle())
-        .accessibilityHidden(true)
     }
 
     private var taskID: String {

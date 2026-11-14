@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Individual Source page (S2-18 / S2-25): pinned identity header, Description +
-/// Credibility beside Metadata (Metadata in a side column at Wide), graphs, artifact cards, Notes,
+/// Credibility beside Metadata (Metadata in a side column at Wide), graphs, Artifact rows, Notes,
 /// on Page columns. Section bodies live in sibling `SourcePage*View` files; this shell owns cache
 /// sync, dialogs, and layout.
 struct SourcePageView: View {
@@ -321,14 +321,17 @@ private struct SourcePageOverview: View {
 /// Regular: a group of up to `widthContentMax`, left-aligned; the error across it, then
 /// Description and Credibility beside Metadata, each half the group, both as tall as the
 /// taller (Credibility sits at the bottom of its column), then the rest below.
-/// Wide: the group `PVPageColumnsMetrics.split` computes: the error, Description and
-/// Credibility, and the rest stacked in a main column, Metadata in a side column beside it.
+/// Wide: the group `PVPageColumnsMetrics.split` computes: the error and the rest stacked in a
+/// main column; Description and Credibility, then Metadata, in a side column beside it (board
+/// SD-W1). The side column keeps `sideMax`; below the full group width the main column shrinks.
 /// An empty error adds no gap. It sizes itself from the proposed width alone, so it holds no
 /// state and crossing the breakpoint keeps the page's scroll and focus.
 struct SourcePageOverviewLayout: Layout {
     let widthClass: PVWidthClass
 
     private static let rowGap = PVSpacing.space9
+    /// Between Description and Credibility and Metadata when they stack in the Wide side column.
+    private static let sideGap = PVSpacing.space11
     /// The side column's cap; `PVPageColumns` is handed the same value to size its band.
     static let sideMax = PVSpacing.widthSecondaryMax
 
@@ -350,20 +353,23 @@ struct SourcePageOverviewLayout: Layout {
         var frames = [CGRect](repeating: .zero, count: 4)
         if widthClass == .wide {
             let split = PVPageColumnsMetrics.split(available: width, sideMax: Self.sideMax)
-            let x = PVPageColumnsMetrics.groupX(in: width, group: split.group)
-            let error = fit(0, split.main), body = fit(1, split.main), rest = fit(3, split.main)
+            let group = split.group, gap = split.group - split.main - split.side
+            let x = PVPageColumnsMetrics.groupX(in: width, group: group)
+            // The side column keeps its full width; the main column gives way down to the breakpoint.
+            let sideWidth = min(Self.sideMax, max(0, group - gap))
+            let main = max(0, group - gap - sideWidth)
+            let error = fit(0, main), rest = fit(3, main)
             var y: CGFloat = 0
-            frames[0] = CGRect(x: x, y: y, width: split.main, height: error.height)
+            frames[0] = CGRect(x: x, y: y, width: main, height: error.height)
             if error.height > 0 { y += error.height + Self.rowGap }
-            frames[1] = CGRect(x: x, y: y, width: split.main, height: body.height)
-            y += body.height + Self.rowGap
-            frames[3] = CGRect(x: x, y: y, width: split.main, height: rest.height)
+            frames[3] = CGRect(x: x, y: y, width: main, height: rest.height)
             y += rest.height
-            let side = fit(2, split.side)
-            frames[2] = CGRect(
-                x: x + split.group - split.side, y: 0, width: split.side, height: side.height
-            )
-            return (frames, max(y, side.height))
+            let sideX = x + group - sideWidth
+            let body = fit(1, sideWidth), side = fit(2, sideWidth)
+            frames[1] = CGRect(x: sideX, y: 0, width: sideWidth, height: body.height)
+            let sideY = body.height + Self.sideGap
+            frames[2] = CGRect(x: sideX, y: sideY, width: sideWidth, height: side.height)
+            return (frames, max(y, sideY + side.height))
         }
         let group = min(PVSpacing.widthContentMax, width)
         let half = max(0, (group - PVSpacing.space11) / 2)

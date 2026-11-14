@@ -215,6 +215,7 @@ struct SourcePageIdentityHeader: View {
                     // the Private switch past the header; the full text is the tooltip.
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .layoutPriority(-1)
                     .frame(maxWidth: PVSpacing.widthInspector, alignment: .leading)
                     .help(line)
                     .accessibilityLabel(L10n.Sources.sourceDateAccessibility(date: line))
@@ -243,6 +244,7 @@ struct SourcePageIdentityHeader: View {
             ),
             isDisabled: model.identity.pendingPrivate != nil
         )
+        .fixedSize()
         .help(L10n.string(L10n.Sources.privateSwitchHelp))
         .accessibilityIdentifier("sources.page.private")
     }
@@ -253,6 +255,7 @@ struct SourcePageIdentityHeader: View {
                 Text(ref)
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
+                    .fixedSize()
                     .accessibilityIdentifier("sources.page.ref")
             }
 
@@ -298,10 +301,8 @@ struct SourcePageIdentityHeader: View {
                 }
             } else {
                 HStack(spacing: PVSpacing.space3) {
-                    CatalogSourceTypePill(
-                        label: model.identity.typeLabel,
-                        iconKey: model.identity.types.iconKey(forTypeID: model.identity.sourceTypeID)
-                    )
+                    CatalogSourceTypePill(label: model.identity.typeLabel)
+                        .fixedSize()
                         .accessibilityIdentifier("sources.page.type")
 
                     PVIconButton(.penLine, label: L10n.Sources.editType, size: .sm) {
