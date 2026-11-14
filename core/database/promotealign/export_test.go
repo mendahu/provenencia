@@ -1,63 +1,60 @@
 package promotealign
 
 import (
-	"slices"
-
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/shortlist"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
-// sorted, the Ref of every handle whose full profile was built.
-func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) {
-	_, _, prof, err := propose(c, graphID, nil, nil)
-	if err != nil || prof == nil {
-		return nil, err
+// HandlesHeldForTest is how many handle profiles the graph's match index holds,
+// 0 when it holds none.
+func HandlesHeldForTest(g *graphcache.Graph) int {
+	m, ok := MatchIndex.Peek(g)
+	if !ok {
+		return 0
 	}
-	var refs []string
-	for id := range prof.done {
-		n, err := c.Graph().Node([]byte(id))
-		if err != nil {
-			return nil, err
-		}
-		if n != nil {
-			refs = append(refs, n.Ref)
-		}
-	}
-	slices.Sort(refs)
-	return refs, nil
+	return len(m.handles)
 }
 
-// ProfilesKeptForTest is how many handle profiles the graph's match index
-// holds, and false when the graph has no match index.
-func ProfilesKeptForTest(c *database.Catalog) (int, bool) {
-	if _, ok, _ := MatchIndex.Get(c.Graph()); !ok {
-		return 0, false
+// HandleForTest is the held Subject of a handle, and false when the graph holds
+// no match index or the index has no such handle.
+func HandleForTest(g *graphcache.Graph, id []byte) (subjectcompare.Subject, bool) {
+	m, ok := MatchIndex.Peek(g)
+	if !ok {
+		return subjectcompare.Subject{}, false
 	}
-	return len(matchIndexOf(c.Graph()).profiles), true
+	s, ok := m.handles[string(id)]
+	return s, ok
 }
 
-// MatchIndexGenForTest is the generation of the stored shortlist index, 0 when
-// the graph has none.
-func MatchIndexGenForTest(g *graphcache.Graph) uint64 {
-	return matchIndexOf(g).gen
+// IndexedForTest is the held shortlist index's Lookup of probe, nil when the
+// graph holds no match index.
+func IndexedForTest(g *graphcache.Graph, kind string, probe subjectcompare.Values) [][]byte {
+	m, ok := MatchIndex.Peek(g)
+	if !ok {
+		return nil
+	}
+	return m.shortlist.Lookup(vocabkey.SubjectType(kind), probe)
 }
 
 // EmptyShortlistForTest replaces the stored shortlist index with one that
-// holds no handle, so Verify can fail a test. Like any index loadShortlist
-// builds, it has a new generation, so candidates ranked against the old one are
-// stale and Verify leaves them alone.
+// holds no handle, so Verify can fail a test.
 func EmptyShortlistForTest(c *database.Catalog) error {
 	g := c.Graph()
-	cfg, _, p, err := shortlistInputs(g, false)
+	p, err := newProfiler(g)
 	if err != nil {
 		return err
 	}
-	m := matchIndexOf(g)
-	m.shortlist = shortlist.NewIndex(cfg.Alignment.Shortlist, cfg.Subject, cfg.Value, p.metas)
-	m.gen = indexGen.Add(1)
-	MatchIndex.Set(g, m)
+	m, err := matchIndexOf(g)
+	if err != nil {
+		return err
+	}
+	MatchIndex.Set(g, &matchIndex{
+		handles:   m.handles,
+		shortlist: shortlist.NewIndex(p.cfg.Alignment.Shortlist, p.cfg.Subject, p.cfg.Value, p.metas),
+	})
 	return nil
 }
 
@@ -69,7 +66,7 @@ func CandidatesHeldForTest(g *graphcache.Graph, graphID []byte) bool {
 
 // HoldCandidatesForTest stores an empty candidates memo for the graph.
 func HoldCandidatesForTest(g *graphcache.Graph, graphID []byte) {
-	candidates.Set(g, graphID, candidatesMemo{gen: matchIndexOf(g).gen})
+	candidates.Set(g, graphID, candidatesMemo{})
 }
 
 // SetCandidatesCapForTest overrides the candidates entry's Cap on g.

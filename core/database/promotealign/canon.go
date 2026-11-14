@@ -11,54 +11,43 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/graphfill"
-	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
-	"github.com/mendahu/provenencia/core/shortlist"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // candidatesMemo is the candidates (handle ids, in order) of each Subject the
-// graph's Evidence graph has had ranked, and the generation of the match index
-// they were ranked against. Candidates depend on the Subject's values and the
-// vocabulary and aliases (the entry is derived from the vocabulary and the name
-// format), the handles' profiles and the shortlist index (dropped together on
-// every handle commit, which gives the next index a new generation). A stored
-// memo is never changed.
+// graph's Evidence graph has had ranked. Candidates depend on the Subject's
+// values, the handles' profiles and the shortlist index, which the match index
+// holds, so the entry is derived from it. A stored memo is never changed.
 type candidatesMemo struct {
-	gen       uint64
 	bySubject map[string][][]byte
 }
 
 // candidates holds each Evidence graph's candidatesMemo, keyed by graph id. It
-// is derived from the vocabulary and the name format, and a commit that moves
-// the graph's rows (Set.EvidenceGraphs) drops that graph's. A held memo is
-// used only while its generation is the stored shortlist index's.
+// is derived from the match index (and so from the vocabulary, the alias index
+// and the name format), and a commit that moves the graph's rows
+// (Set.EvidenceGraphs) drops that graph's. It is registered in index.go's init,
+// after the match index.
 var candidates graphcache.Keyed[candidatesMemo]
-
-func init() {
-	candidates = graphcache.RegisterKeyed(graphcache.KeyedEntry[candidatesMemo]{
-		Name:        "promotealign.candidates",
-		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}, nameformats.Default},
-		Apply:       graphcache.DropNamedGraphs[candidatesMemo],
-		Check:       checkCandidates,
-		Cap:         graphfill.MaxEvidenceGraphs,
-	})
-}
 
 // loadCanon reads the open catalog's graph: fixed anchors, the candidates of
 // each unfixed Subject (loadCandidatesMemo), then every link those handles
 // have. Link order is association ref, then the neighbor's ref, which is the
-// order the walk used to break ties. Every handle's profile is built once:
-// the shortlisted ones together, the ones the walk reaches after it. Recorded
+// order the walk used to break ties. Every handle's profile is the match
+// index's, so nothing is built here. Recorded
 // links come from the walk and implied ones from canonlinks.Reader.For, which
 // composes them from the graph cache's kinship pivots for each walked person; both go
 // through one kinship.LinkSet, so a link read from either end or recorded
 // both ways merges, and the implied links follow the recorded ones in walk
 // order.
-func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
+func loadCanon(g *graphcache.Graph, graphID []byte, m *matchIndex, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
+	vocab, err := g.Vocabulary()
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+	eventTypeProp := vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)
 	handles := map[string]*graphcache.Node{}
 	kinds := map[string]string{}
 	var seeds [][]byte
@@ -75,12 +64,12 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		if err != nil || n == nil || n.Merged {
 			return err
 		}
-		kind := string(prof.kind(n))
-		if !vocabkey.IsPrimaryKind(kind) {
+		h, ok := m.handles[string(id)]
+		if !ok {
 			return nil
 		}
 		handles[string(id)] = n
-		kinds[string(id)] = kind
+		kinds[string(id)] = h.Kind
 		seeds = append(seeds, id)
 		return nil
 	}
@@ -108,7 +97,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		todo = append(todo, s)
 	}
 	if len(todo) > 0 {
-		known, err := loadCandidatesMemo(g, graphID, prof, layer, todo, cfg)
+		known, err := loadCandidatesMemo(g, graphID, m, layer, todo, cfg)
 		if err != nil {
 			return graphalign.Canon{}, err
 		}
@@ -176,11 +165,12 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				if neighbor == nil || neighbor.Merged {
 					continue
 				}
-				nKind := string(prof.kind(neighbor))
-				if !vocabkey.IsPrimaryKind(nKind) {
+				nh, primary := m.handles[string(neighbor.ID)]
+				if !primary {
 					continue
 				}
-				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, prof.eventTypeProp, terms); ok {
+				nKind := nh.Kind
+				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, eventTypeProp, terms); ok {
 					set.Add(kinship.Link{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
@@ -235,18 +225,11 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		})
 	}
 
-	nodes := make([]*graphcache.Node, 0, len(handles))
-	for _, n := range handles {
-		nodes = append(nodes, n)
-	}
-	if err := prof.profile(nodes); err != nil {
-		return graphalign.Canon{}, err
-	}
+	// The handles are the entry's Subjects, shared: graphalign reads a Handle
+	// and never writes it.
 	out := graphalign.Canon{Edges: edges, Candidates: candidates}
-	for id, n := range handles {
-		out.Handles = append(out.Handles, graphalign.Handle{
-			ID: append([]byte(nil), n.ID...), Ref: n.Ref, Kind: kinds[id], Values: prof.values(n.ID),
-		})
+	for id := range handles {
+		out.Handles = append(out.Handles, m.handles[id])
 	}
 	sort.Slice(out.Handles, func(i, j int) bool {
 		if out.Handles[i].Ref != out.Handles[j].Ref {
@@ -258,18 +241,14 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 }
 
 // loadCandidatesMemo is the ranked candidate ids of each Subject in todo:
-// graphalign.Candidates over the handles the shortlist index offers it, held in
-// the candidates entry until the index changes. It reads the stored memo for
-// the current index generation, ranks only the Subjects it lacks, and stores a
-// new map, never changing the stored one. A stale generation is a miss.
-func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, todo []graphalign.Subject, cfg graphalign.Config) (map[string][][]byte, error) {
-	ix, gen, err := loadShortlist(g, prof, cfg)
-	if err != nil {
-		return nil, err
-	}
+// graphalign.Candidates over the handles the match index offers it, held in
+// the candidates entry until the match index changes. It reads the stored memo,
+// ranks only the Subjects it lacks, and stores a new map, never changing the
+// stored one.
+func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, m *matchIndex, layer graphalign.Layer, todo []graphalign.Subject, cfg graphalign.Config) (map[string][][]byte, error) {
 	var known map[string][][]byte
-	if m, ok := candidates.Peek(g, graphID); ok && m.gen == gen {
-		known = m.bySubject
+	if memo, ok := candidates.Peek(g, graphID); ok {
+		known = memo.bySubject
 	}
 	var missing []graphalign.Subject
 	for _, s := range todo {
@@ -280,25 +259,19 @@ func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, prof *profiler, lay
 	if len(missing) == 0 {
 		return known, nil
 	}
-	ranked, err := rankCandidates(g, prof, ix, layer, missing, cfg)
-	if err != nil {
-		return nil, err
-	}
+	ranked := rankCandidates(m, layer, missing, cfg)
 	stored := make(map[string][][]byte, len(known)+len(missing))
 	maps.Copy(stored, known)
 	maps.Copy(stored, ranked)
-	candidates.Set(g, graphID, candidatesMemo{gen: gen, bySubject: stored})
+	candidates.Set(g, graphID, candidatesMemo{bySubject: stored})
 	return stored, nil
 }
 
 // rankCandidates is the ranked candidate ids of each Subject: the handles the
-// shortlist index offers it, profiled once together, ordered by
-// graphalign.Candidates. Every Subject has an entry, an empty list for none.
-func rankCandidates(g *graphcache.Graph, prof *profiler, ix *shortlist.Index, layer graphalign.Layer, subjects []graphalign.Subject, cfg graphalign.Config) (map[string][][]byte, error) {
-	shortlisted, err := seedHandles(g, prof, ix, subjects)
-	if err != nil {
-		return nil, err
-	}
+// shortlist index offers it, ordered by graphalign.Candidates. Every Subject has
+// an entry, an empty list for none.
+func rankCandidates(m *matchIndex, layer graphalign.Layer, subjects []graphalign.Subject, cfg graphalign.Config) map[string][][]byte {
+	shortlisted := seedHandles(m, subjects)
 	out := make(map[string][][]byte, len(subjects))
 	for i, s := range subjects {
 		ranked := [][]byte{}
@@ -307,16 +280,15 @@ func rankCandidates(g *graphcache.Graph, prof *profiler, ix *shortlist.Index, la
 		}
 		out[string(s.ID)] = ranked
 	}
-	return out, nil
+	return out
 }
 
 // checkCandidates ranks the held graph's Subjects again from fresh inputs,
-// storing nothing, and compares. A memo ranked against an index that is no
-// longer the stored one is never used, so it is not compared.
+// storing nothing, and compares.
 func checkCandidates(g *graphcache.Graph, graphID []byte, stored candidatesMemo) error {
-	m := matchIndexOf(g)
-	if m.shortlist == nil || stored.gen != m.gen {
-		return nil
+	m, err := matchIndexOf(g)
+	if err != nil {
+		return err
 	}
 	ev, err := evidencelayer.Fresh(g, graphID)
 	if errors.Is(err, evidencelayer.ErrNoGraph) {
@@ -325,7 +297,7 @@ func checkCandidates(g *graphcache.Graph, graphID []byte, stored candidatesMemo)
 	if err != nil {
 		return err
 	}
-	cfg, _, prof, err := shortlistInputs(g, true)
+	cfg, _, err := loadConfig(g)
 	if err != nil {
 		return err
 	}
@@ -341,11 +313,7 @@ func checkCandidates(g *graphcache.Graph, graphID []byte, stored candidatesMemo)
 		}
 		subjects = append(subjects, s)
 	}
-	fresh, err := rankCandidates(g, prof, m.shortlist, layer, subjects, cfg)
-	if err != nil {
-		return err
-	}
-	if !reflect.DeepEqual(fresh, stored.bySubject) {
+	if !reflect.DeepEqual(rankCandidates(m, layer, subjects, cfg), stored.bySubject) {
 		return fmt.Errorf("promotealign: the stored candidates of %x do not match a fresh ranking", graphID)
 	}
 	return nil

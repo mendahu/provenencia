@@ -1,10 +1,14 @@
 package promotealign
 
 import (
+	"bytes"
+
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/valuerules"
+	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectprofile"
@@ -12,13 +16,8 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// The canon side's profile loader: each handle is built here, once per match
-// index, with the profile builder; the Evidence side is built by
-// core/database/evidencelayer.
-
-// hopPersonToEvent follows a person to the events it takes part in, any role.
-// The profile builder reads it.
-var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.PropertyPerson, vocabkey.PropertyEvent, nil)
+// The canon side's profile builder: each handle is built here and held by the
+// match index; the Evidence side is built by core/database/evidencelayer.
 
 // reconciled is a cached handle value as the reconciler left it.
 func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (autoreconcile.ReconciledValue, error) {
@@ -31,129 +30,113 @@ func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (au
 	}, nil
 }
 
-// profile is a built handle: its values.
-type profile struct {
-	values subjectcompare.Values
-}
-
-// profiler builds handle profiles from the canon graph, each once for as long
-// as the graph's match index lives. done is the index's profile map. A caller
-// keeps the profiles with keep(); nothing else stores them.
+// profiler is the one place that says what a handle's profile reads, in what
+// order profiles are built, and who must be rebuilt when a read input changes.
+// It holds the vocabulary, the value rules and the alignment config a profile is
+// built under, and stores nothing: the match index holds the profiles.
 type profiler struct {
-	g             *graphcache.Graph
-	props         map[string]graphcache.VocabProperty
-	eventTypeProp []byte // the event_type property: what types an event on a bridge
-	terms         map[string]graphcache.VocabTerm
-	metas         subjectcompare.Metas
-	types         map[string][]byte // subject type key -> id
-	typeKeys      map[string]string // subject type id -> key
-	rules         subjectcompare.Rules
-	reconcile     valuecompare.Rules
-	namePattern   string
-	done          map[string]profile
+	g           *graphcache.Graph
+	props       map[string]graphcache.VocabProperty
+	terms       map[string]graphcache.VocabTerm
+	metas       subjectcompare.Metas
+	types       map[string][]byte // subject type key -> id
+	typeKeys    map[string]string // subject type id -> key
+	rules       subjectcompare.Rules
+	reconcile   valuecompare.Rules
+	namePattern string
+	cfg         graphalign.Config
 }
 
-func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string) (*profiler, error) {
-	// Profiles are kept with the match index, for one name pattern at a time:
-	// this profiler shares the index's map when it has one for this pattern,
-	// and starts its own otherwise. keep stores a map into the index.
-	m := matchIndexOf(g)
-	done := m.profiles
-	if done == nil || m.profilesPattern != namePattern {
-		done = map[string]profile{}
+// newProfiler reads the alignment config, the value metas and the vocabulary a
+// profile is built under.
+func newProfiler(g *graphcache.Graph) (*profiler, error) {
+	cfg, namePattern, err := loadConfig(g)
+	if err != nil {
+		return nil, err
 	}
-	return newProfilerWith(g, metas, rules, namePattern, done)
-}
-
-// newProfilerWith is newProfiler over a given profile map: a check passes an
-// empty one so it shares nothing with the stored index.
-func newProfilerWith(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string, done map[string]profile) (*profiler, error) {
+	metas, err := valuerules.Metas(g)
+	if err != nil {
+		return nil, err
+	}
 	vocab, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	props := vocab.PropertiesByID()
 	return &profiler{
-		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(), rules: rules,
-		reconcile: autoreconciler.ValueRules, namePattern: namePattern,
-		done: done,
+		g: g, props: vocab.PropertiesByID(), terms: vocab.TermsByID(), metas: metas,
+		types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(), rules: cfg.Subject,
+		reconcile: autoreconciler.ValueRules, namePattern: namePattern, cfg: cfg,
 	}, nil
-}
-
-// keep stores this profiler's profiles in the graph's match index, creating the
-// index slot when there is none. The profiles then live as long as the index.
-// A map already stored for this name pattern is this profiler's own, so it is
-// left alone.
-func (p *profiler) keep() {
-	m := matchIndexOf(p.g)
-	if m.profiles != nil && m.profilesPattern == p.namePattern {
-		return
-	}
-	m.profiles, m.profilesPattern = p.done, p.namePattern
-	MatchIndex.Set(p.g, m)
 }
 
 func (p *profiler) kind(n *graphcache.Node) vocabkey.SubjectType {
 	return vocabkey.SubjectType(p.typeKeys[string(n.SubjectTypeID)])
 }
 
-// profile builds every node not built yet. A node whose kind has a lifespan
-// reads its life from the events it takes part in, so all of those events are
-// loaded with one call and built first.
-func (p *profiler) profile(nodes []*graphcache.Node) error {
-	var todo []*graphcache.Node
+// derivesLife reports whether a kind reads its life from the events it takes
+// part in (a Lifespans rule): its profile reads other handles' profiles.
+func (p *profiler) derivesLife(kind vocabkey.SubjectType) bool {
+	return len(p.rules.Lifespans[kind]) > 0
+}
+
+// subjects builds the nodes' profiles into built, overwriting a held one. A nil
+// or merged node is skipped. The nodes whose kind reads no other profile are
+// built first, so a kind that derives its life reads the events built now. A
+// profile it reads that is not in built is skipped.
+func (p *profiler) subjects(nodes []*graphcache.Node, built map[string]subjectcompare.Subject) error {
 	queued := map[string]bool{}
+	var plain, derived []*graphcache.Node
 	for _, n := range nodes {
 		if n == nil || n.Merged || queued[string(n.ID)] {
 			continue
 		}
-		if _, ok := p.done[string(n.ID)]; ok {
-			continue
-		}
 		queued[string(n.ID)] = true
-		todo = append(todo, n)
-	}
-	if len(todo) == 0 {
-		return nil
-	}
-	var neighborIDs [][]byte
-	for _, n := range todo {
-		if len(p.rules.Lifespans[p.kind(n)]) == 0 {
-			continue
-		}
-		links, err := p.g.Follow(n.ID, hopPersonToEvent)
-		if err != nil {
-			return err
-		}
-		for _, l := range links {
-			neighborIDs = append(neighborIDs, l.Neighbor)
+		if p.derivesLife(p.kind(n)) {
+			derived = append(derived, n)
+		} else {
+			plain = append(plain, n)
 		}
 	}
-	if err := p.g.Nodes(neighborIDs); err != nil {
-		return err
-	}
-	var events []*graphcache.Node
-	for _, id := range neighborIDs {
-		n, err := p.g.Node(id)
-		if err != nil {
-			return err
-		}
-		events = append(events, n)
-	}
-	for _, group := range [][]*graphcache.Node{events, todo} {
+	for _, group := range [][]*graphcache.Node{plain, derived} {
 		for _, n := range group {
-			if n == nil || n.Merged {
-				continue
-			}
-			if _, ok := p.done[string(n.ID)]; ok {
-				continue
-			}
-			if err := p.build(n); err != nil {
+			s, err := p.subject(n, built)
+			if err != nil {
 				return err
 			}
+			built[string(n.ID)] = s
 		}
 	}
 	return nil
+}
+
+// readers is the ids, deduplicated in first-seen order, whose profile reads
+// the profile of one of ids: for each id whose kind derives no life, the
+// neighbors across hops.ParticipantsOfEvent whose kind does. It is the inverse
+// of the read subject makes.
+func (p *profiler) readers(ids [][]byte) ([][]byte, error) {
+	var out [][]byte
+	seen := map[string]bool{}
+	for _, id := range ids {
+		n, err := p.g.Node(id)
+		if err != nil {
+			return nil, err
+		}
+		if n == nil || p.derivesLife(p.kind(n)) {
+			continue
+		}
+		links, err := p.g.Follow(id, hops.ParticipantsOfEvent)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range links {
+			if !p.derivesLife(vocabkey.SubjectType(l.NeighborTypeKey)) || seen[string(l.Neighbor)] {
+				continue
+			}
+			seen[string(l.Neighbor)] = true
+			out = append(out, l.Neighbor)
+		}
+	}
+	return out, nil
 }
 
 // entity is a node's reconciled properties as the profile builder reads them,
@@ -178,49 +161,28 @@ func (p *profiler) entity(n *graphcache.Node) (subjectprofile.Entity, error) {
 	return subjectprofile.Entity{Properties: props, NamePattern: p.namePattern}, nil
 }
 
-// keyValues is a node's values for shortlist keys: the profile with no derived
-// lead, so no life event is read. It is not kept in done, which holds only full
-// profiles.
-func (p *profiler) keyValues(n *graphcache.Node) (subjectcompare.Values, error) {
-	e, err := p.entity(n)
-	if err != nil {
-		return nil, err
-	}
-	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
-	return vals, err
-}
-
-// build makes one node's profile. A kind with a lifespan reads its life from
-// the already built events it is linked to.
-func (p *profiler) build(n *graphcache.Node) error {
+// subject makes one node's profile. A kind that derives its life reads it from
+// the profiles in built of the events it takes part in.
+func (p *profiler) subject(n *graphcache.Node, built map[string]subjectcompare.Subject) (subjectcompare.Subject, error) {
 	kind := p.kind(n)
 	e, err := p.entity(n)
 	if err != nil {
-		return err
+		return subjectcompare.Subject{}, err
 	}
-	if len(p.rules.Lifespans[kind]) > 0 {
-		links, err := p.g.Follow(n.ID, hopPersonToEvent)
+	if p.derivesLife(kind) {
+		links, err := p.g.Follow(n.ID, hops.EventsOfParticipant)
 		if err != nil {
-			return err
+			return subjectcompare.Subject{}, err
 		}
 		for _, l := range links {
-			if ev, ok := p.done[string(l.Neighbor)]; ok {
-				e.Life = append(e.Life, subjectprofile.LifeEventOf(ev.values, vocabkey.Role(l.TermKey)))
+			if ev, ok := built[string(l.Neighbor)]; ok {
+				e.Life = append(e.Life, subjectprofile.LifeEventOf(ev.Values, vocabkey.Role(l.TermKey)))
 			}
 		}
 	}
 	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
 	if err != nil {
-		return err
+		return subjectcompare.Subject{}, err
 	}
-	p.done[string(n.ID)] = profile{values: vals}
-	return nil
-}
-
-// values is a built node's profile.
-func (p *profiler) values(id []byte) subjectcompare.Values {
-	if v, ok := p.done[string(id)]; ok {
-		return v.values
-	}
-	return subjectcompare.Values{}
+	return subjectcompare.Subject{ID: bytes.Clone(n.ID), Ref: n.Ref, Kind: string(kind), Values: vals}, nil
 }

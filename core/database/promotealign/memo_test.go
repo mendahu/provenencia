@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -36,7 +37,7 @@ type warmFixture struct {
 	f                         *fixture
 	srcB                      sources.Source
 	artB                      artifacts.Artifact
-	member                    subjects.Subject
+	member, memberBirth       subjects.Subject
 	bPerson, bBirth           subjects.Subject
 	personHandle, birthHandle []byte
 }
@@ -44,12 +45,12 @@ type warmFixture struct {
 func newWarmFixture(t *testing.T) *warmFixture {
 	t.Helper()
 	f := newFixture(t)
-	member, _, ph, bh := f.filedBirth(f.source, f.artifact, "John Smith", 1817, nil, nil)
+	member, memberBirth, ph, bh := f.filedBirth(f.source, f.artifact, "John Smith", 1817, nil, nil)
 	srcB, artB := f.NewSource("Obituary")
 	bPerson := f.Person(srcB, artB, "John Smith")
 	bBirth := f.DatedBirth(srcB, artB, 1817)
 	f.Participation(srcB, artB, bPerson, bBirth, "subject")
-	return &warmFixture{f: f, srcB: srcB, artB: artB, member: member, bPerson: bPerson, bBirth: bBirth, personHandle: ph, birthHandle: bh}
+	return &warmFixture{f: f, srcB: srcB, artB: artB, member: member, memberBirth: memberBirth, bPerson: bPerson, bBirth: bBirth, personHandle: ph, birthHandle: bh}
 }
 
 // T-18 (AC-4.2): a second Propose on one Source, with no commit between,
@@ -93,27 +94,7 @@ func TestMemoFollowsCommit(t *testing.T) {
 
 	t.Run("a member's Observation edited", func(t *testing.T) {
 		w := newWarmFixture(t)
-		compare(t, w, func() {
-			listed, err := observations.ListBySubject(w.f.c, w.member.ID)
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, l := range listed {
-				if l.PropertyID == nil || string(l.PropertyID) != string(w.f.Prop("name").ID) {
-					continue
-				}
-				_, err := writes.Call(w.f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-					return observations.Update(tx, userID, observations.Input{
-						ID: l.ID, SubjectID: w.member.ID, PropertyID: l.PropertyID, Name: namevaluetest.Western("Jon Smyth"),
-					})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				return
-			}
-			t.Fatal("the member has no name Observation")
-		})
+		compare(t, w, func() { w.renameMember(t, "Jon Smyth") })
 	})
 
 	t.Run("a handle merged", func(t *testing.T) {
@@ -135,6 +116,30 @@ func TestMemoFollowsCommit(t *testing.T) {
 			}
 		})
 	})
+}
+
+// renameMember edits the member's name Observation to name.
+func (w *warmFixture) renameMember(t *testing.T, name string) {
+	t.Helper()
+	listed, err := observations.ListBySubject(w.f.c, w.member.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range listed {
+		if l.PropertyID == nil || string(l.PropertyID) != string(w.f.Prop("name").ID) {
+			continue
+		}
+		_, err := writes.Call(w.f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+			return observations.Update(tx, userID, observations.Input{
+				ID: l.ID, SubjectID: w.member.ID, PropertyID: l.PropertyID, Name: namevaluetest.Western(name),
+			})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	t.Fatal("the member has no name Observation")
 }
 
 func sameErr(a, b error) bool {
@@ -391,26 +396,46 @@ func memoJSON(t *testing.T, w *warmFixture) string {
 	return string(b)
 }
 
-// D-22: handle profiles live as long as the match index: kept by a Propose,
-// shared by the next one, and dropped by a handle commit.
-func TestProfilesLiveWithTheMatchIndex(t *testing.T) {
+// AC-2.1, AC-2.2: Warm builds a profile for every unmerged person, event and
+// place, and a proposal reads them without changing the entry or a Subject in it.
+func TestMatchIndexHoldsEveryHandle(t *testing.T) {
 	w := newWarmFixture(t)
-	w.f.c.Graph().Drop()
-	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {
+	w.f.promote(w.f.Place(w.f.source, w.f.artifact, "Springfield"))
+	c := w.f.c
+	g := c.Graph()
+	g.Drop()
+	if _, ok := promotealign.MatchIndex.Peek(g); ok {
 		t.Fatal("a dropped graph holds a match index")
 	}
-	w.f.propose(w.f.Graph(w.srcB), nil)
-	kept, ok := promotealign.ProfilesKeptForTest(w.f.c)
-	if !ok || kept == 0 {
-		t.Fatalf("after Propose the index holds %d profiles (index %v)", kept, ok)
+	if err := promotealign.Warm(c); err != nil {
+		t.Fatal(err)
 	}
-	w.f.propose(w.f.Graph(w.srcB), nil)
-	if again, _ := promotealign.ProfilesKeptForTest(w.f.c); again != kept {
-		t.Fatalf("a second Propose changed the kept profiles from %d to %d", kept, again)
+	want := 0
+	for _, kind := range []string{"person", "event", "place"} {
+		nodes, err := g.Kind(graphcachetest.SubjectTypeID(t, c, kind))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want += len(nodes)
 	}
-	w.f.join(w.f.Person(w.f.source, w.f.artifact, "John Smith"), w.personHandle)
-	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {
-		t.Fatal("a handle commit left the match index and its profiles")
+	if got := promotealign.HandlesHeldForTest(g); want == 0 || got != want {
+		t.Fatalf("the match index holds %d handles, want the %d unmerged people, events and places", got, want)
+	}
+	graphcachetest.AssertKindsLoaded(t, c, "person", "event", "place")
+	person, ok := promotealign.HandleForTest(g, w.personHandle)
+	if !ok || len(person.Values[vocabkey.PropertyLifespan]) == 0 {
+		t.Errorf("the person's held profile has no lifespan: %+v (held %v)", person, ok)
+	}
+	before, _ := promotealign.MatchIndex.Peek(g)
+	for i := 0; i < 2; i++ {
+		w.f.propose(w.f.Graph(w.srcB), nil)
+	}
+	if after, _ := promotealign.MatchIndex.Peek(g); after != before {
+		t.Error("a proposal replaced the match index")
+	}
+	t.Setenv("PROVENENCIA_GRAPH_VERIFY", "1")
+	if err := g.Verify(); err != nil {
+		t.Errorf("Verify after two proposals: %v", err)
 	}
 }
 
@@ -476,8 +501,8 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 	}
 }
 
-// T-2 (AC-1.2): Warm loads the shortlist kinds and builds the index, so a
-// proposal on another Source builds no new one and loads no kind.
+// T-2 (AC-1.2): Warm builds the match index, so a proposal on another Source
+// builds no new one and loads no kind.
 func TestWarmBuildsTheIndex(t *testing.T) {
 	w := newWarmFixture(t)
 	c := w.f.c
@@ -486,14 +511,14 @@ func TestWarmBuildsTheIndex(t *testing.T) {
 	if err := promotealign.Warm(c); err != nil {
 		t.Fatal(err)
 	}
-	gen := promotealign.MatchIndexGenForTest(g)
-	if gen == 0 {
+	built, ok := promotealign.MatchIndex.Peek(g)
+	if !ok {
 		t.Fatal("Warm built no index")
 	}
-	graphcachetest.AssertKindsLoaded(t, c, "person", "event")
+	graphcachetest.AssertKindsLoaded(t, c, "person", "event", "place")
 	w.f.propose(w.f.Graph(w.srcB), nil)
-	if got := promotealign.MatchIndexGenForTest(g); got != gen {
-		t.Errorf("a proposal rebuilt the index: generation %d, want %d", got, gen)
+	if after, _ := promotealign.MatchIndex.Peek(g); after != built {
+		t.Error("a proposal rebuilt the index")
 	}
 }
 
@@ -552,7 +577,7 @@ func TestMatchIndexDrops(t *testing.T) {
 }
 
 func stored(g *graphcache.Graph) bool {
-	_, ok, _ := promotealign.MatchIndex.Get(g)
+	_, ok := promotealign.MatchIndex.Peek(g)
 	return ok
 }
 

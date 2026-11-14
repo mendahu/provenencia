@@ -27,59 +27,51 @@ import (
 // unknown or empty graphID is promote.ErrInvalid. A graph read error is
 // returned instead of a proposal.
 func Propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only []byte) (graphalign.Proposal, int64, error) {
-	prop, rev, _, err := propose(c, graphID, fixed, only)
-	return prop, rev, err
-}
-
-// propose is Propose, and the profiler it used, for a test that reads which
-// handles were profiled. The profiler is nil when the graph has no Subject to
-// place.
-func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only []byte) (graphalign.Proposal, int64, *profiler, error) {
 	if c == nil || len(graphID) != 16 {
-		return graphalign.Proposal{}, 0, nil, promote.ErrInvalid
+		return graphalign.Proposal{}, 0, promote.ErrInvalid
 	}
 	db, err := c.DB()
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
 	var rev int64
 	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
 	in, err := loadInputs(c, graphID)
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
-	cfg, namePattern, terms, layer := in.cfg, in.namePattern, in.terms, in.layer
+	cfg, terms, layer := in.cfg, in.terms, in.layer
 	if len(layer.Subjects) == 0 {
-		return graphalign.Proposal{Rows: nil}, rev, nil, nil
+		return graphalign.Proposal{Rows: nil}, rev, nil
 	}
 
 	anchors, promoted, err := mergeFixed(c.Graph(), in.graphID, in.evidence, fixed)
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
 
-	prof, err := newProfiler(c.Graph(), layer.Metas, cfg.Subject, namePattern)
+	m, err := matchIndexOf(c.Graph())
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
-	canon, err := loadCanon(c.Graph(), in.graphID, prof, layer, anchors, cfg, terms)
+	canon, err := loadCanon(c.Graph(), in.graphID, m, layer, anchors, cfg, terms)
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
 
 	prop := graphalign.Align(layer, canon, anchors, cfg)
 	eg, err := graphfill.EvidenceGraph(c.Graph(), in.graphID)
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
 	vocab, err := c.Graph().Vocabulary()
 	if err != nil {
-		return graphalign.Proposal{}, 0, nil, err
+		return graphalign.Proposal{}, 0, err
 	}
 	prop.Connections = graphalign.Connections(pageBridges(eg, vocab), pageEnds(promoted, in.evidence, fixed, prop.Rows, only), canon.Edges)
-	return prop, rev, prof, nil
+	return prop, rev, nil
 }
 
 // inputs is what a proposal reads first: the Evidence graph's layer and the

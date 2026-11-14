@@ -57,7 +57,7 @@ func TestDoWarmsMatching(t *testing.T) {
 	dir := newProject(t)
 	err := catalogsession.Do(dir, func(c *database.Catalog) error {
 		g := c.Graph()
-		if _, ok, _ := promotealign.MatchIndex.Get(g); !ok {
+		if _, ok := promotealign.MatchIndex.Peek(g); !ok {
 			t.Error("the open project has no match index")
 		}
 		graphcachetest.AssertKindsLoaded(t, c, "person", "event", "place")
@@ -106,7 +106,7 @@ func TestDoKeepsWarmEntries(t *testing.T) {
 			}
 			err = catalogsession.Do(dir, func(c *database.Catalog) error {
 				g := c.Graph()
-				if _, ok, _ := promotealign.MatchIndex.Get(g); ok != tc.wantIndex {
+				if _, ok := promotealign.MatchIndex.Peek(g); ok != tc.wantIndex {
 					t.Errorf("match index present = %v, want %v", ok, tc.wantIndex)
 				}
 				selects := databasetest.CountSelects(t, c)
@@ -142,7 +142,7 @@ func TestNameFormatDropsItsReaders(t *testing.T) {
 	dir := newProject(t)
 	err := catalogsession.Do(dir, func(c *database.Catalog) error {
 		g := c.Graph()
-		if _, ok, _ := promotealign.MatchIndex.Get(g); !ok {
+		if _, ok := promotealign.MatchIndex.Peek(g); !ok {
 			t.Fatal("the open project has no match index")
 		}
 		loaded, ok, err := nameformats.Default.Get(g)
@@ -150,7 +150,7 @@ func TestNameFormatDropsItsReaders(t *testing.T) {
 			t.Fatalf("name format = %v, %v", ok, err)
 		}
 		nameformats.Default.Set(g, loaded)
-		if _, ok, _ := promotealign.MatchIndex.Get(g); ok {
+		if _, ok := promotealign.MatchIndex.Peek(g); ok {
 			t.Error("the match index survived a new name format")
 		}
 		selects := databasetest.CountSelects(t, c)
@@ -199,7 +199,7 @@ func TestOpenSurvivesABadValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = catalogsession.Do(dir, func(c *database.Catalog) error {
-		if _, ok, _ := promotealign.MatchIndex.Get(c.Graph()); ok {
+		if _, ok := promotealign.MatchIndex.Peek(c.Graph()); ok {
 			t.Error("the shortlist index was built over a value that does not decode")
 		}
 		if err := promotealign.Warm(c); err == nil {
