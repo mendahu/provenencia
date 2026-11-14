@@ -41,8 +41,8 @@ final class SourceArtifactsSection {
 
     var items: [CatalogArtifact] { context.workspace?.artifacts ?? [] }
 
-    /// The Source's Evidence graphs when the session has them (the link
-    /// checkboxes show); nil otherwise, so no group shows.
+    /// The Source's Evidence graphs when the session has them (they feed
+    /// `graphLines`); nil otherwise, so no line shows.
     var visibleGraphs: [CatalogEvidenceGraph]? { context.evidenceGraphs }
 
     var canSubmitAttach: Bool {

@@ -6750,7 +6750,7 @@ enum L10n {
         static let artifactLabelRequired = LocalizedStringResource(
             "sources.page.artifactLabelRequired",
             defaultValue: "Give the artifact a label.",
-            comment: "Validation when Add Artifact is submitted without a label"
+            comment: "Validation when the Artifact sheet (add or edit) is saved without a label"
         )
 
         static let artifactMenuEdit = LocalizedStringResource(
