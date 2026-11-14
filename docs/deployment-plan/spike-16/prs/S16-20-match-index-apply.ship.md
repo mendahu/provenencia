@@ -1,7 +1,7 @@
 # Ship log — S16-20 One match index that Apply keeps current
 
 **Plan:** [`S16-20-match-index-apply.md`](S16-20-match-index-apply.md) · **Branch:** `s16-20-match-index-apply` · **PR:** #827
-**State:** ready
+**State:** fixing 2 (user-answered)
 
 ## Round 0 — implement
 Dispatched `pr-implementer` against `main` @ `c09b83b9e` (plan's Planned base `64a91ae`).
@@ -94,3 +94,20 @@ MNT-1 — **Resolved** (`inputs.namePattern` gone; `loadInputs` takes `cfg, _, e
 
 ## Result
 Gate PASS · `origin/main` unchanged since `c09b83b9e` · CI green on the third run of the Swift `test` job: run 1 failed `EvidenceGraphModelTests.deleteUncitedBridgeRemovesCardAndProvisionalLink`, run 2 failed `PromoteModelTests.doneAppliesItsEffects`; both are `FakeStore` tests, this PR changes no Swift, and each passed on the next run (flaky, not this PR); Go `test` and `localizable` green first time · open blockers/majors: none · follow-ups: none · to user: MNT-4 (`loadCanon`'s `kinds` map vs D-9), MNT-5 (`profiler.rules` beside `cfg` vs D-3), CON-3 (§10 manual check not run).
+
+## User answer — MNT-4, MNT-5
+User, 2026-11-13: "Apply both". This supersedes D-9's "keeps … its `kinds` map" and D-3's listing of both `rules` and `cfg` on `profiler`; the plan's Landed note records it.
+
+### Fix plan 2
+
+**F-7 — `loadCanon` reads each handle's kind from the entry** (from MNT-4; supersedes D-9's `kinds` map)
+Files: `core/database/promotealign/canon.go`, the plan's Landed note.
+Failing test first: none (behavior unchanged; Promote's tests, the goldens and `TestAlignInvariants` hold it).
+Do: delete `kinds` and `nKind`; where `kinds[string(id)] == vocabkey.Person` is read, test `m.handles[string(id)].Kind == vocabkey.Person` (every id it was written for is held by `m.handles`). Add one Landed-note line: "D-9's `kinds` map went in fix round 2 (MNT-4, user 2026-11-13); `loadCanon` reads the held Subject's `Kind`."
+Check: `grep -n "kinds\|nKind" core/database/promotealign/canon.go` prints nothing; promotealign tests pass with and without `PROVENENCIA_GRAPH_VERIFY=1`; scripts/check-pr.sh PASS.
+
+**F-8 — `profiler` holds the subject rules once** (from MNT-5; supersedes D-3's field list)
+Files: `core/database/promotealign/profiles.go` (and any reader of `p.rules`), the plan's Landed note.
+Failing test first: none (behavior unchanged).
+Do: drop the `rules` field; read `p.cfg.Subject` where `p.rules` was read (`profiles.go:79`, `:183`). Keep `cfg` (Build and `EmptyShortlistForTest` read it). Add one Landed-note line: "`profiler.rules` went in fix round 2 (MNT-5, user 2026-11-13); profiles read `cfg.Subject`."
+Check: `grep -rn "p\.rules\|rules:" core/database/promotealign/*.go` prints nothing for `profiler`; promotealign tests pass with and without `PROVENENCIA_GRAPH_VERIFY=1`; scripts/check-pr.sh PASS.
