@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
@@ -461,6 +462,15 @@ func TestLargeSourceBudgets(t *testing.T) {
 	})
 }
 
+// indexSurvived fails the test when a commit dropped the match index instead of
+// patching it.
+func indexSurvived(t *testing.T, g *graphcache.Graph) {
+	t.Helper()
+	if _, ok := promotealign.MatchIndex.Peek(g); !ok {
+		t.Fatal("the commit dropped the match index")
+	}
+}
+
 // D-12 (rule "Apply states its fan-out"): the match index's Apply re-profiles
 // what a commit reaches and no more. Crafted at bar 2's sizes: an event with
 // 500 participants, and a person who is the father of 2,000 births.
@@ -492,7 +502,9 @@ func TestMatchIndexApplyFanOut(t *testing.T) {
 		d := databasetest.Fastest(3, func() time.Duration {
 			year++
 			k.Date(marriage, "date", *datevaluetest.YMD(year, 0, 0))
-			return databasetest.Since(func() { k.Commit(marriage) })
+			d := databasetest.Since(func() { k.Commit(marriage) })
+			indexSurvived(t, g)
+			return d
 		})
 		t.Logf("edit the date of an event with 500 participants: %v", d)
 		databasetest.WithinBudget(t, "edit an event with 500 participants", d, ceilingEditEventOf500)
@@ -505,7 +517,9 @@ func TestMatchIndexApplyFanOut(t *testing.T) {
 		d := databasetest.Fastest(3, func() time.Duration {
 			k.Retype(father, "gender", terms[i])
 			i++
-			return databasetest.Since(func() { k.Commit(father) })
+			d := databasetest.Since(func() { k.Commit(father) })
+			indexSurvived(t, g)
+			return d
 		})
 		t.Logf("retype the gender of a father of 2,000 births: %v", d)
 		databasetest.WithinBudget(t, "retype a father of 2,000 births", d, ceilingEditFatherOf2000)
