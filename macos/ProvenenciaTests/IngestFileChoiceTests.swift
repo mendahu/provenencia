@@ -45,6 +45,18 @@ struct IngestFileChoiceTests {
         #expect(file.reject != nil)
     }
 
+    @Test func aFailureAfterTheCreateKeepsThePath() throws {
+        let url = try ArtifactFileFixtures.writeStubPNG()
+        var file = IngestFileChoice()
+        file.choose(url)
+        file.failAfterCreate(message: "Already attached.")
+        #expect(file.filePath == url.path)
+        #expect(file.fileName == "scan.png")
+        #expect(file.reject?.title == L10n.Sources.artifactFileNotAttachedTitle)
+        #expect(file.reject?.message.contains("Already attached.") == true)
+        #expect(!file.isRefused)
+    }
+
     @Test func otherErrorsAreNotRefusals() throws {
         var file = IngestFileChoice()
         file.choose(try ArtifactFileFixtures.writeStubPNG())

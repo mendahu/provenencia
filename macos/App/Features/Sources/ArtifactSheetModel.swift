@@ -262,7 +262,7 @@ final class ArtifactSheetModel {
         case .edit:
             !isSaving && (graphIDs == nil || linkLoadState == .ready)
         case .create:
-            !isSaving && file.reject == nil
+            !isSaving && !file.isRefused
                 && !draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
@@ -291,7 +291,7 @@ final class ArtifactSheetModel {
         }
         switch mode {
         case .create:
-            if file.reject != nil { return false }
+            if file.isRefused { return false }
         case .edit:
             if graphIDs != nil, linkLoadState != .ready { return false }
         }
@@ -317,6 +317,13 @@ final class ArtifactSheetModel {
                 scrollToTop()
                 return false
             }
+            if let unattached = error as? FileNotAttached {
+                // The Artifact exists and the page shows it; only the file is missing.
+                guard let message = context.fail(unattached.underlying) else { return true }
+                file.failAfterCreate(message: message)
+                scrollToTop()
+                return false
+            }
             guard let message = context.fail(error) else { return true }
             if board.showRefusal(error) { return false }
             // Read the locks again: a Citation may have taken the Artifact
@@ -326,6 +333,11 @@ final class ArtifactSheetModel {
             scrollToTop()
             return false
         }
+    }
+
+    /// The file's ingest failed with something other than a refusal, after the Artifact was made.
+    private struct FileNotAttached: Error {
+        let underlying: Error
     }
 
     /// One `updateArtifact`, applied to the page; the edit Save and an add retry both use it.
@@ -378,12 +390,21 @@ final class ArtifactSheetModel {
         host.markSaved()
         guard var art = created else { return }
         if let path = file.filePath {
-            let ingested = try await context.store.ingestArtifactFile(
-                projectDir: context.projectDir,
-                userID: context.userID,
-                artifactID: art.id,
-                path: path
-            )
+            let ingested: (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
+            do {
+                ingested = try await context.store.ingestArtifactFile(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    artifactID: art.id,
+                    path: path
+                )
+            } catch {
+                // A refusal is the file's own message; any other failure leaves the Artifact
+                // made without its file, which `save()` says in its own copy.
+                var probe = file
+                if probe.refuse(ifIngestRefusal: error) { throw error }
+                throw FileNotAttached(underlying: error)
+            }
             art = ingested.artifact
             created = art
             onSaved(art, nil, ingested.effects)

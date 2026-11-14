@@ -61,6 +61,18 @@ struct IngestFileChoice: Equatable {
         return true
     }
 
+    /// True when the file was refused and no path is left to ingest: Save waits for another file.
+    var isRefused: Bool { reject != nil && filePath == nil }
+
+    /// The Artifact was made but the file did not attach: keeps the path and the name, so a
+    /// retry ingests it again, and shows the engine's message under a title that says so.
+    mutating func failAfterCreate(message: String) {
+        reject = L10n.Errors.IngestCallout(
+            title: L10n.Sources.artifactFileNotAttachedTitle,
+            message: L10n.Sources.artifactFileNotAttachedBody(message)
+        )
+    }
+
     mutating func clear() {
         filePath = nil
         fileName = nil

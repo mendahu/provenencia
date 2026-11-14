@@ -10030,6 +10030,30 @@
         }
       }
     },
+    "sources.page.artifactSheet.fileNotAttachedTitle": {
+      "comment": "Callout title on the Artifact sheet when the artifact was made but its file failed to attach for a reason other than the file being refused",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file wasn’t attached"
+          }
+        }
+      }
+    },
+    "sources.page.artifactSheet.fileNotAttachedBody": {
+      "comment": "Callout message on the Artifact sheet when the artifact was made but its file failed to attach; argument is the engine's error message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The artifact was added without it. %@ Choose Add artifact to try the file again."
+          }
+        }
+      }
+    },
     "sources.page.artifactSheetFinishOpenField": {
       "comment": "Callout on the Artifact sheet when Save is pressed while a copy-details field holds text not yet confirmed",
       "extractionState": "manual",

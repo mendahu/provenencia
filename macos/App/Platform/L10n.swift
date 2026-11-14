@@ -6829,6 +6829,20 @@ enum L10n {
             ), count, ref)
         }
 
+        static let artifactFileNotAttachedTitle = LocalizedStringResource(
+            "sources.page.artifactSheet.fileNotAttachedTitle",
+            defaultValue: "The file wasn\u{2019}t attached",
+            comment: "Callout title on the Artifact sheet when the artifact was made but its file failed to attach for a reason other than the file being refused"
+        )
+
+        static func artifactFileNotAttachedBody(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifactSheet.fileNotAttachedBody",
+                defaultValue: "The artifact was added without it. %@ Choose Add artifact to try the file again.",
+                comment: "Callout message on the Artifact sheet when the artifact was made but its file failed to attach; argument is the engine's error message"
+            ), error)
+        }
+
         static let artifactSheetFinishOpenField = LocalizedStringResource(
             "sources.page.artifactSheetFinishOpenField",
             defaultValue: "Finish the open field first: save its value or clear it.",

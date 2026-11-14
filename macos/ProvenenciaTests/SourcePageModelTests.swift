@@ -572,6 +572,38 @@ struct SourcePageModelTests {
         #expect(model.artifacts.items.first?.fileID.isEmpty == false)
     }
 
+    @Test func aFileFailureAfterTheCreateSaysTheArtifactWasAdded() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        let url = try ArtifactFileFixtures.writeStubPNG()
+        sheet.file.choose(url)
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "artifacts.file_already_attached", kind: .user, params: []
+        )
+
+        let saved = await sheet.save()
+
+        #expect(!saved)
+        #expect(sheet.saveError == nil)
+        let reject = try #require(sheet.file.reject)
+        #expect(reject.title == L10n.Sources.artifactFileNotAttachedTitle)
+        #expect(!reject.message.isEmpty)
+        #expect(sheet.file.filePath == url.path)
+        #expect(sheet.canSave)
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+        #expect(model.artifacts.items.first?.fileID.isEmpty == true)
+
+        store.ingestArtifactFileError = nil
+        let retried = await sheet.save()
+
+        #expect(retried)
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+        #expect(model.artifacts.items.first?.fileID.isEmpty == false)
+    }
+
     @Test func ingestMissingFileSurfacesIngestInvalid() async throws {
         let store = makeStore()
         store.ingestArtifactFileError = CoreInvokeError.coded(
