@@ -118,7 +118,7 @@ func buildShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*s
 			if err != nil {
 				return nil, err
 			}
-			ix.Add(vocabkey.SubjectType(kind), n.ID, v)
+			ix.Put(vocabkey.SubjectType(kind), n.ID, v)
 		}
 	}
 	return ix, nil

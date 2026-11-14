@@ -1,6 +1,7 @@
 package shortlist_test
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
@@ -65,7 +66,7 @@ func build(rules valuecompare.Rules, kind vocabkey.SubjectType, entries ...entry
 	r := matchregistry.Default()
 	ix := shortlist.NewIndex(r.Alignment.Shortlist, r.Subject, rules, subjectcomparetest.Metas())
 	for _, e := range entries {
-		ix.Add(kind, []byte{e.id}, e.v)
+		ix.Put(kind, []byte{e.id}, e.v)
 	}
 	return ix
 }
@@ -254,4 +255,76 @@ func TestKeys(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestIndexPut: Put refiles a handle, Remove unfiles it, and an index patched
+// to a state equals one built to it.
+func TestIndexPut(t *testing.T) {
+	rules := matchregistry.Default().Value
+	probe := func(ix *shortlist.Index, kind vocabkey.SubjectType, e entry) []byte {
+		return ids(ix.Lookup(kind, e.v))
+	}
+	t.Run("a handle is refiled", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, person(1, "James Robins"), person(2, "Robins"))
+		if got := probe(ix, vocabkey.Person, person(0, "Robins")); !slices.Equal(got, []byte{1, 2}) {
+			t.Fatalf("Lookup Robins = %v, want [1 2]", got)
+		}
+		ix.Put(vocabkey.Person, []byte{1}, person(1, "James Smith").v)
+		if got := probe(ix, vocabkey.Person, person(0, "Robins")); !slices.Equal(got, []byte{2}) {
+			t.Errorf("Lookup Robins after the refile = %v, want [2]", got)
+		}
+		if got := probe(ix, vocabkey.Person, person(0, "Smith")); !slices.Equal(got, []byte{1}) {
+			t.Errorf("Lookup Smith after the refile = %v, want [1]", got)
+		}
+	})
+	t.Run("a removed handle leaves an index equal to one built without it", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, person(1, "James Smith"), person(2, "Robins"))
+		ix.Remove([]byte{2})
+		if got := probe(ix, vocabkey.Person, person(0, "Robins")); got != nil {
+			t.Errorf("Lookup Robins after Remove = %v, want none", got)
+		}
+		if want := build(rules, vocabkey.Person, person(1, "James Smith")); !reflect.DeepEqual(ix, want) {
+			t.Error("a patched index differs from one built to the same state")
+		}
+	})
+	t.Run("a value with no keys is not filed", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, entry{1, subjectcompare.Values{}})
+		if want := build(rules, vocabkey.Person); !reflect.DeepEqual(ix, want) {
+			t.Error("a handle with no keys was filed")
+		}
+	})
+	t.Run("a handle put with no keys is unfiled", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, person(1, "James Smith"))
+		ix.Put(vocabkey.Person, []byte{1}, subjectcompare.Values{})
+		if want := build(rules, vocabkey.Person); !reflect.DeepEqual(ix, want) {
+			t.Error("a handle put with no keys is still filed")
+		}
+	})
+	t.Run("a handle put under another kind is filed only there", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, person(1, "Springfield"))
+		ix.Put(vocabkey.Place, []byte{1}, place(1, "Springfield").v)
+		if got := probe(ix, vocabkey.Person, person(0, "Springfield")); got != nil {
+			t.Errorf("the person index still holds the handle: %v", got)
+		}
+		if want := build(rules, vocabkey.Place, place(1, "Springfield")); !reflect.DeepEqual(ix, want) {
+			t.Error("a handle moved between kinds differs from one built there")
+		}
+	})
+	t.Run("a repeated put changes nothing", func(t *testing.T) {
+		ix := build(rules, vocabkey.Person, person(1, "James Robins"))
+		ix.Put(vocabkey.Person, []byte{1}, person(1, "James Robins").v)
+		if want := build(rules, vocabkey.Person, person(1, "James Robins")); !reflect.DeepEqual(ix, want) {
+			t.Error("putting the same value twice differs from putting it once")
+		}
+	})
+	t.Run("put order does not matter", func(t *testing.T) {
+		a := build(rules, vocabkey.Person, person(3, "Robins"), person(1, "Robins"), person(2, "Robins"))
+		b := build(rules, vocabkey.Person, person(1, "Robins"), person(2, "Robins"), person(3, "Robins"))
+		if !reflect.DeepEqual(a, b) {
+			t.Error("postings depend on the order handles were put in")
+		}
+	})
+	var nilIndex *shortlist.Index
+	nilIndex.Put(vocabkey.Person, []byte{1}, person(1, "James Robins").v)
+	nilIndex.Remove([]byte{1})
 }
