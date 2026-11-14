@@ -330,8 +330,8 @@ struct SourcePageOverviewLayout: Layout {
     let widthClass: PVWidthClass
 
     private static let rowGap = PVSpacing.space9
-    /// The gap between the Wide columns, as `PVPageColumnsMetrics.split` leaves it.
-    private static let columnGap = PVSpacing.space9
+    /// Between Description and Credibility and Metadata when they stack in the Wide side column.
+    private static let sideGap = PVSpacing.space11
     /// The side column's cap; `PVPageColumns` is handed the same value to size its band.
     static let sideMax = PVSpacing.widthSecondaryMax
 
@@ -352,11 +352,12 @@ struct SourcePageOverviewLayout: Layout {
     ) -> (frames: [CGRect], height: CGFloat) {
         var frames = [CGRect](repeating: .zero, count: 4)
         if widthClass == .wide {
-            let group = PVPageColumnsMetrics.split(available: width, sideMax: Self.sideMax).group
+            let split = PVPageColumnsMetrics.split(available: width, sideMax: Self.sideMax)
+            let group = split.group, gap = split.group - split.main - split.side
             let x = PVPageColumnsMetrics.groupX(in: width, group: group)
             // The side column keeps its full width; the main column gives way down to the breakpoint.
-            let sideWidth = min(Self.sideMax, max(0, group - Self.columnGap))
-            let main = max(0, group - Self.columnGap - sideWidth)
+            let sideWidth = min(Self.sideMax, max(0, group - gap))
+            let main = max(0, group - gap - sideWidth)
             let error = fit(0, main), rest = fit(3, main)
             var y: CGFloat = 0
             frames[0] = CGRect(x: x, y: y, width: main, height: error.height)
@@ -366,7 +367,7 @@ struct SourcePageOverviewLayout: Layout {
             let sideX = x + group - sideWidth
             let body = fit(1, sideWidth), side = fit(2, sideWidth)
             frames[1] = CGRect(x: sideX, y: 0, width: sideWidth, height: body.height)
-            let sideY = body.height + PVSpacing.space11
+            let sideY = body.height + Self.sideGap
             frames[2] = CGRect(x: sideX, y: sideY, width: sideWidth, height: side.height)
             return (frames, max(y, sideY + side.height))
         }

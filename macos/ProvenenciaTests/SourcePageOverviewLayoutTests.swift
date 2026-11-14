@@ -36,9 +36,12 @@ struct SourcePageOverviewLayoutTests {
         let group = PVPageColumnsMetrics.split(
             available: 2296 - 2 * PVSpacing.gutterPage, sideMax: PVSpacing.widthSecondaryMax
         )
-        let frames = arrange(width: group.group, widthClass: .wide, errorHeight: 30).frames
+        let laidOut = arrange(width: group.group, widthClass: .wide, errorHeight: 30)
+        let frames = laidOut.frames
         let (error, body, side, rest) = (frames[0], frames[1], frames[2], frames[3])
         #expect(group.main == 1180 && group.side == 480)
+        // The side column is the taller here, so it sets the page's height.
+        #expect(laidOut.height == side.maxY)
         // The main column: the error, then graphs, Artifacts and Notes.
         #expect(error.minX == 0 && error.minY == 0 && error.width == 1180)
         #expect(rest.minX == 0 && rest.width == 1180 && rest.minY == 30 + PVSpacing.space9)
@@ -57,5 +60,14 @@ struct SourcePageOverviewLayoutTests {
         #expect(rest.minX == 0 && rest.width == main)
         #expect(body.width == PVSpacing.widthSecondaryMax && side.width == PVSpacing.widthSecondaryMax)
         #expect(body.minX == main + PVSpacing.space9 && side.maxX == width)
+    }
+
+    @Test func wideHeightFollowsTheTallerMainColumn() {
+        let heights: [CGFloat] = [30, 100, 140, 900]
+        let laidOut = SourcePageOverviewLayout.arrange(width: 1692, widthClass: .wide) { index, width in
+            CGSize(width: width, height: heights[index])
+        }
+        #expect(laidOut.height == laidOut.frames[3].maxY)
+        #expect(laidOut.frames[3].maxY > laidOut.frames[2].maxY)
     }
 }
