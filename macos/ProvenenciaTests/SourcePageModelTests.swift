@@ -2332,12 +2332,12 @@ struct SourcePageModelTests {
         #expect(sheet.saveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
     }
 
-    @Test func anEditSheetOpenedDuringTheReadIsKept() async {
+    @Test func anEditSheetOpenedDuringTheReadIsKept() async throws {
         let (model, store, _) = await makeCensus()
         model.artifacts.sheet = nil
         store.listTypeSuggestionsHold.isOn = true
         let firstOpen = Task { await model.artifacts.openAdd() }
-        #expect(await waitUntil { store.listTypeSuggestionsHold.count == 1 })
+        try #require(await waitUntil(timeout: .seconds(15)) { store.listTypeSuggestionsHold.count == 1 })
         #expect(!model.acceptsArtifactPageDrop)
         let secondOpen = Task { await model.artifacts.openAdd() }
         // A second open must not start its own read.
