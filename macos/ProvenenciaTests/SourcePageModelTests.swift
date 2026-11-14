@@ -382,27 +382,28 @@ struct SourcePageModelTests {
         #expect(model.notes.items.first?.body == "Keep me")
     }
 
-    @Test func createFilelessArtifact() async {
+    @Test func createFilelessArtifact() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Physical copy"
-        model.artifacts.draft.description = "At the archive"
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Physical copy"
+        sheet.draft.description = "At the archive"
+        let saved = await sheet.save()
+        #expect(saved)
         #expect(model.artifacts.items.count == 1)
         #expect(model.artifacts.items.first?.label == "Physical copy")
         #expect(model.artifacts.items.first?.fileID.isEmpty == true)
-        #expect(model.artifacts.isAdding == false)
     }
 
-    @Test func createArtifactRequiresLabel() async {
+    @Test func createArtifactRequiresLabel() async throws {
         let model = makeModel(store: makeStore())
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "  "
-        await model.artifacts.create()
-        #expect(model.artifacts.draftLabelError != nil)
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "  "
+        let saved = await sheet.save()
+        #expect(!saved)
+        #expect(sheet.labelError != nil)
         #expect(model.artifacts.items.isEmpty)
     }
 
@@ -410,13 +411,10 @@ struct SourcePageModelTests {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Deed"
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("deed-\(UUID().uuidString).pdf").path
-        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
-        model.artifacts.draft.filePath = path
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Deed"
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF-1.1".utf8), named: "deed.pdf"))
+        _ = await sheet.save()
         #expect(model.artifacts.items.count == 1)
         #expect(model.source?.coverMode == "type_icon")
         #expect(model.source?.primaryArtifactID.isEmpty == true)
@@ -440,13 +438,10 @@ struct SourcePageModelTests {
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model) == nil)
 
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Scan"
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
-        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
-        model.artifacts.draft.filePath = path
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF-1.1".utf8), named: "scan.pdf"))
+        _ = await sheet.save()
 
         guard let artID = store.artifactsBySource[sourceID]?.last?.id else {
             Issue.record("expected a created Artifact")
@@ -466,16 +461,13 @@ struct SourcePageModelTests {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Scan"
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).png").path
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
         // Minimal valid PNG so FakeStore marks a raster thumb path.
-        try Data([
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-        ]).write(to: URL(fileURLWithPath: path))
-        model.artifacts.draft.filePath = path
-        await model.artifacts.create()
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(
+            Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), named: "scan.png"
+        ))
+        _ = await sheet.save()
         let first = try #require(model.artifacts.items.first)
         #expect(!model.artifacts.isCover(first))
         #expect(model.artifacts.canUseAsThumbnail(first))
@@ -486,13 +478,11 @@ struct SourcePageModelTests {
         #expect(model.source?.primaryArtifactID == first.id)
         #expect(!model.source!.thumbnailRelPath.isEmpty)
 
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Other"
-        let path2 = FileManager.default.temporaryDirectory
-            .appendingPathComponent("other-\(UUID().uuidString).pdf").path
-        try Data("%PDF".utf8).write(to: URL(fileURLWithPath: path2))
-        model.artifacts.draft.filePath = path2
-        await model.artifacts.create()
+        model.artifacts.sheet = nil // the dialog closed after the first Save
+        let sheet2 = try await openAddSheet(model)
+        sheet2.draft.label = "Other"
+        sheet2.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF".utf8), named: "other.pdf"))
+        _ = await sheet2.save()
         let second = try #require(model.artifacts.items.last)
         #expect(!model.artifacts.isCover(second))
         #expect(!model.artifacts.canUseAsThumbnail(second))
@@ -507,22 +497,22 @@ struct SourcePageModelTests {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Note only"
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Note only"
+        _ = await sheet.save()
         let art = try #require(model.artifacts.items.first)
         #expect(!model.artifacts.canUseAsThumbnail(art))
         #expect(!model.artifacts.isCover(art))
         #expect(model.source?.coverMode == "type_icon")
     }
 
-    @Test func createFilelessArtifactClearsMIMECoverForTypeIcon() async {
+    @Test func createFilelessArtifactClearsMIMECoverForTypeIcon() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Physical register"
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Physical register"
+        _ = await sheet.save()
         #expect(model.source?.thumbnailRelPath.isEmpty == true)
         #expect(model.source?.thumbnailMediaType.isEmpty == true)
         #expect(model.source?.coverMode == "type_icon")
@@ -546,16 +536,16 @@ struct SourcePageModelTests {
         )
         await model.warmFromSession()
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Scan"
-        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        sheet.file.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
 
-        await model.artifacts.create()
+        let refused = await sheet.save()
 
         // Go created the Artifact before the file was refused: the page shows
-        // it and its graph link, and the dialog stays open on the refusal.
-        #expect(model.artifacts.isAdding)
-        #expect(model.artifacts.draft.reject != nil)
+        // it and its graph link, and the sheet stays open on the refusal.
+        #expect(!refused)
+        #expect(sheet.file.reject != nil)
         #expect(model.artifacts.items.map(\.label) == ["Scan"])
         #expect(model.artifacts.items.first?.fileID.isEmpty == true)
         if let artID = store.artifactsBySource[sourceID]?.first?.id {
@@ -570,22 +560,51 @@ struct SourcePageModelTests {
         #expect(entryGraphLocation(model)?.graphId == "g-1")
 
         store.ingestArtifactFileError = nil
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
-        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
-        model.artifacts.applyPickedFile(url: URL(fileURLWithPath: path), into: .create)
-        model.artifacts.draft.label = "Scan, front"
+        sheet.file.choose(try ArtifactFileFixtures.writeTemp(Data("%PDF-1.1".utf8), named: "scan.pdf"))
+        sheet.draft.label = "Scan, front"
 
-        await model.artifacts.create()
+        let retried = await sheet.save()
 
-        #expect(!model.artifacts.isAdding)
+        #expect(retried)
         #expect(store.artifactsBySource[sourceID]?.count == 1)
         #expect(model.artifacts.items.count == 1)
         #expect(model.artifacts.items.first?.label == "Scan, front")
         #expect(model.artifacts.items.first?.fileID.isEmpty == false)
     }
 
-    @Test func ingestMissingFileSurfacesIngestInvalid() async {
+    @Test func aFileFailureAfterTheCreateSaysTheArtifactWasAdded() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        let url = try ArtifactFileFixtures.writeStubPNG()
+        sheet.file.choose(url)
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "artifacts.file_already_attached", kind: .user, params: []
+        )
+
+        let saved = await sheet.save()
+
+        #expect(!saved)
+        #expect(sheet.saveError == nil)
+        let reject = try #require(sheet.file.reject)
+        #expect(reject.title == L10n.Sources.artifactFileNotAttachedTitle)
+        #expect(!reject.message.isEmpty)
+        #expect(sheet.file.filePath == url.path)
+        #expect(sheet.canSave)
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+        #expect(model.artifacts.items.first?.fileID.isEmpty == true)
+
+        store.ingestArtifactFileError = nil
+        let retried = await sheet.save()
+
+        #expect(retried)
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+        #expect(model.artifacts.items.first?.fileID.isEmpty == false)
+    }
+
+    @Test func ingestMissingFileSurfacesIngestInvalid() async throws {
         let store = makeStore()
         store.ingestArtifactFileError = CoreInvokeError.coded(
             status: 1,
@@ -595,49 +614,60 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Scan"
-        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        sheet.file.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
 
-        await model.artifacts.create()
+        let saved = await sheet.save()
 
-        #expect(model.artifacts.draft.reject != nil)
-        #expect(model.artifacts.draft.filePath == nil)
-        #expect(model.artifacts.draftLabelError == nil)
-        #expect(model.artifacts.isAdding)
+        #expect(!saved)
+        #expect(sheet.file.reject != nil)
+        #expect(sheet.file.filePath == nil)
+        #expect(sheet.labelError == nil)
     }
 
-    @Test func applyPickedFileRejectsSpreadsheetWithoutFFI() throws {
-        let model = makeModel(store: makeStore())
-        model.artifacts.openAdd()
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ingest-ui-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let url = dir.appendingPathComponent("notes.xlsx")
-        try Data("PK\u{0003}\u{0004}".utf8).write(to: url)
+    @Test func anAttachRefusalKeepsTheDialog() async throws {
+        let url = try ArtifactFileFixtures.writeStubPNG()
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Front", description: "", file: nil
+                ),
+            ]
+        )
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.artifacts.openAttach(to: "a1")
+        model.artifacts.attachDraft.file.choose(url)
 
-        model.artifacts.applyPickedFile(url: url, into: .create)
+        await model.artifacts.confirmAttach()
 
-        #expect(model.artifacts.draft.filePath == nil)
-        #expect(model.artifacts.draft.fileName == "notes.xlsx")
-        #expect(model.artifacts.draft.reject != nil)
-        #expect(!model.artifacts.canSubmitDraft) // label still empty too
-        model.artifacts.draft.label = "Letter"
-        #expect(!model.artifacts.canSubmitDraft)
+        #expect(model.artifacts.isAttaching)
+        #expect(model.artifacts.attachDraft.file.reject != nil)
+        #expect(model.artifacts.attachDraft.file.filePath == nil)
+
+        store.ingestArtifactFileError = nil
+        model.artifacts.attachDraft.file.choose(url)
+        await model.artifacts.confirmAttach()
+
+        #expect(!model.artifacts.isAttaching)
+        #expect(model.toast != nil)
     }
 
     @Test func ingestThenRejectSecondAttach() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Scan"
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        _ = await sheet.save()
         let artID = try #require(model.artifacts.items.first?.id)
 
-        let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("scan-\(UUID().uuidString).bin").path
-        try Data("bytes".utf8).write(to: URL(fileURLWithPath: path))
+        let path = try ArtifactFileFixtures.writeTemp(Data("bytes".utf8), named: "scan.bin").path
 
         let first = try await store.ingestArtifactFile(
             projectDir: projectDir, userID: userID, artifactID: artID, path: path
@@ -1136,7 +1166,7 @@ struct SourcePageModelTests {
     }
 
     @Test func pageDropStagesFileWithoutCreating() async throws {
-        let url = try writeTempPNG()
+        let url = try ArtifactFileFixtures.writeStubPNG()
         let store = makeStore(
             artifacts: [
                 CatalogArtifact(
@@ -1148,18 +1178,20 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         let before = model.artifacts.items.count
-        model.artifacts.stagePageDrop([url])
-        #expect(model.artifacts.isAdding)
-        #expect(model.artifacts.draft.label.isEmpty)
-        #expect(model.artifacts.draft.description.isEmpty)
-        #expect(model.artifacts.draft.fileName == url.lastPathComponent)
-        #expect(model.artifacts.draft.filePath == url.path)
-        #expect(model.artifacts.draft.reject == nil)
+        await model.artifacts.stagePageDrop([url])
+        let sheet = try #require(model.artifacts.sheet)
+        #expect(sheet.isCreate)
+        #expect(sheet.draft.label.isEmpty)
+        #expect(sheet.draft.description.isEmpty)
+        #expect(sheet.file.fileName == url.lastPathComponent)
+        #expect(sheet.file.filePath == url.path)
+        #expect(sheet.file.reject == nil)
         #expect(model.artifacts.items.count == before)
         #expect(store.artifactsBySource[sourceID]?.count == before)
+        #expect(store.createArtifactGraphIDs.isEmpty)
     }
 
-    @Test func pageDropOfTwoFilesOpensRejectCallout() async {
+    @Test func pageDropOfTwoFilesOpensRejectCallout() async throws {
         let store = makeStore(
             artifacts: [
                 CatalogArtifact(
@@ -1171,24 +1203,23 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         let before = model.artifacts.items.count
-        model.artifacts.stagePageDrop([
+        await model.artifacts.stagePageDrop([
             URL(fileURLWithPath: "/tmp/recto.png"),
             URL(fileURLWithPath: "/tmp/verso.png"),
         ])
-        #expect(model.artifacts.isAdding)
-        #expect(model.artifacts.draft.label.isEmpty)
-        #expect(model.artifacts.draft.filePath == nil)
-        #expect(model.artifacts.draft.reject != nil)
-        #expect(!model.artifacts.canSubmitDraft)
+        let sheet = try #require(model.artifacts.sheet)
+        #expect(sheet.draft.label.isEmpty)
+        #expect(sheet.file.filePath == nil)
+        #expect(sheet.file.reject != nil)
+        #expect(!sheet.canSave)
         #expect(model.artifacts.items.count == before)
         #expect(store.artifactsBySource[sourceID]?.count == before)
     }
 
-    private func writeTempPNG() throws -> URL {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("s10-18-\(UUID().uuidString).png")
-        try Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]).write(to: url)
-        return url
+    /// Opens Add artifact the way its button does and answers the sheet it opened.
+    private func openAddSheet(_ model: SourcePageModel) async throws -> ArtifactSheetModel {
+        await model.artifacts.openAdd()
+        return try #require(model.artifacts.sheet)
     }
 
     @Test func askDeleteSourcePresentsAllowedImpact() async {
@@ -1606,24 +1637,24 @@ struct SourcePageModelTests {
         return (model, store, session)
     }
 
-    @Test func addArtifactOnOneGraphShowsTheGroup() async {
+    @Test func addArtifactOnOneGraphShowsTheGroup() async throws {
         let (model, store, _) = await makeCensus(graphs: [graph("g-1", "Default", [])])
         #expect(model.artifacts.visibleGraphs?.map(\.id) == ["g-1"])
-        model.artifacts.openAdd()
-        #expect(model.artifacts.draftGraphIDs == ["g-1"])
-        model.artifacts.draft.label = "Page 7"
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        #expect(sheet.checkedGraphIDs == ["g-1"])
+        sheet.draft.label = "Page 7"
+        let saved = await sheet.save()
+        #expect(saved)
         #expect(store.createArtifactGraphIDs == [["g-1"]])
-        #expect(!model.artifacts.isAdding)
 
         // A list with no graph for the Source shows no group and sends no links:
         // the engine links every graph.
         let (bare, bareStore, _) = await makeCensus(graphs: [])
         #expect(bare.artifacts.visibleGraphs == nil)
-        bare.artifacts.openAdd()
-        #expect(bare.artifacts.draftGraphIDs == nil)
-        bare.artifacts.draft.label = "Page 7"
-        await bare.artifacts.create()
+        let bareSheet = try await openAddSheet(bare)
+        #expect(bareSheet.graphIDs == nil)
+        bareSheet.draft.label = "Page 7"
+        _ = await bareSheet.save()
         #expect(bareStore.createArtifactGraphIDs.count == 1)
         #expect(bareStore.createArtifactGraphIDs.first! == nil)
 
@@ -1632,43 +1663,289 @@ struct SourcePageModelTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: loading)
         let other = makeModel(store: loading, session: session)
         #expect(other.artifacts.visibleGraphs == nil)
-        #expect(other.artifacts.draftGraphIDs == nil)
+        let otherSheet = try await openAddSheet(other)
+        #expect(otherSheet.graphIDs == nil)
     }
 
-    @Test func addArtifactLinksOnlyTheCheckedGraphs() async {
+    @Test func addArtifactLinksOnlyTheCheckedGraphs() async throws {
         let (model, store, _) = await makeCensus()
         #expect(model.artifacts.visibleGraphs?.map(\.id) == ["g-b", "g-j", "g-s"])
-        model.artifacts.openAdd()
-        #expect(model.artifacts.draftGraphIDs == ["g-b", "g-j", "g-s"])
-        model.artifacts.draft.label = "Page 7"
-        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-s"]
-        #expect(model.artifacts.draftGraphIDs == ["g-j"])
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        #expect(sheet.checkedGraphIDs == ["g-b", "g-j", "g-s"])
+        #expect(sheet.linkLoadState == .ready)
+        sheet.draft.label = "Page 7"
+        sheet.excludedGraphIDs = ["g-b", "g-s"]
+        #expect(sheet.checkedGraphIDs == ["g-j"])
+        let saved = await sheet.save()
+        #expect(saved)
         let created = store.artifactsBySource[sourceID]?.last
         #expect(created?.label == "Page 7")
         #expect(store.createArtifactGraphIDs.last == ["g-j"])
-        #expect(!model.artifacts.isAdding)
         #expect(model.toast != nil)
     }
 
-    @Test func addArtifactWithNoGraphChecked() async {
+    @Test func addArtifactWithNoGraphChecked() async throws {
         let (model, store, _) = await makeCensus()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Page 7"
-        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-j", "g-s"]
-        #expect(model.artifacts.canSubmitDraft)
-        #expect(model.artifacts.draftInNoGraph)
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Page 7"
+        sheet.excludedGraphIDs = ["g-b", "g-j", "g-s"]
+        #expect(sheet.canSave)
+        #expect(sheet.inNoGraph)
+        let saved = await sheet.save()
+        #expect(saved)
         #expect(store.createArtifactGraphIDs == [[]])
-        #expect(!model.artifacts.isAdding)
     }
 
-    @Test func addArtifactExcludedGraphIsDirty() async {
+    @Test func aGraphMadeWhileAddingIsLinked() async throws {
+        let (model, store, session) = await makeCensus()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Page 7"
+        store.evidenceGraphsByProject[projectDir]?.append(graph("g-n", "Nolan household", []))
+        session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])]))
+        await waitForQuery(session.evidenceGraphsHandle!)
+        #expect(sheet.linkLoadState == .ready)
+        let saved = await sheet.save()
+        #expect(saved)
+        #expect(store.createArtifactGraphIDs == [["g-b", "g-j", "g-s", "g-n"]])
+    }
+
+    @Test func addArtifactExcludedGraphIsDirty() async throws {
         let (model, _, _) = await makeCensus()
-        model.artifacts.openAdd()
-        #expect(!model.artifacts.addSheetIsDirty)
-        model.artifacts.draft.excludedGraphIDs = ["g-b"]
-        #expect(model.artifacts.addSheetIsDirty)
+        let sheet = try await openAddSheet(model)
+        #expect(!sheet.isDirty)
+        sheet.excludedGraphIDs = ["g-b"]
+        #expect(sheet.isDirty)
+    }
+
+    // MARK: Artifact sheet, add mode (S15-10)
+
+    private let artifactProviderField = catalogMetadataField("provider", label: "Provider")
+    private let artifactURLField = catalogMetadataField("url", label: "URL")
+    private let artifactAccessedField = catalogMetadataField("accessed", label: "Accessed")
+
+    /// The census whose type suggests Provider, URL and Accessed at the `artifact` level.
+    private func makeSuggestingCensus() async -> (model: SourcePageModel, store: FakeStore, session: WorkspaceSession) {
+        let fields = [artifactProviderField, artifactURLField, artifactAccessedField]
+        let census = await makeCensus(fields: fields)
+        census.store.suggestionsByLevel[.artifact, default: [:]]["t1"] = [
+            CatalogTypeSuggestion(field: artifactProviderField, sortOrder: 0),
+            CatalogTypeSuggestion(field: artifactURLField, sortOrder: 1),
+            CatalogTypeSuggestion(field: artifactAccessedField, sortOrder: 2),
+        ]
+        return census
+    }
+
+    /// The rows the engine answers for a new Artifact: the three suggestions, `filled` holding values.
+    private func newArtifactRows(_ filled: [String: String] = [:]) -> [CatalogMetadataEntry] {
+        [artifactProviderField, artifactURLField, artifactAccessedField].enumerated().map { index, field in
+            let value = filled[field.id] ?? ""
+            return CatalogMetadataEntry(
+                field: field, valueText: value, hasValue: !value.isEmpty, suggested: value.isEmpty,
+                sortOrder: Int32(index)
+            )
+        }
+    }
+
+    @Test func addOpensTheSheetWithTheTypesArtifactSuggestions() async throws {
+        let (model, store, _) = await makeSuggestingCensus()
+        let sheet = try await openAddSheet(model)
+        #expect(sheet.isCreate)
+        #expect(sheet.board.entries.map(\.field.id) == ["provider", "url", "accessed"])
+        #expect(sheet.board.entries.allSatisfy { $0.suggested && !$0.hasValue && $0.valueText.isEmpty })
+        #expect(store.listTypeSuggestionsLevels == [.artifact])
+        #expect(!sheet.canSave)
+        #expect(sheet.subtitle == "SRC-AAAAA · Family album")
+
+        // A type with no `artifact` suggestions opens an empty board.
+        let (bare, _, _) = await makeCensus(fields: [artifactProviderField])
+        let bareSheet = try await openAddSheet(bare)
+        #expect(bareSheet.board.entries.isEmpty)
+    }
+
+    @Test func aFailedSuggestionReadOpensNoSheet() async {
+        let (model, store, _) = await makeSuggestingCensus()
+        let error = CoreInvokeError.failed(status: 3)
+        store.listTypeSuggestionsError = error
+        let opened = await model.artifacts.openAdd()
+        #expect(opened == nil)
+        #expect(model.artifacts.sheet == nil)
+        #expect(model.pageError?.message == L10n.Errors.message(for: error))
+    }
+
+    @Test func addSavesTheCopyDetailsWithTheArtifact() async throws {
+        let (model, store, session) = await makeSuggestingCensus()
+        store.nextArtifactID = "a-new"
+        let owner = MetadataOwner(level: .artifact, id: "a-new")
+        let rows = newArtifactRows(["provider": "FamilySearch", "url": "https://example.org/ark/1"])
+        store.metadataWriteResults[owner] = rows
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Sheet 26 (image 13)"
+        sheet.board.drafts["provider"] = "FamilySearch"
+        await sheet.board.save(fieldID: "provider")
+        sheet.board.drafts["url"] = "https://example.org/ark/1"
+        await sheet.board.save(fieldID: "url")
+
+        let saved = await sheet.save()
+
+        #expect(saved)
+        #expect(store.createArtifactGraphIDs.count == 1)
+        let sent = try #require(store.createArtifactMetadata.last ?? nil)
+        #expect(sent.values.map(\.fieldID) == ["provider", "url"])
+        #expect(store.updateArtifactCalls == 0)
+        #expect(model.artifacts.items.contains { $0.id == "a-new" && $0.label == "Sheet 26 (image 13)" })
+        #expect(model.artifacts.copyDetails(for: "a-new") == rows)
+        let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+        let cached: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(key)
+        #expect(cached?.value?.metadataRows(for: owner) == rows)
+        #expect(model.toast != nil)
+    }
+
+    @Test func anUntouchedBoardSendsNoDraftButKeepsTheRows() async throws {
+        let (model, store, _) = await makeSuggestingCensus()
+        store.nextArtifactID = "a-new"
+        store.metadataWriteResults[MetadataOwner(level: .artifact, id: "a-new")] = newArtifactRows()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Sheet 26"
+        let saved = await sheet.save()
+        #expect(saved)
+        #expect(store.createArtifactMetadata == [nil])
+        #expect(model.artifacts.copyDetails(for: "a-new").map(\.field.id) == ["provider", "url", "accessed"])
+
+        // A dismissed suggestion is a change: the draft lists it as a dismissed layout row.
+        model.artifacts.sheet = nil
+        let second = try await openAddSheet(model)
+        second.draft.label = "Sheet 27"
+        await second.board.dismissSuggestion(fieldID: "url")
+        _ = await second.save()
+        let draft = try #require(store.createArtifactMetadata.last ?? nil)
+        #expect(draft.layout.contains { $0.fieldID == "url" && $0.dismissed })
+    }
+
+    @Test func aRefusedValueCreatesNothing() async throws {
+        let (model, store, _) = await makeSuggestingCensus()
+        let refusal = catalogMetadataRefusal(params: ["url"])
+        store.createArtifactError = refusal
+        let before = model.artifacts.items
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Sheet 26"
+        sheet.board.drafts["url"] = "not a link"
+        await sheet.board.save(fieldID: "url")
+
+        let saved = await sheet.save()
+
+        #expect(!saved)
+        #expect(sheet.board.editingFieldID == "url")
+        #expect(sheet.board.fieldError == L10n.Errors.message(for: refusal))
+        #expect(sheet.saveError == nil)
+        #expect(model.artifacts.items == before)
+        #expect(sheet.artifactID == nil)
+    }
+
+    @Test func aRetryWithChangesUpdatesOnce() async throws {
+        let (model, store, _) = await makeSuggestingCensus()
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Sheet 26"
+        sheet.file.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        let first = await sheet.save()
+        #expect(!first)
+        #expect(model.artifacts.items.contains { $0.label == "Sheet 26" })
+        #expect(sheet.file.reject != nil)
+        #expect(sheet.graphsLocked)
+        #expect(!sheet.canSave)
+        // The baselines moved to what the create wrote: nothing is dirty yet.
+        #expect(!sheet.isDirty)
+
+        store.ingestArtifactFileError = nil
+        sheet.file.choose(try ArtifactFileFixtures.writeStubPNG())
+        sheet.board.drafts["provider"] = "Ancestry"
+        await sheet.board.save(fieldID: "provider")
+        let retried = await sheet.save()
+
+        #expect(retried)
+        #expect(store.createArtifactGraphIDs.count == 1)
+        #expect(store.updateArtifactCalls == 1)
+        #expect(store.updateArtifactGraphIDs == [nil])
+        #expect(store.updateArtifactMetadata.last != nil)
+    }
+
+    @Test func aRetryWithNoChangeOnlyIngests() async throws {
+        let (model, store, _) = await makeSuggestingCensus()
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Sheet 26"
+        sheet.file.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        _ = await sheet.save()
+
+        store.ingestArtifactFileError = nil
+        sheet.file.choose(try ArtifactFileFixtures.writeStubPNG())
+        let retried = await sheet.save()
+
+        #expect(retried)
+        #expect(store.updateArtifactCalls == 0)
+        #expect(store.createArtifactGraphIDs.count == 1)
+        #expect(model.artifacts.items.first { $0.label == "Sheet 26" }?.fileID.isEmpty == false)
+    }
+
+    @Test func addModeDirtAndEnablement() async throws {
+        let (model, store, _) = await makeSuggestingCensus()
+        let sheet = try await openAddSheet(model)
+        #expect(!sheet.isDirty)
+        #expect(!sheet.canSave)
+        sheet.draft.label = "Sheet 26"
+        #expect(sheet.isDirty)
+        #expect(sheet.canSave)
+        sheet.draft.label = ""
+        sheet.file.choose(try ArtifactFileFixtures.writeStubPNG())
+        #expect(sheet.isDirty)
+        sheet.file.choose(URL(fileURLWithPath: "/tmp/notes.xlsx"))
+        #expect(!sheet.canSave)
+        sheet.file.clear()
+        #expect(!sheet.isDirty)
+        sheet.board.drafts["provider"] = "Ancestry"
+        await sheet.board.save(fieldID: "provider")
+        #expect(sheet.isDirty)
+
+        let blank = try await openAddSheetAfterClosing(model)
+        blank.draft.label = "  "
+        let saved = await blank.save()
+        #expect(!saved)
+        #expect(blank.labelError != nil)
+        #expect(store.createArtifactGraphIDs.isEmpty)
+    }
+
+    @Test func anAddSheetCloseRule() async throws {
+        let (model, store, _) = await makeCensus()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Typed"
+        // The workspace changes (a note is added elsewhere): the sheet stays with what was typed.
+        store.notesBySource[sourceID] = [
+            CatalogSourceNote(id: "n1", sourceID: sourceID, body: "New", authorDisplayName: "Jake", createdAt: ""),
+        ]
+        await model.warmFromSession()
+        #expect(model.artifacts.sheet === sheet)
+        #expect(sheet.draft.label == "Typed")
+
+        // Once the Artifact is made, it leaving the page closes the sheet and names it.
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        sheet.file.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        _ = await sheet.save()
+        let madeID = try #require(sheet.artifactID)
+        store.artifactsBySource[sourceID] = store.artifactsBySource[sourceID]?.filter { $0.id != madeID }
+        await model.warmFromSession()
+        #expect(model.artifacts.sheet == nil)
+        #expect(model.toast?.body == L10n.Sources.toastArtifactGoneBody(label: "Typed"))
+    }
+
+    private func openAddSheetAfterClosing(_ model: SourcePageModel) async throws -> ArtifactSheetModel {
+        model.artifacts.sheet = nil
+        return try await openAddSheet(model)
     }
 
     // MARK: Artifact sheet (S15-34)
@@ -1698,7 +1975,7 @@ struct SourcePageModelTests {
         #expect(sheet?.isDirty == false)
         // Only one sheet at a time, and none for an Artifact that is not there.
         model.artifacts.openSheet(artifactID: "P4")
-        #expect(model.artifacts.sheet?.artifact.id == "P3")
+        #expect(model.artifacts.sheet?.artifactID == "P3")
         model.artifacts.sheet = nil
         model.artifacts.openSheet(artifactID: "nope")
         #expect(model.artifacts.sheet == nil)
@@ -2055,6 +2332,28 @@ struct SourcePageModelTests {
         #expect(sheet.saveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
     }
 
+    @Test func anEditSheetOpenedDuringTheReadIsKept() async throws {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.sheet = nil
+        store.listTypeSuggestionsHold.isOn = true
+        let firstOpen = Task { await model.artifacts.openAdd() }
+        try #require(await waitUntil(timeout: .seconds(15)) { store.listTypeSuggestionsHold.count == 1 })
+        #expect(!model.acceptsArtifactPageDrop)
+        let secondOpen = Task { await model.artifacts.openAdd() }
+        // A second open must not start its own read.
+        #expect(!(await waitUntil(timeout: .milliseconds(300)) { store.listTypeSuggestionsHold.count == 2 }))
+
+        model.artifacts.openSheet(artifactID: "P3")
+        let edit = model.artifacts.sheet
+        store.listTypeSuggestionsHold.release()
+        store.listTypeSuggestionsHold.release()
+
+        #expect(await secondOpen.value == nil)
+        #expect(await firstOpen.value == nil)
+        #expect(model.artifacts.sheet === edit)
+        #expect(edit?.artifactID == "P3")
+    }
+
     @Test func sheetSavingDisablesSaveAndHoldsTheWrite() async {
         let (model, store, _) = await makeCensus()
         let sheet = await openSheet(model, "P3")
@@ -2127,8 +2426,8 @@ struct SourcePageModelTests {
         #expect(model.artifacts.sheet?.opensAt == .top)
         #expect(!model.acceptsArtifactPageDrop)
         // A drop stages nothing while the sheet is up.
-        model.artifacts.stagePageDrop([URL(fileURLWithPath: "/tmp/dropped.png")])
-        #expect(!model.artifacts.isAdding)
+        await model.artifacts.stagePageDrop([URL(fileURLWithPath: "/tmp/dropped.png")])
+        #expect(model.artifacts.sheet?.artifactID == "P3")
     }
 
     @Test func linkToAGraphOpensAtGraphs() async {
@@ -2215,21 +2514,23 @@ struct SourcePageModelTests {
         #expect(model.artifacts.thumbnailTypeIconKey(for: withFile) == nil)
     }
 
-    @Test func addArtifactRetryIgnoresGraphChoice() async {
+    @Test func addArtifactRetryIgnoresGraphChoice() async throws {
         let (model, store, _) = await makeCensus()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Page 7"
-        model.artifacts.draft.filePath = "/tmp/page-7.jpg"
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Page 7"
+        sheet.file.filePath = "/tmp/page-7.jpg"
         store.ingestArtifactFileError = CoreInvokeError.failed(status: 3)
-        await model.artifacts.create()
-        #expect(model.artifacts.draft.createdID != nil)
-        #expect(model.artifacts.isAdding)
-        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-j", "g-s"]
-        #expect(model.artifacts.canSubmitDraft)
+        let first = await sheet.save()
+        #expect(!first)
+        #expect(sheet.artifactID != nil)
+        #expect(sheet.graphsLocked)
+        sheet.excludedGraphIDs = ["g-b", "g-j", "g-s"]
+        #expect(sheet.canSave)
         store.ingestArtifactFileError = nil
-        await model.artifacts.create()
-        #expect(!model.artifacts.isAdding)
+        let retried = await sheet.save()
+        #expect(retried)
         #expect(store.createArtifactGraphIDs.count == 1)
+        #expect(store.updateArtifactGraphIDs.allSatisfy { $0 == nil })
     }
 
     // MARK: Source date, Private and a Source deleted elsewhere (S15-03)
@@ -2546,10 +2847,10 @@ struct SourcePageModelTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
-        model.artifacts.openAdd()
-        model.artifacts.draft.label = "Scan"
-        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
-        await model.artifacts.create()
+        let sheet = try await openAddSheet(model)
+        sheet.draft.label = "Scan"
+        sheet.file.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        _ = await sheet.save()
         #expect(model.artifacts.items.map(\.label) == ["Scan"])
 
         let sourceOwner = MetadataOwner(level: .source, id: sourceID)

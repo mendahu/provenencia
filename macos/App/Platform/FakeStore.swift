@@ -179,9 +179,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var updateEvidenceGraphMetadata: [CatalogMetadataDraft?] = []
     /// When set, `updateArtifact` throws.
     var updateArtifactError: Error?
+    /// When set, `createArtifact` records the call and then throws it.
+    var createArtifactError: Error?
+    /// The id the next `createArtifact` gives the new Artifact (then cleared), so a test can
+    /// script `metadataWriteResults` for its reply rows.
+    var nextArtifactID: String?
+    /// When set, `listTypeSuggestions` throws it.
+    var listTypeSuggestionsError: Error?
+    /// The level of each `listTypeSuggestions` call, in order.
+    var listTypeSuggestionsLevels: [Level] = []
     /// While on, `updateArtifact` suspends after recording the call and before it
     /// throws or writes, so a test can act mid-save.
     let updateArtifactHold = FakeHold()
+    let listTypeSuggestionsHold = FakeHold()
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
@@ -807,11 +817,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphIDs: [String]?,
         metadata: CatalogMetadataDraft?
     ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
-        return withState {
+        return try withState {
             createArtifactGraphIDs.append(graphIDs)
             createArtifactMetadata.append(metadata)
+            if let createArtifactError { throw createArtifactError }
+            let newID = nextArtifactID ?? UUID().uuidString.lowercased()
+            nextArtifactID = nil
             let art = CatalogArtifact(
-                id: UUID().uuidString.lowercased(),
+                id: newID,
                 ref: "ART-FAKE1",
                 sourceID: sourceID,
                 fileID: fileID,
@@ -1213,7 +1226,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func listTypeSuggestions(projectDir _: String, typeID: String, level: Level) async throws
         -> [CatalogTypeSuggestion]
     {
+        await listTypeSuggestionsHold.wait()
         return try withState {
+            listTypeSuggestionsLevels.append(level)
+            if let listTypeSuggestionsError { throw listTypeSuggestionsError }
             // The engine refuses a level that holds no metadata.
             guard level.holdsMetadata else { throw StoreBoom.boom }
             return suggestionsByLevel[level]?[typeID] ?? []

@@ -19,6 +19,18 @@ enum ArtifactFileFixtures {
             .path
     }
 
+    /// Writes `data` to a file called `named` in a fresh unique folder and returns its URL.
+    static func writeTemp(_ data: Data, named: String) throws -> URL {
+        let dir = uniqueProjectDir()
+        try write(data, projectDir: dir, relPath: named)
+        return URL(fileURLWithPath: dir).appendingPathComponent(named)
+    }
+
+    /// A temp file named scan.png that holds only the first six bytes of a PNG signature: it passes for a PNG by name and type, and decodes to nothing.
+    static func writeStubPNG() throws -> URL {
+        try writeTemp(Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]), named: "scan.png")
+    }
+
     /// An all-red PNG, or with `topHalfRed` a red top half over a blue bottom half.
     static func writePNG(
         projectDir: String,

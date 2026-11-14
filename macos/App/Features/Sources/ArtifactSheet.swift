@@ -14,8 +14,24 @@ private struct ArtifactSheetModifier: ViewModifier {
     @Binding var model: ArtifactSheetModel?
 
     private var copy: PVFormDialogCopy {
+        switch model?.mode {
+        case .create:
+            PVFormDialogCopy(
+                title: L10n.Sources.addArtifactDialogTitle,
+                verbatimSubtitle: model?.subtitle,
+                confirm: L10n.Sources.addArtifactConfirm,
+                cancel: L10n.Sources.cancelAction
+            )
+        case .edit(let art):
+            editCopy(ref: art.ref)
+        case nil:
+            editCopy(ref: "")
+        }
+    }
+
+    private func editCopy(ref: String) -> PVFormDialogCopy {
         PVFormDialogCopy(
-            verbatimTitle: L10n.Sources.editArtifactLabel(ref: model?.artifact.ref ?? ""),
+            verbatimTitle: L10n.Sources.editArtifactLabel(ref: ref),
             verbatimSubtitle: model?.subtitle,
             confirm: L10n.Sources.saveArtifact,
             cancel: L10n.Sources.cancelAction
@@ -40,8 +56,8 @@ private struct ArtifactSheetModifier: ViewModifier {
     }
 }
 
-/// The sheet's body: save error, label and description, the Evidence graphs the
-/// Artifact is in, and its copy details. Each section carries its `.id` for the
+/// The sheet's body: save error, in add mode the file, label and description, the Evidence
+/// graphs the Artifact is in, and its copy details. Each section carries its `.id` for the
 /// scroll target.
 private struct ArtifactSheetForm: View {
     @Bindable var model: ArtifactSheetModel
@@ -60,6 +76,10 @@ private struct ArtifactSheetForm: View {
                     )
                     .accessibilityIdentifier("\(prefix).saveError")
                 }
+                if model.isCreate {
+                    fileField
+                        .disabled(model.isSaving)
+                }
                 fields
                     .disabled(model.isSaving)
             }
@@ -68,6 +88,17 @@ private struct ArtifactSheetForm: View {
                 .id(ArtifactSheetModel.Section.graphs)
             copyDetails
                 .id(ArtifactSheetModel.Section.copyDetails)
+        }
+    }
+
+    private var fileField: some View {
+        PVField(label: L10n.Sources.optionalFile) {
+            IngestFileDropRow(
+                file: $model.file,
+                isBusy: model.isSaving,
+                idleHint: L10n.Sources.ingestDropIdleCreate,
+                rejectAccessibilityIdentifier: "\(prefix).ingestReject"
+            )
         }
     }
 
@@ -139,7 +170,7 @@ private struct ArtifactSheetForm: View {
                             graphs: model.graphs,
                             excluded: $model.excludedGraphIDs,
                             locked: model.lockedGraphs,
-                            isDisabled: model.isSaving,
+                            isDisabled: model.isSaving || model.graphsLocked,
                             accessibilityIdentifierPrefix: "\(prefix).graphs"
                         )
                     }

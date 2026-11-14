@@ -6518,19 +6518,19 @@ enum L10n {
         static let artifactGraphsLabel = LocalizedStringResource(
             "sources.page.artifact.graphs.label",
             defaultValue: "Evidence graphs",
-            comment: "Label of the evidence graph checkbox group in the Add artifact dialog and in the Artifact sheet"
+            comment: "Label of the evidence graph checkbox group in the Artifact sheet"
         )
 
         static let artifactGraphsHint = LocalizedStringResource(
             "sources.page.artifact.graphs.hint",
             defaultValue: "Which evidence graphs can cite this artifact",
-            comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and in the Artifact sheet"
+            comment: "Hint under the evidence graph checkbox group label in the Artifact sheet"
         )
 
         static let artifactGraphsNone = LocalizedStringResource(
             "sources.page.artifact.graphs.none",
             defaultValue: "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked.",
-            comment: "Muted line under the evidence graph group in the Add artifact dialog and in the Artifact sheet when no box is checked"
+            comment: "Muted line under the evidence graph group in the Artifact sheet when no box is checked"
         )
 
         static let artifactNotInGraph = LocalizedStringResource(
@@ -6714,7 +6714,7 @@ enum L10n {
         static let addArtifact = LocalizedStringResource(
             "sources.page.addArtifact",
             defaultValue: "Add artifact",
-            comment: "Button to open the Add Artifact dialog"
+            comment: "Button to open the Artifact sheet in add mode"
         )
 
         static let artifactsEmptyTitle = LocalizedStringResource(
@@ -6735,12 +6735,6 @@ enum L10n {
             comment: "Field label for an Artifact's required list headline"
         )
 
-        static let artifactLabelHint = LocalizedStringResource(
-            "sources.page.artifactLabelHint",
-            defaultValue: "Name it so the row is recognisable in the list",
-            comment: "Hint under Artifact label field"
-        )
-
         static let artifactDescription = LocalizedStringResource(
             "sources.page.artifactDescription",
             defaultValue: "Description",
@@ -6756,7 +6750,7 @@ enum L10n {
         static let artifactLabelRequired = LocalizedStringResource(
             "sources.page.artifactLabelRequired",
             defaultValue: "Give the artifact a label.",
-            comment: "Validation when Add Artifact is submitted without a label"
+            comment: "Validation when the Artifact sheet (add or edit) is saved without a label"
         )
 
         static let artifactMenuEdit = LocalizedStringResource(
@@ -6833,6 +6827,20 @@ enum L10n {
                 defaultValue: "%#@details@ of %2$@",
                 comment: "VoiceOver label of the more button on an Artifact row; %1$lld is how many more, %2$@ is the ART- ref"
             ), count, ref)
+        }
+
+        static let artifactFileNotAttachedTitle = LocalizedStringResource(
+            "sources.page.artifactSheet.fileNotAttachedTitle",
+            defaultValue: "The file wasn\u{2019}t attached",
+            comment: "Callout title on the Artifact sheet when the artifact was made but its file failed to attach for a reason other than the file being refused"
+        )
+
+        static func artifactFileNotAttachedBody(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifactSheet.fileNotAttachedBody",
+                defaultValue: "The artifact was added without it. %@ Choose Add artifact to try the file again.",
+                comment: "Callout message on the Artifact sheet when the artifact was made but its file failed to attach; argument is the engine's error message"
+            ), error)
         }
 
         static let artifactSheetFinishOpenField = LocalizedStringResource(
@@ -6939,25 +6947,19 @@ enum L10n {
         static let addArtifactDialogTitle = LocalizedStringResource(
             "sources.page.addArtifactDialogTitle",
             defaultValue: "Add artifact",
-            comment: "Title of the Add Artifact dialog"
-        )
-
-        static let addArtifactDialogSubtitle = LocalizedStringResource(
-            "sources.page.addArtifactDialogSubtitle",
-            defaultValue: "A concrete representation of this source — scan, photo, or physical-only stand-in.",
-            comment: "Subtitle of the Add Artifact dialog"
+            comment: "Title of the Artifact sheet in add mode"
         )
 
         static let addArtifactConfirm = LocalizedStringResource(
             "sources.page.addArtifactConfirm",
             defaultValue: "Add artifact",
-            comment: "Confirm button on the Add Artifact dialog"
+            comment: "Confirm button on the Artifact sheet in add mode"
         )
 
         static let optionalFile = LocalizedStringResource(
             "sources.page.optionalFile",
             defaultValue: "File",
-            comment: "Label for optional file pick on Add Artifact"
+            comment: "Label for the optional file field in the Artifact sheet in add mode"
         )
 
         static let chooseFile = LocalizedStringResource(
@@ -6993,7 +6995,7 @@ enum L10n {
         static let ingestDropIdleCreate = LocalizedStringResource(
             "sources.page.ingestDropIdleCreate",
             defaultValue: "Drop a file here, or skip — the artifact stays physical-only",
-            comment: "Idle drop hint in Add Artifact when no file is chosen"
+            comment: "Idle drop hint in the Artifact sheet in add mode when no file is chosen"
         )
 
         static let ingestDropIdleAttach = LocalizedStringResource(

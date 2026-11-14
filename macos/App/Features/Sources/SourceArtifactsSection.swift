@@ -8,41 +8,21 @@ enum ArtifactGraphLine: Equatable {
     case graphs(all: [String], shown: [String], more: Int)
 }
 
-/// Artifacts on the Source page: the Artifact sheet, the Add-artifact
-/// dialog, and file attach/open.
+/// Artifacts on the Source page: the Artifact sheet (edit and add), the Add file
+/// dialog, and file open.
 @MainActor
 @Observable
 final class SourceArtifactsSection {
-    struct Draft: Equatable {
-        var label = ""
-        var description = ""
-        /// Absolute path when validation passed; nil when rejected or cleared.
-        var filePath: String?
-        var fileName: String?
-        var reject: L10n.Errors.IngestCallout?
-        /// The Artifact an earlier confirm created before its file was
-        /// refused. A retry saves onto it instead of creating another.
-        var createdID: String?
-        /// The unchecked Evidence graphs, shown whenever the session has the
-        /// Source's graphs. State is the unchecked set, so a graph made while
-        /// the dialog is open starts checked.
-        var excludedGraphIDs: Set<String> = []
-    }
-
     struct AttachDraft: Equatable {
         var artifactID = ""
         var artifactRef = ""
-        var filePath: String?
-        var fileName: String?
-        var reject: L10n.Errors.IngestCallout?
+        var file = IngestFileChoice()
     }
 
-    // MARK: Add dialog
+    // MARK: Artifact sheet
 
-    var isAdding = false
-    var draft = Draft()
-    var draftLabelError: String?
-    private(set) var isSavingDraft = false
+    /// True while `openAdd` reads the type's suggestions, so a second click or drop opens nothing.
+    private(set) var isOpeningAdd = false
 
     // MARK: Add file dialog
 
@@ -61,61 +41,19 @@ final class SourceArtifactsSection {
 
     var items: [CatalogArtifact] { context.workspace?.artifacts ?? [] }
 
-    /// The Source's Evidence graphs when the session has them (the link
-    /// checkboxes show); nil otherwise, so no group shows.
+    /// The Source's Evidence graphs when the session has them (they feed
+    /// `graphLines`); nil otherwise, so no line shows.
     var visibleGraphs: [CatalogEvidenceGraph]? { context.evidenceGraphs }
-
-    /// The graph ids the Add dialog links: the checked ones in list order,
-    /// possibly none. Nil when the group is hidden (the engine links every graph).
-    var draftGraphIDs: [String]? {
-        guard let graphs = visibleGraphs else { return nil }
-        return PVChecklistState.checkedIDs(
-            ids: graphs.map(\.id), excluded: draft.excludedGraphIDs, locked: []
-        )
-    }
-
-    /// The Artifact is not made yet and no box is checked: it will be in no
-    /// graph. After a refused file the Artifact exists and a retry does not
-    /// link, so the boxes no longer matter.
-    var draftInNoGraph: Bool {
-        draft.createdID == nil && draftGraphIDs == []
-    }
-
-    /// The Add dialog's graph boxes are read-only: a retry after a refused
-    /// file saves onto the Artifact already made, which keeps its links.
-    var draftGraphsLocked: Bool {
-        draft.createdID != nil
-    }
-
-    var canSubmitDraft: Bool {
-        !isSavingDraft
-            && !draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && draft.reject == nil
-    }
 
     var canSubmitAttach: Bool {
         !isSavingAttach
-            && attachDraft.filePath != nil
-            && attachDraft.reject == nil
-    }
-
-    var addSheetIsDirty: Bool {
-        let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !label.isEmpty || !description.isEmpty || draft.filePath != nil || draftGraphsChanged
-    }
-
-    /// A box was unchecked since the dialog opened.
-    private var draftGraphsChanged: Bool {
-        guard let graphs = visibleGraphs else { return false }
-        return !PVChecklistState.liveExcluded(
-            ids: graphs.map(\.id), excluded: draft.excludedGraphIDs, locked: []
-        ).isEmpty
+            && attachDraft.file.filePath != nil
+            && attachDraft.file.reject == nil
     }
 
     /// The artifact the file will attach to is a seed. A chosen file is an edit.
     var attachSheetIsDirty: Bool {
-        attachDraft.filePath != nil
+        attachDraft.file.filePath != nil
     }
 
     /// What an Artifact row's graph line shows, by Artifact id. Empty until the session has the
@@ -158,7 +96,7 @@ final class SourceArtifactsSection {
     /// The page's workspace changed: a sheet whose Artifact is no longer on the
     /// page closes with its draft and says so. An Artifact still there keeps its draft.
     func workspaceChanged() {
-        guard let sheet, !items.contains(where: { $0.id == sheet.artifact.id }) else { return }
+        guard let sheet, let id = sheet.artifactID, !items.contains(where: { $0.id == id }) else { return }
         self.sheet = nil
         context.toast = VocabularyToast(
             title: L10n.string(L10n.Sources.toastArtifactGoneTitle),
@@ -175,166 +113,48 @@ final class SourceArtifactsSection {
             context: context,
             mode: .edit(art),
             opensAt: section,
-            onSaved: { [weak self] art, metadata, effects in
-                self?.show(art, metadata: metadata, effects: effects)
-            }
+            onSaved: sheetSaved()
         )
     }
 
-    /// Opens Add Artifact with the dropped file staged. Nothing is stored until confirm.
-    func stagePageDrop(_ urls: [URL]) {
-        guard !urls.isEmpty, sheet == nil, !isSavingDraft else { return }
-        openAdd()
-        applyDroppedURLs(urls, into: .create)
-    }
-
-    // MARK: Add dialog
-
-    func openAdd() {
-        draft = Draft()
-        draftLabelError = nil
-        isAdding = true
-    }
-
-    func cancelAdd() {
-        guard !isSavingDraft else { return }
-        isAdding = false
-        draftLabelError = nil
-    }
-
-    func pickFile() {
-        let path = ProjectFiles.pickFileForIngest(
-            prompt: L10n.string(L10n.Sources.filePickPrompt),
-            message: L10n.string(L10n.Sources.filePickMessage)
-        )
-        guard let path else { return }
-        applyPickedFile(url: URL(fileURLWithPath: path), into: .create)
-    }
-
-    func applyDroppedURLs(_ urls: [URL], into target: FilePickTarget) {
-        if urls.count > 1 {
-            setReject(
-                L10n.Errors.ingestCallout(reason: .multiFile),
-                fileName: urls.first?.lastPathComponent,
-                into: target
-            )
-            return
-        }
-        guard let url = urls.first else { return }
-        applyPickedFile(url: url, into: target)
-    }
-
-    func applyPickedFile(url: URL, into target: FilePickTarget) {
-        let name = url.lastPathComponent
-        switch IngestMediaPolicy.validate(url: url) {
-        case .ok:
-            switch target {
-            case .create:
-                draft.filePath = url.path
-                draft.fileName = name
-                draft.reject = nil
-            case .attach:
-                attachDraft.filePath = url.path
-                attachDraft.fileName = name
-                attachDraft.reject = nil
-            }
-        case .reject(let reason):
-            let size = reason == .tooLarge
-                ? IngestMediaPolicy.formatByteSize(IngestMediaPolicy.byteSize(of: url))
-                : nil
-            setReject(
-                L10n.Errors.ingestCallout(reason: reason, sizeLabel: size),
-                fileName: name,
-                into: target
-            )
-        }
-    }
-
-    func clearFile() {
-        draft.filePath = nil
-        draft.fileName = nil
-        draft.reject = nil
-    }
-
-    func create() async {
-        guard !isSavingDraft else { return }
-        let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if label.isEmpty {
-            draftLabelError = L10n.string(L10n.Sources.artifactLabelRequired)
-            return
-        }
-        guard draft.reject == nil else { return }
-        isSavingDraft = true
-        defer { isSavingDraft = false }
-        let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// Opens the Artifact sheet in add mode, its copy details board starting as the Source type's
+    /// `artifact` suggestions, empty. Answers the sheet, or nil when none opened: one is open or
+    /// opening, or the suggestion read failed (the page banner shows the message).
+    @discardableResult
+    func openAdd() async -> ArtifactSheetModel? {
+        guard sheet == nil, !isOpeningAdd else { return nil }
+        isOpeningAdd = true
+        defer { isOpeningAdd = false }
+        let suggestions: [CatalogMetadataEntry]
         do {
-            var art: CatalogArtifact
-            if let id = draft.createdID, let existing = items.first(where: { $0.id == id }) {
-                art = existing
-                if label != art.label || description != art.description {
-                    let (updated, _, effects) = try await context.store.updateArtifact(
-                        projectDir: context.projectDir,
-                        userID: context.userID,
-                        artifactID: id,
-                        label: label,
-                        description: description,
-                        graphIDs: nil,
-                        metadata: nil
-                    )
-                    art = updated
-                    show(art, effects: effects)
-                }
-            } else {
-                let (created, _, effects) = try await context.store.createArtifact(
-                    projectDir: context.projectDir,
-                    userID: context.userID,
-                    sourceID: context.sourceID,
-                    fileID: "",
-                    label: label,
-                    description: description,
-                    // Nil when the boxes are hidden: the engine links every graph.
-                    graphIDs: draftGraphIDs,
-                    metadata: nil
-                )
-                art = created
-                // Shown before the file is ingested: if the file is refused,
-                // the Artifact Go created still reads on the page, and its
-                // graph links (which the ingest does not report) still apply.
-                show(art, effects: effects)
-                draft.createdID = art.id
-            }
-            if let path = draft.filePath {
-                let ingested = try await context.store.ingestArtifactFile(
-                    projectDir: context.projectDir,
-                    userID: context.userID,
-                    artifactID: art.id,
-                    path: path
-                )
-                art = ingested.artifact
-                show(art, effects: ingested.effects)
-            }
-            isAdding = false
-            draftLabelError = nil
-            draft.reject = nil
-            draft.createdID = nil
-            await context.refreshCoverFromStore()
-            context.toast = VocabularyToast(
-                title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
-                body: art.fileID.isEmpty
-                    ? L10n.Sources.toastArtifactCreatedFileless
-                    : L10n.Sources.toastArtifactCreatedWithFile,
-                tone: .success
-            )
+            suggestions = try await context.unsavedMetadataRows(level: .artifact)
         } catch {
-            if let coded = error as? CoreInvokeError, let code = coded.code,
-               let callout = L10n.Errors.ingestCallout(code: code, params: coded.params)
-            {
-                draft.reject = callout
-                draft.filePath = nil
-                draftLabelError = nil
-            } else if let message = context.fail(error) {
-                draftLabelError = message
-            }
+            context.showFailure(error)
+            return nil
+        }
+        // A sheet opened while the read ran (an edit from a pencil) is not replaced.
+        guard sheet == nil else { return nil }
+        let created = ArtifactSheetModel(
+            context: context,
+            mode: .create(suggestions: suggestions),
+            opensAt: .top,
+            onSaved: sheetSaved()
+        )
+        sheet = created
+        return created
+    }
+
+    /// Opens the Artifact sheet in add mode with the dropped file staged. Nothing is stored until Save.
+    func stagePageDrop(_ urls: [URL]) async {
+        guard !urls.isEmpty, sheet == nil, !isOpeningAdd else { return }
+        guard let sheet = await openAdd() else { return }
+        sheet.file.choose(urls)
+    }
+
+    /// What every Artifact write the sheet makes does with the answer: puts it on the page.
+    private func sheetSaved() -> @MainActor (CatalogArtifact, [CatalogMetadataEntry]?, CatalogWriteEffects) -> Void {
+        { [weak self] art, metadata, effects in
+            self?.show(art, metadata: metadata, effects: effects)
         }
     }
 
@@ -373,11 +193,6 @@ final class SourceArtifactsSection {
 
     // MARK: Files
 
-    enum FilePickTarget {
-        case create
-        case attach
-    }
-
     func openAttach(to id: String) {
         guard let art = items.first(where: { $0.id == id }), art.fileID.isEmpty else { return }
         attachDraft = AttachDraft(artifactID: id, artifactRef: art.ref)
@@ -390,24 +205,9 @@ final class SourceArtifactsSection {
         attachDraft = AttachDraft()
     }
 
-    func pickAttachFile() {
-        let path = ProjectFiles.pickFileForIngest(
-            prompt: L10n.string(L10n.Sources.filePickPrompt),
-            message: L10n.string(L10n.Sources.filePickMessage)
-        )
-        guard let path else { return }
-        applyPickedFile(url: URL(fileURLWithPath: path), into: .attach)
-    }
-
-    func clearAttachFile() {
-        attachDraft.filePath = nil
-        attachDraft.fileName = nil
-        attachDraft.reject = nil
-    }
-
     func confirmAttach() async {
         guard canSubmitAttach else { return }
-        guard let path = attachDraft.filePath else { return }
+        guard let path = attachDraft.file.filePath else { return }
         let id = attachDraft.artifactID
         isSavingAttach = true
         defer { isSavingAttach = false }
@@ -429,12 +229,8 @@ final class SourceArtifactsSection {
                 tone: .success
             )
         } catch {
-            if let coded = error as? CoreInvokeError, let code = coded.code,
-               let callout = L10n.Errors.ingestCallout(code: code, params: coded.params)
-            {
-                attachDraft.reject = callout
-                attachDraft.filePath = nil
-            } else if context.showFailure(error) {
+            // A refused file keeps the dialog open with the refusal under the row.
+            if !attachDraft.file.refuse(ifIngestRefusal: error), context.showFailure(error) {
                 isAttaching = false
             }
         }
@@ -457,23 +253,6 @@ final class SourceArtifactsSection {
             filename: name,
             missing: L10n.string(L10n.Sources.fileOpenMissing)
         ))
-    }
-
-    private func setReject(
-        _ callout: L10n.Errors.IngestCallout,
-        fileName: String?,
-        into target: FilePickTarget
-    ) {
-        switch target {
-        case .create:
-            draft.filePath = nil
-            draft.fileName = fileName
-            draft.reject = callout
-        case .attach:
-            attachDraft.filePath = nil
-            attachDraft.fileName = fileName
-            attachDraft.reject = callout
-        }
     }
 
     /// Puts a written Artifact on the page, appended when new: the one apply

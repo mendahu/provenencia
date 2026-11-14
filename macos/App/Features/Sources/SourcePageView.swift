@@ -123,28 +123,12 @@ private struct SourcePageContent: View {
         }
         .dropDestination(for: URL.self, action: { urls, _ in
             guard model.acceptsArtifactPageDrop, !urls.isEmpty else { return false }
-            model.artifacts.stagePageDrop(urls)
+            Task { await model.artifacts.stagePageDrop(urls) }
             return true
         }, isTargeted: { targeted in
             pageFileDrag = targeted
         })
         .vocabularyToastOverlay($model.toast, identifier: "sources.page.toast")
-        .pvFormDialog(
-            isPresented: addArtifactPresented,
-            copy: PVFormDialogCopy(
-                title: L10n.Sources.addArtifactDialogTitle,
-                subtitle: L10n.Sources.addArtifactDialogSubtitle,
-                confirm: L10n.Sources.addArtifactConfirm,
-                cancel: L10n.Sources.cancelAction
-            ),
-            isRunning: model.artifacts.isSavingDraft,
-            isDirty: model.artifacts.addSheetIsDirty,
-            confirmDisabled: !model.artifacts.canSubmitDraft,
-            accessibilityIdentifierPrefix: "sources.page.addArtifact",
-            onConfirm: { Task { await model.artifacts.create() } }
-        ) {
-            SourcePageArtifactsView(model: model).addForm
-        }
         .pvFormDialog(
             isPresented: addFilePresented,
             copy: PVFormDialogCopy(
@@ -254,19 +238,6 @@ private struct SourcePageContent: View {
         .padding(.bottom, PVSpacing.space12)
         .allowsHitTesting(false)
         .accessibilityIdentifier("sources.page.dropHint")
-    }
-
-    private var addArtifactPresented: Binding<Bool> {
-        Binding(
-            get: { model.artifacts.isAdding },
-            set: { presented in
-                if presented {
-                    model.artifacts.openAdd()
-                } else {
-                    model.artifacts.cancelAdd()
-                }
-            }
-        )
     }
 
     private var addFilePresented: Binding<Bool> {

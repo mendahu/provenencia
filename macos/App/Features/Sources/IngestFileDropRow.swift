@@ -1,14 +1,34 @@
 import SwiftUI
 
-/// Choose-file / drop row for Add Artifact and Add File modals.
+/// Choose-file / drop row for the Artifact sheet's File field and the Add file dialog.
+/// Bound to one `IngestFileChoice`, it draws the refused-file Callout under its caption.
 struct IngestFileDropRow: View {
     let fileName: String?
-    let isRejected: Bool
+    let reject: L10n.Errors.IngestCallout?
+    let rejectAccessibilityIdentifier: String
     let isBusy: Bool
     let idleHint: LocalizedStringResource
     let onChoose: () -> Void
     let onClear: () -> Void
     let onDropURLs: ([URL]) -> Void
+
+    init(
+        file: Binding<IngestFileChoice>,
+        isBusy: Bool,
+        idleHint: LocalizedStringResource,
+        rejectAccessibilityIdentifier: String
+    ) {
+        fileName = file.wrappedValue.fileName
+        reject = file.wrappedValue.reject
+        self.rejectAccessibilityIdentifier = rejectAccessibilityIdentifier
+        self.isBusy = isBusy
+        self.idleHint = idleHint
+        onChoose = { file.wrappedValue.pick() }
+        onClear = { file.wrappedValue.clear() }
+        onDropURLs = { file.wrappedValue.choose($0) }
+    }
+
+    private var isRejected: Bool { reject != nil }
 
     @State private var isTargeted = false
 
@@ -65,6 +85,11 @@ struct IngestFileDropRow: View {
             Text(L10n.Sources.ingestAllowedTypesCaption)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
+
+            if let reject {
+                PVCallout(tone: .danger, title: reject.title, message: reject.message, announces: true)
+                    .accessibilityIdentifier(rejectAccessibilityIdentifier)
+            }
         }
     }
 

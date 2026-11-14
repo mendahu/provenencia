@@ -4,7 +4,7 @@ import SwiftUI
 /// kit checkbox per graph with its name and ref. State is the unchecked set
 /// (`excluded`), so a graph made later starts checked. A `locked` graph (its
 /// id mapped to its hint) is checked, shows the lock mark and cannot be
-/// cleared. Used by the Add artifact dialog and the Artifact sheet.
+/// cleared. Used by the Artifact sheet, in edit and add mode.
 /// `accessibilityIdentifierPrefix` roots the ids: `<prefix>`, `.<graph id>`.
 struct SourceArtifactGraphLinks: View {
     let graphs: [CatalogEvidenceGraph]

@@ -1,6 +1,6 @@
 # S15-10 — Adding an Artifact asks for its copy details
 
-**Status:** Planned
+**Status:** Landed in [#829](https://github.com/mendahu/provenencia/pull/829) (2026-11-14)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D14](../design/S15-D14-source-page-artifacts.md) SA-7 (and frame 13's empty board, SA-13), board agreed 2026-11-13
@@ -346,3 +346,11 @@ None.
 
 **Title:** S15-10 — Adding an Artifact asks for its copy details
 **Body:** objective in one sentence; what shipped against US-1 – US-4; AC evidence (test names); deviations from the plan; the manual check, including the SQL step; `Plan: docs/deployment-plan/spike-15/prs/S15-10-artifact-sheet-add-mode.md`.
+
+## Landed
+
+- `SourcePageModel.apply` calls `artifacts.workspaceChanged()` when the page's shown Artifacts (`context.workspace` before the new one) differ from the new workspace, in place of comparing the last applied workspace's. An Artifact the sheet made reaches the page through `show` and not the applied workspace, so without it another window deleting the made Artifact never closed the sheet (AC-4.4, T-11).
+- `IngestFileDropRow` keeps its fields and a second `init(file:…)`; the old six-parameter init and `isRejected` as a stored property are gone, `isRejected` is computed from `reject`.
+- The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
+- Review fix F-2 (same-pass cleanup, MNT-1) supersedes T-1's "its own private temp-file helper": `IngestFileChoiceTests`, `IngestMediaPolicyTests` and `SourcePageModelTests` write their temp files through `ArtifactFileFixtures.writeTemp(_:named:)` and `writeStubPNG()`.
+- Review fix F-6 (user-requested, UX-2) narrows D-8's "(e) save-error" arm: when the file's ingest fails after the Artifact exists with something other than an `ingest.*` refusal, `ArtifactSheetModel.save()` shows the file callout "The file wasn’t attached" (`IngestFileChoice.failAfterCreate(message:)`) instead of the save-error copy, keeps the file path so Save re-ingests it, and sets no `saveError`. A failure of the retry's `updateArtifact` keeps the save-error copy. `IngestFileChoice.isRefused` (a reject with no path) now gates Save in place of `reject != nil`. Two strings were added.
