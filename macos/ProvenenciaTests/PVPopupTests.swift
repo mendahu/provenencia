@@ -113,6 +113,21 @@ struct PVPopupDecisionTests {
         #expect(decision == row.decision)
     }
 
+    @Test func rightClicksPassWhenIgnored() {
+        let options = PVPopupOptions(ignoresRightClicks: true)
+        let close = PVPopupDecision.close(consumesEvent: false)
+        func decide(_ input: PVPopupInput, pending: Bool = false) -> PVPopupDecision {
+            PVPopupDecision.decide(input, openingPressPending: pending, options: options)
+        }
+        #expect(decide(.mouseDown(.right, inside: false)) == .pass)
+        #expect(decide(.mouseDown(.right, inside: true)) == .pass)
+        #expect(decide(.mouseUp(.right, inside: false)) == .pass)
+        #expect(decide(.mouseUp(.right, inside: false), pending: true) == .endOpeningPress)
+        #expect(decide(.mouseDown(.other, inside: false)) == close)
+        #expect(decide(.mouseUp(.left, inside: false)) == close)
+        #expect(decide(.key(.escape)) == .close(consumesEvent: true))
+    }
+
     @Test func aClickIsWhereItsPressBegan() {
         let options = PVPopupOptions()
         let release = PVPopupInput.mouseUp(.left, inside: false)

@@ -13,7 +13,7 @@ import SwiftUI
 //
 // Right-click: `.pvRightClickMenu` adds the menu's state, the right-click
 // trigger and one VoiceOver action per enabled item on top of `.pvActionMenu`.
-// `PVSelect` uses `.pvContextMenu` directly: its keys stay in its field.
+// `PVSelect` and the toolbar's history menu use `.pvContextMenu` directly: `PVSelect`'s keys stay in its field, and the history menu's rows are not action items.
 
 /// One row of an action menu.
 struct PVActionMenuItem {

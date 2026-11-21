@@ -1,36 +1,4 @@
-import AppKit
 import SwiftUI
-
-/// Shared open/anchor state for the Back/Forward jump menu. Owned by
-/// `WorkspaceContent` so the panel overlays the full content column (not the
-/// clipped 52pt toolbar row) and can receive clicks over the page below.
-@Observable
-final class HistoryJumpMenuModel {
-    var side: HistoryJumpMenuSide?
-    var anchors: [HistoryJumpMenuSide: CGRect] = [:]
-
-    func present(_ side: HistoryJumpMenuSide) {
-        self.side = side
-    }
-
-    func dismiss() {
-        side = nil
-    }
-
-    var isPresented: Bool { side != nil }
-
-    /// The panel's preferred width.
-    static let panelWidth: CGFloat = 600
-
-    /// The width drawn: the preferred width, narrowed so the panel's right edge
-    /// stays `PVSpacing.space6` inside the content column. An unmeasured column
-    /// (width 0) keeps the preferred width.
-    static func fittedPanelWidth(contentWidth: CGFloat, anchorMinX: CGFloat) -> CGFloat {
-        PVPopupListPlacement.fittedWidth(
-            preferred: panelWidth, hangsFrom: anchorMinX, alignment: .leading, columnWidth: contentWidth
-        )
-    }
-}
 
 enum HistoryJumpMenuSide: Hashable {
     case back, forward
@@ -42,13 +10,14 @@ struct WorkspaceToolbar: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(OmnibarFocusCoordinator.self) private var omnibarFocus
     @Environment(WorkspaceSession.self) private var session
-    var jumpMenu: HistoryJumpMenuModel
     @Bindable var omnibarResults: OmnibarResultsModel
     let projectDir: String
     let store: any GenealogyStore
-    /// The content column's width, for the omnibar list's width rule.
+    /// The content column's width, for the omnibar list's and the history menu's width rules.
     let contentWidth: CGFloat
     @FocusState private var omnibarFocused: Bool
+    /// Which side's history menu is open, if either.
+    @State private var jumpMenuSide: HistoryJumpMenuSide?
 
     /// Omnibar width at a comfortable window size, and the floor it
     /// compresses to before the breadcrumbs give up any more room.
@@ -71,7 +40,6 @@ struct WorkspaceToolbar: View {
         }
         .padding(.horizontal, PVSpacing.gutterPage)
         .frame(maxWidth: .infinity)
-        .onPreferenceChange(HistoryJumpMenuAnchorKey.self) { jumpMenu.anchors = $0 }
         // Drag surface sits *behind* the row: an overlay would swallow
         // Back/Forward, breadcrumb, and omnibar hits, but without one only
         // the system title-bar strip at the very top of the 52pt row drags.
@@ -80,7 +48,7 @@ struct WorkspaceToolbar: View {
             omnibarFocused = true
         }
         .onChange(of: navigation.currentLocation) { _, _ in
-            jumpMenu.dismiss()
+            jumpMenuSide = nil
         }
         // Losing focus (Tab, a click that takes focus) closes the results and
         // keeps the query, as `PVComboBox` does; a click on a hit row does not
@@ -131,7 +99,18 @@ struct WorkspaceToolbar: View {
         step: @escaping () -> Void,
         items: [(index: Int, location: WorkspaceLocation)]
     ) -> some View {
-        HistoryNavControl(
+        let menuPresented = Binding(
+            get: { jumpMenuSide == side },
+            set: { presented in
+                if presented {
+                    omnibarResults.closePanel()
+                    jumpMenuSide = side
+                } else if jumpMenuSide == side {
+                    jumpMenuSide = nil
+                }
+            }
+        )
+        return HistoryNavControl(
             enabled: enabled,
             symbol: symbol,
             shortcut: shortcut,
@@ -139,33 +118,14 @@ struct WorkspaceToolbar: View {
             accessibilityIdentifier: side == .back
                 ? "workspace.toolbar.back"
                 : "workspace.toolbar.forward",
-            menuPresented: Binding(
-                get: { jumpMenu.side == side },
-                set: { presented in
-                    if presented {
-                        omnibarResults.closePanel()
-                        jumpMenu.present(side)
-                    } else if jumpMenu.side == side {
-                        jumpMenu.dismiss()
-                    }
-                }
-            ),
+            menuPresented: menuPresented,
             hasJumpItems: !items.isEmpty,
             onStep: {
-                jumpMenu.dismiss()
+                jumpMenuSide = nil
                 step()
             }
         )
-        .background {
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: HistoryJumpMenuAnchorKey.self,
-                    value: [
-                        side: geo.frame(in: .named(WorkspaceContent.coordinateSpace)),
-                    ]
-                )
-            }
-        }
+        .modifier(HistoryJumpMenuHost(items: items, presented: menuPresented, contentWidth: contentWidth))
     }
 
     private var breadcrumbs: some View {
@@ -298,64 +258,78 @@ struct WorkspaceToolbar: View {
     }
 }
 
-// MARK: - Jump menu host (content-column overlay)
+// MARK: - Jump menu host
 
-/// Renders and dismisses the jump menu over the workspace content column.
-struct HistoryJumpMenuHost: View {
+/// Presents one history button's jump menu through `.pvContextMenu`, in the
+/// kit menu window under the button. Right-clicks pass: they switch between
+/// Back and Forward.
+private struct HistoryJumpMenuHost: ViewModifier {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(WorkspaceSession.self) private var session
-    var jumpMenu: HistoryJumpMenuModel
+    let items: [(index: Int, location: WorkspaceLocation)]
+    let presented: Binding<Bool>
     let contentWidth: CGFloat
-    @State private var dismissMonitor: Any?
-    @State private var activeIndex = -1
+    /// The button's frame in the content column.
+    @State private var anchor: CGRect?
+    @State private var keyboard = PVContextMenuKeyboard.inactive
 
-    var body: some View {
-        Group {
-            if let side = jumpMenu.side,
-               let anchor = jumpMenu.anchors[side] {
-                let items = Self.rows(for: side, navigation: navigation, names: LocationNames(session: session))
-                if !items.isEmpty {
-                    HistoryJumpMenuPanel(
-                        items: items,
-                        activeIndex: activeIndex,
-                        width: HistoryJumpMenuModel.fittedPanelWidth(
-                            contentWidth: contentWidth,
-                            anchorMinX: anchor.minX
-                        ),
-                        onSelect: { index in
-                            jumpMenu.dismiss()
-                            navigation.go(toIndex: index)
-                        }
-                    )
-                    .offset(x: anchor.minX, y: anchor.maxY + 4)
+    /// The panel's preferred width.
+    static let panelWidth: CGFloat = 600
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .named(WorkspaceContent.coordinateSpace))
+            } action: {
+                anchor = $0
+            }
+            .pvContextMenu(
+                state,
+                keyboard: $keyboard,
+                options: PVPopupOptions(ignoresRightClicks: true)
+            ) {
+                menu
+            }
+            .onChange(of: presented.wrappedValue) { _, open in
+                if open {
+                    keyboard = PVContextMenuKeyboard(itemCount: items.count, activeIndex: -1)
                 }
             }
-        }
-        .onChange(of: jumpMenu.side) { _, open in
-            if open != nil {
-                activeIndex = -1
-                DispatchQueue.main.async { armDismissMonitor() }
-            } else {
-                removeDismissMonitor()
-            }
-        }
-        .onDisappear {
-            jumpMenu.dismiss()
-            removeDismissMonitor()
+    }
+
+    private var state: Binding<PVContextMenuState> {
+        Binding(
+            get: {
+                PVContextMenuState(
+                    isPresented: presented.wrappedValue,
+                    origin: CGPoint(x: 0, y: (anchor?.height ?? 0) + PVSpacing.space2)
+                )
+            },
+            set: { presented.wrappedValue = $0.isPresented }
+        )
+    }
+
+    /// Nothing while closed: the kit presenter builds its content on every render.
+    @ViewBuilder
+    private var menu: some View {
+        if presented.wrappedValue, let anchor {
+            HistoryJumpMenuPanel(
+                items: Self.rows(items, names: LocationNames(session: session)),
+                width: PVPopupListPlacement.fittedWidth(
+                    preferred: Self.panelWidth, hangsFrom: anchor.minX,
+                    alignment: .leading, columnWidth: contentWidth
+                ),
+                onSelect: { navigation.go(toIndex: $0) }
+            )
         }
     }
 
     @MainActor
-    private static func rows(
-        for side: HistoryJumpMenuSide,
-        navigation: WorkspaceNavigation,
+    static func rows(
+        _ items: [(index: Int, location: WorkspaceLocation)],
         names: LocationNames
     ) -> [HistoryJumpRow] {
-        let raw: [(index: Int, location: WorkspaceLocation)] = switch side {
-        case .back: navigation.backJumpItems()
-        case .forward: navigation.forwardJumpItems()
-        }
-        return raw.map { row in
+        items.map { row in
             let labels = WorkspaceLocationLabels.labels(for: row.location, names: names)
             let leaf = labels.leaf.flatMap { leaf in
                 labels.section.map { L10n.Conclusions.pageSectionLeaf(leaf, $0) } ?? leaf
@@ -363,95 +337,9 @@ struct HistoryJumpMenuHost: View {
             return HistoryJumpRow(index: row.index, location: row.location, leafLabel: leaf)
         }
     }
-
-    private func armDismissMonitor() {
-        removeDismissMonitor()
-        // Wait out the opening gesture (long-press release / right-click up)
-        // before arming, or the same mouse-up closes the menu immediately.
-        if NSEvent.pressedMouseButtons != 0 {
-            dismissMonitor = NSEvent.addLocalMonitorForEvents(
-                matching: [.leftMouseUp, .rightMouseUp, .otherMouseUp]
-            ) { event in
-                DispatchQueue.main.async { armDismissMonitor() }
-                return event
-            }
-            return
-        }
-
-        dismissMonitor = NSEvent.addLocalMonitorForEvents(
-            // Right-click is owned by the Back/Forward catchers (present /
-            // switch). Listening for rightMouseDown here raced that present and
-            // closed the menu when switching buttons.
-            matching: [.leftMouseUp, .keyDown]
-        ) { event in
-            if event.type == .keyDown {
-                return handleKeyDown(event)
-            }
-            // Dismiss on mouse*Up* (not Down): Button actions fire on mouseUp,
-            // and tearing the panel down on mouseDown prevents the item from
-            // running.
-            DispatchQueue.main.async { jumpMenu.dismiss() }
-            return event
-        }
-    }
-
-    private func handleKeyDown(_ event: NSEvent) -> NSEvent? {
-        if event.keyCode == 53 { // Escape
-            DispatchQueue.main.async { jumpMenu.dismiss() }
-            return nil
-        }
-        guard let side = jumpMenu.side else { return event }
-        let items = Self.rows(for: side, navigation: navigation, names: LocationNames(session: session))
-        guard !items.isEmpty else { return event }
-
-        switch event.keyCode {
-        case 125: // Down
-            DispatchQueue.main.async {
-                activeIndex = PVFloatingMenuSelection.moveIndex(
-                    from: activeIndex, delta: 1, count: items.count
-                )
-            }
-            return nil
-        case 126: // Up
-            DispatchQueue.main.async {
-                activeIndex = PVFloatingMenuSelection.moveIndex(
-                    from: activeIndex, delta: -1, count: items.count
-                )
-            }
-            return nil
-        case 36, 76: // Return / keypad Enter
-            let highlight = activeIndex
-            DispatchQueue.main.async {
-                guard items.indices.contains(highlight) else { return }
-                jumpMenu.dismiss()
-                navigation.go(toIndex: items[highlight].index)
-            }
-            return nil
-        default:
-            return event
-        }
-    }
-
-    private func removeDismissMonitor() {
-        if let dismissMonitor {
-            NSEvent.removeMonitor(dismissMonitor)
-            self.dismissMonitor = nil
-        }
-    }
 }
 
 // MARK: - Jump menu rows
-
-private struct HistoryJumpMenuAnchorKey: PreferenceKey {
-    static var defaultValue: [HistoryJumpMenuSide: CGRect] { [:] }
-
-    static func reduce(
-        value: inout [HistoryJumpMenuSide: CGRect],
-        nextValue: () -> [HistoryJumpMenuSide: CGRect]
-    ) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-    }
-}
 
 private struct HistoryJumpRow: Identifiable {
     let index: Int
@@ -551,7 +439,6 @@ private struct HistoryNavControl: View {
 
 private struct HistoryJumpMenuPanel: View {
     let items: [HistoryJumpRow]
-    var activeIndex: Int
     let width: CGFloat
     let onSelect: (Int) -> Void
 
@@ -561,57 +448,57 @@ private struct HistoryJumpMenuPanel: View {
             accessibilityIdentifier: "workspace.toolbar.jumpMenu"
         ) {
             ForEach(Array(items.enumerated()), id: \.element.id) { offset, item in
-                Button {
-                    onSelect(item.index)
-                } label: {
-                    HStack(alignment: .center, spacing: PVSpacing.space5) {
-                        PVGlyphView(item.glyph, size: 15)
-                            .foregroundStyle(PVColor.textSecondary)
-                            .frame(width: 15)
-                        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                            Text(item.rootLabel)
-                                .font(PVFont.body(size: PVTypeScale.caption))
-                                .foregroundStyle(PVColor.textMuted)
-                                .lineLimit(1)
-                                .layoutPriority(0)
-                            if let leafLabel = item.leafLabel {
-                                Text(verbatim: "›")
-                                    .font(PVFont.body(size: PVTypeScale.caption))
-                                    .foregroundStyle(PVColor.textFaint)
-                                Text(verbatim: leafLabel)
-                                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                                    .foregroundStyle(PVColor.textPrimary)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .layoutPriority(1)
-                                    .help(Text(verbatim: leafLabel))
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        if !item.refLabel.isEmpty {
-                            Text(item.refLabel)
-                                .font(PVFont.mono(size: PVTypeScale.micro))
-                                .foregroundStyle(PVColor.textFaint)
-                                .fixedSize(horizontal: true, vertical: false)
-                        }
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
+                PVContextMenuItem(index: offset, action: { onSelect(item.index) }) {
+                    HistoryJumpRowLabel(item: item)
                 }
-                .buttonStyle(PVMenuRowButtonStyle(
-                    isSelected: offset == activeIndex,
-                    cornerRadius: PVRadius.xs
-                ))
             }
         }
         .accessibilityLabel(Text(L10n.Workspace.jumpMenuAccessibilityLabel))
     }
 }
 
+/// One history row's content: glyph, section root, `›`, leaf and ref. The kit
+/// menu item around it supplies padding, highlight and dismiss.
+private struct HistoryJumpRowLabel: View {
+    let item: HistoryJumpRow
+
+    var body: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
+            PVGlyphView(item.glyph, size: 15)
+                .foregroundStyle(PVColor.textSecondary)
+                .frame(width: 15)
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                Text(item.rootLabel)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                    .layoutPriority(0)
+                if let leafLabel = item.leafLabel {
+                    Text(verbatim: "›")
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textFaint)
+                    Text(verbatim: leafLabel)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .layoutPriority(1)
+                        .help(Text(verbatim: leafLabel))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !item.refLabel.isEmpty {
+                Text(item.refLabel)
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textFaint)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+        }
+    }
+}
+
 #Preview {
     WorkspaceToolbar(
-        jumpMenu: HistoryJumpMenuModel(),
         omnibarResults: OmnibarResultsModel(),
         projectDir: "/tmp/preview.provenencia",
         store: FakeStore(),

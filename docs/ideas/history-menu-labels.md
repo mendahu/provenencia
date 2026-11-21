@@ -1,6 +1,6 @@
 # History menu labels
 
-**Status:** idea only — not roadmapped. Moved out of `shared-list-helpers.md` on 2026-11-17 (that file is retired; its other items went to Spike 16 Batch 6) so it can be thought through on its own; more changes to the menu are to be added here. Spike 16's S16-53 moves the menu onto a kit menu row and `.pvPopup` with no visible change and leaves this out.
+**Status:** idea only — not roadmapped. Moved out of `shared-list-helpers.md` on 2026-11-17 (that file is retired; its other items went to Spike 16 Batch 6) so it can be thought through on its own; more changes to the menu are to be added here. Spike 16's S16-53 moved the menu onto the kit menu item (with a feature-private label) and `.pvPopup`, and left this out.
 
 ## Where it started
 
@@ -10,12 +10,12 @@ Dogfood 2026-10-29:
 
 ## What is already fixed
 
-- **Width.** S14-35 widened the panel to 600 pt (`HistoryJumpMenuModel.panelWidth`), narrowed only to stay inside the content column (`fittedPanelWidth`).
-- **The open section is named.** A record page's row reads "Ada Robins · Timeline": the row builder joins the leaf from `WorkspaceLocationLabels.labels(for:names:)` to its section with `L10n.Conclusions.pageSectionLeaf` (`WorkspaceToolbar.swift`, `rows(for:navigation:names:)`).
+- **Width.** S14-35 widened the panel to 600 pt (`HistoryJumpMenuHost.panelWidth`), narrowed only to stay inside the content column (`PVPopupListPlacement.fittedWidth`).
+- **The open section is named.** A record page's row reads "Ada Robins · Timeline": the row builder joins the leaf from `WorkspaceLocationLabels.labels(for:names:)` to its section with `L10n.Conclusions.pageSectionLeaf` (`WorkspaceToolbar.swift`, `HistoryJumpMenuHost.rows(_:names:)`).
 
 ## What is still wrong (checked in the code, 2026-11-17)
 
-- **The end of a label is what gets cut.** The leaf and its " · Timeline" suffix are one `Text` with `.truncationMode(.tail)` in `HistoryJumpMenuPanel`. A long name loses its section first, so walking one long-named person's sections shows rows that read the same.
+- **The end of a label is what gets cut.** The leaf and its " · Timeline" suffix are one `Text` with `.truncationMode(.tail)` in `HistoryJumpRowLabel`. A long name loses its section first, so walking one long-named person's sections shows rows that read the same.
 - **Graph rows do not name their Source.** For an Evidence graph, its composer or its Promote page, `labels(for:names:)` returns the graph's name as the leaf and the surface as the section. The root is "Sources", and the Source title is never in the row. Two Sources whose graphs are both "Default" give two rows reading "Sources › Default". The toolbar's breadcrumb (`WorkspaceToolbar.breadcrumbItems`) has the Source title; the menu does not use it.
 - **The ref is not a tie-breaker between sections.** It is the location's carried ref, so a person's sections share one.
 

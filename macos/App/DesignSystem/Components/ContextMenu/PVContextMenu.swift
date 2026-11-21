@@ -344,19 +344,19 @@ extension View {
     /// trigger view. Action menus use `.pvActionMenu` (`.pvRightClickMenu` for a
     /// right-click), which does this.
     ///
-    /// `keyboard` feeds the rows' highlight and, unless `keysStayInField`, the
-    /// menu's keys (↑/↓, Home/End, type-select, Return). A `PVSelect` keeps its
-    /// keys in its focused field, so it passes `keysStayInField`.
+    /// `keyboard` feeds the rows' highlight and, unless `options.keysStayInField`,
+    /// the menu's keys (↑/↓, Home/End, type-select, Return). A `PVSelect` keeps
+    /// its keys in its focused field, so it passes `keysStayInField`.
     func pvContextMenu<Content: View>(
         _ state: Binding<PVContextMenuState>,
         keyboard: Binding<PVContextMenuKeyboard>? = nil,
-        keysStayInField: Bool = false,
+        options: PVPopupOptions = PVPopupOptions(),
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         modifier(PVContextMenuPresenter(
             state: state,
             keyboard: keyboard,
-            keysStayInField: keysStayInField,
+            options: options,
             content: content
         ))
     }
@@ -413,7 +413,7 @@ extension EnvironmentValues {
 private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
     @Binding var state: PVContextMenuState
     var keyboard: Binding<PVContextMenuKeyboard>?
-    var keysStayInField = false
+    var options = PVPopupOptions()
     @ViewBuilder var content: () -> MenuContent
     @State private var actionRegistry = PVContextMenuActionRegistry()
 
@@ -428,7 +428,7 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
             )
             .pvPopup(
                 isPresented: $state.isPresented,
-                options: PVPopupOptions(keysStayInField: keysStayInField),
+                options: options,
                 onKey: handleKey
             )
             .onChange(of: state.isPresented) { _, open in

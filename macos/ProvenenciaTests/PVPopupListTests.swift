@@ -223,18 +223,28 @@ struct PVPopupListPlacementTests {
         #expect(frame.maxY == 496)
     }
 
-    @Test func fittedWidthStaysInTheColumn() {
-        func trailing(_ edge: CGFloat, _ column: CGFloat, _ minimum: CGFloat) -> CGFloat {
-            PVPopupListPlacement.fittedWidth(
-                preferred: 640, hangsFrom: edge, alignment: .trailing, columnWidth: column, minimum: minimum)
-        }
-        #expect(trailing(1070, 0, 420) == 640)
-        #expect(trailing(1070, 1102, 420) == 640)
-        #expect(trailing(404, 436, 200) == 388)
-        #expect(trailing(210, 436, 200) == 200)
+    @Test(arguments: [
+        (CGFloat(640), CGFloat(1070), HorizontalEdge.trailing, CGFloat(0), CGFloat(420), CGFloat(640)),
+        (CGFloat(640), CGFloat(1070), HorizontalEdge.trailing, CGFloat(1102), CGFloat(420), CGFloat(640)),
+        (CGFloat(640), CGFloat(404), HorizontalEdge.trailing, CGFloat(436), CGFloat(200), CGFloat(388)),
+        (CGFloat(640), CGFloat(210), HorizontalEdge.trailing, CGFloat(436), CGFloat(200), CGFloat(200)),
+        (CGFloat(600), CGFloat(60), HorizontalEdge.leading, CGFloat(436), CGFloat(0), CGFloat(360)),
+        (CGFloat(600), CGFloat(12), HorizontalEdge.leading, CGFloat(1102), CGFloat(0), CGFloat(600)),
+        (CGFloat(600), CGFloat(12), HorizontalEdge.leading, CGFloat(436), CGFloat(0), CGFloat(408)),
+        (CGFloat(600), CGFloat(12), HorizontalEdge.leading, CGFloat(0), CGFloat(0), CGFloat(600)),
+        (CGFloat(600), CGFloat(12), HorizontalEdge.leading, CGFloat(628), CGFloat(0), CGFloat(600)),
+        (CGFloat(600), CGFloat(12), HorizontalEdge.leading, CGFloat(627), CGFloat(0), CGFloat(599)),
+        (CGFloat(600), CGFloat(32), HorizontalEdge.leading, CGFloat(436), CGFloat(0), CGFloat(388)),
+        (CGFloat(600), CGFloat(82), HorizontalEdge.leading, CGFloat(436), CGFloat(0), CGFloat(338)),
+    ])
+    func fittedWidthStaysInTheColumn(
+        preferred: CGFloat, edge: CGFloat, alignment: HorizontalEdge,
+        column: CGFloat, minimum: CGFloat, expected: CGFloat
+    ) {
         #expect(
             PVPopupListPlacement.fittedWidth(
-                preferred: 600, hangsFrom: 60, alignment: .leading, columnWidth: 436) == 360)
+                preferred: preferred, hangsFrom: edge, alignment: alignment,
+                columnWidth: column, minimum: minimum) == expected)
     }
 }
 

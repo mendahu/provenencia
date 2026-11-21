@@ -1,6 +1,6 @@
 # S16-53 — The history menu uses the kit presenter and a kit menu row
 
-**Status:** Planned
+**Status:** Landed in [#937](https://github.com/Jake-Robins-Studios/provenencia/pull/937) (2026-11-21)
 **Spike / slice:** Spike 16 · Slice 6d — Popups
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no brief: the rows keep their content and order. The menu takes the kit menu's padding, corner and window, as every action menu draws. The user accepted that look without a brief, 2026-11-21)
@@ -301,3 +301,9 @@ None.
 
 **Title:** S16-53 — The history menu uses the kit presenter and a kit menu row
 **Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-16/prs/S16-53-history-menu-kit-row.md`.
+
+## Landed
+
+- STEP-3 check `rg "activeIndex" macos/App/Features/Workspace` finds the one `activeIndex: -1` in the keyboard seed that D-6 requires; no `activeIndex` state remains.
+- The in-app passes (STEP-3 macOS check, AC-1.1, AC-1.7, AC-2.1 to AC-2.7 and section 10) were not run by the implementer; they are owed before merge.
+- This plan still names the deleted `HistoryJumpMenuModelTests.swift` in STEP-4 and Deletes; `check-plan-docs.py` accepts it.

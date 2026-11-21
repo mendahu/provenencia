@@ -1,6 +1,6 @@
 import Foundation
 
-/// Clamped ↑/↓ movement for overlay floating menus (context, select, history).
+/// Clamped ↑/↓ movement for overlay floating menus (context menus, select).
 /// No wrap — matches Finder lists and the omnibar.
 enum PVFloatingMenuSelection {
     /// - Parameters:
