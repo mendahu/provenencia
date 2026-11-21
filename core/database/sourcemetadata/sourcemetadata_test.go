@@ -3130,7 +3130,7 @@ var seedExpectations = map[string]seedExpect{
 	"book":                 {needed: []string{"author", "author_sort"}, unsug: []string{"short_title:used", "author_sort:needed"}, date: "used", page: "used"},
 	"broadcast":            {needed: []string{"author", "published_in", "author_sort"}, unsug: []string{"short_title:used", "author_sort:needed"}, date: "used", page: "used"},
 	"case_file":            {needed: []string{"jurisdiction"}, unsug: []string{"short_title:used", "collection:used"}, omitted: []string{"item"}},
-	"cemetery_marker":      {needed: []string{"creator", "jurisdiction"}, omitted: []string{"item"}},
+	"cemetery_marker":      {needed: []string{"creator", "cemetery_location"}, omitted: []string{"item"}},
 	"census":               {needed: []string{"jurisdiction"}, omitted: []string{"dwelling_number", "family_number", "folio", "item", "line_number", "schedule_number"}, date: "needed", page: "used"},
 	"church_register":      {needed: []string{"creator"}, unsug: []string{"short_title:used", "coverage:used"}, omitted: []string{"entry_number", "folio", "item"}, page: "used"},
 	"correspondence":       {needed: []string{"creator", "recipient"}, unsug: []string{"coverage:used"}, date: "needed"},

@@ -22,9 +22,9 @@ death_certificate	full	list	Calder County, Westmark. Calder County Clerk. Death 
 death_certificate	bare	full	, death certificate (14 June 1880).
 death_certificate	bare	short	, death certificate.
 death_certificate	bare	list	. Death certificates.
-church_register	full	full	St. Brendan's Church, Port Ellis (Calder County, Westmark), *Baptisms and burials, 1850–1899*, vol. 3, p. 14, fol. 22, no. 57, Ada Robins; digital image, *Westmark Heritage* (https://example.org/calder/1880 : accessed 12 March 2025); film 1022345, item 3; Calder County Archives, Port Ellis.
+church_register	full	full	St. Brendan's Church, Port Ellis (Port Ellis, Westmark), *Baptisms and burials, 1850–1899*, vol. 3, p. 14, fol. 22, no. 57, Ada Robins; digital image, *Westmark Heritage* (https://example.org/calder/1880 : accessed 12 March 2025); film 1022345, item 3; Calder County Archives, Port Ellis.
 church_register	full	short	St. Brendan's Church, Port Ellis, *Calder Register*, vol. 3, p. 14, no. 57.
-church_register	full	list	St. Brendan's Church, Port Ellis (Calder County, Westmark). *Baptisms and burials, 1850–1899*, 1850–1899. Calder County Archives, Port Ellis.
+church_register	full	list	St. Brendan's Church, Port Ellis (Port Ellis, Westmark). *Baptisms and burials, 1850–1899*, 1850–1899. Calder County Archives, Port Ellis.
 church_register	bare	full	, *Baptisms and burials, 1850–1899*.
 church_register	bare	short	, *Baptisms and burials, 1850–1899*.
 church_register	bare	list	. *Baptisms and burials, 1850–1899*.
@@ -58,9 +58,9 @@ government_file	full	list	Calder County Archives, Port Ellis. Record Group 45. V
 government_file	bare	full	Pension file of Harold Venn (14 June 1880); .
 government_file	bare	short	Pension file of Harold Venn.
 government_file	bare	list	. Pension file of Harold Venn.
-cemetery_marker	full	full	Hillcrest Cemetery (Calder County, Westmark), Ada Robins, section 4, lot 112; photographed by Silas Pell, 12 March 2025.
-cemetery_marker	full	short	Hillcrest Cemetery (Calder County, Westmark), Ada Robins.
-cemetery_marker	full	list	Calder County, Westmark. Hillcrest Cemetery. Grave markers.
+cemetery_marker	full	full	Hillcrest Cemetery (Port Ellis, Westmark), Ada Robins, section 4, lot 112; photographed by Silas Pell, 12 March 2025.
+cemetery_marker	full	short	Hillcrest Cemetery (Port Ellis, Westmark), Ada Robins.
+cemetery_marker	full	list	Port Ellis, Westmark. Hillcrest Cemetery. Grave markers.
 cemetery_marker	bare	full	, Grave of Ada Robins.
 cemetery_marker	bare	short	, Grave of Ada Robins.
 cemetery_marker	bare	list	. . Grave markers.
@@ -94,19 +94,19 @@ gedcom_file	full	list	Mabel Thorne. Venn family tree. Held by Clara Venn, Port E
 gedcom_file	bare	full	Venn family tree, 14 June 1880.
 gedcom_file	bare	short	Venn family tree.
 gedcom_file	bare	list	Venn family tree.
-interview	full	full	Clara Venn (Calder County, Westmark), interview by Ruth Abernant, 14 June 1880, Ada Robins; held by Clara Venn, Port Ellis, 2025.
+interview	full	full	Clara Venn (Port Ellis, Westmark), interview by Ruth Abernant, 14 June 1880, Ada Robins; held by Clara Venn, Port Ellis, 2025.
 interview	full	short	Clara Venn, interview, 14 June 1880.
-interview	full	list	Clara Venn. Interview by Ruth Abernant. Calder County, Westmark, 14 June 1880. Held by Clara Venn, Port Ellis, 2025.
+interview	full	list	Clara Venn. Interview by Ruth Abernant. Port Ellis, Westmark, 14 June 1880. Held by Clara Venn, Port Ellis, 2025.
 interview	bare	full	, interview by , 14 June 1880.
 interview	bare	short	, interview, 14 June 1880.
 interview	bare	list	. Interview by . 14 June 1880.
-oral_testimony	full	full	Clara Venn (Calder County, Westmark), interview by Ruth Abernant, 14 June 1880, Ada Robins; held by Clara Venn, Port Ellis, 2025.
+oral_testimony	full	full	Clara Venn (Port Ellis, Westmark), interview by Ruth Abernant, 14 June 1880, Ada Robins; held by Clara Venn, Port Ellis, 2025.
 oral_testimony	full	short	Clara Venn, oral testimony, 14 June 1880.
-oral_testimony	full	list	Clara Venn. Interview by Ruth Abernant. Calder County, Westmark, 14 June 1880. Held by Clara Venn, Port Ellis, 2025.
+oral_testimony	full	list	Clara Venn. Interview by Ruth Abernant. Port Ellis, Westmark, 14 June 1880. Held by Clara Venn, Port Ellis, 2025.
 oral_testimony	bare	full	, 14 June 1880.
 oral_testimony	bare	short	, oral testimony, 14 June 1880.
 oral_testimony	bare	list	. 14 June 1880.
-correspondence	full	full	Clara Venn (Calder County, Westmark) to Harold Venn, Letter about Ada Robins, 14 June 1880; held by Clara Venn, Port Ellis, 2025.
+correspondence	full	full	Clara Venn (Port Ellis, Westmark) to Harold Venn, Letter about Ada Robins, 14 June 1880; held by Clara Venn, Port Ellis, 2025.
 correspondence	full	short	Clara Venn to Harold Venn, 14 June 1880.
 correspondence	full	list	Clara Venn. Correspondence to Harold Venn, 1850–1899. Held by Clara Venn, Port Ellis, 2025.
 correspondence	bare	full	 to , Letter about Ada Robins, 14 June 1880.
@@ -130,9 +130,9 @@ broadcast	full	list	Thorne, Mabel. "Ada Robins and the Calder flood." *Calder Va
 broadcast	bare	full	, "Ada Robins and the Calder flood,"  (14 June 1880).
 broadcast	bare	short	, "Ada Robins and the Calder flood".
 broadcast	bare	list	. "Ada Robins and the Calder flood."  (14 June 1880).
-newspaper_item	full	full	"Death of Ada Robins," *Calder Valley Gazette* (Calder County, Westmark), 14 June 1880, p. 14, col. 3; digital image, *Westmark Heritage* (https://example.org/calder/1880 : accessed 12 March 2025).
+newspaper_item	full	full	"Death of Ada Robins," *Calder Valley Gazette* (Port Ellis), 14 June 1880, p. 14, col. 3; digital image, *Westmark Heritage* (https://example.org/calder/1880 : accessed 12 March 2025).
 newspaper_item	full	short	"Calder Register," *Calder Valley Gazette*, 14 June 1880.
-newspaper_item	full	list	*Calder Valley Gazette* (Calder County, Westmark).
+newspaper_item	full	list	*Calder Valley Gazette* (Port Ellis).
 newspaper_item	bare	full	"Death of Ada Robins," , 14 June 1880.
 newspaper_item	bare	short	"Death of Ada Robins," , 14 June 1880.
 newspaper_item	bare	list	.

@@ -116,8 +116,8 @@ func TestInstall(t *testing.T) {
 					t.Fatal(err)
 				}
 				// The map's counts, asserted once; every other check reads the registry.
-				if len(seedTypes) != 26 || len(seedFields) != 63 {
-					t.Fatalf("registry holds %d types and %d fields, the map says 26 and 63", len(seedTypes), len(seedFields))
+				if len(seedTypes) != 26 || len(seedFields) != 67 {
+					t.Fatalf("registry holds %d types and %d fields, the map says 26 and 67", len(seedTypes), len(seedFields))
 				}
 				if len(types) != len(seedTypes) || len(fields) != len(seedFields) {
 					t.Fatalf("types=%d fields=%d", len(types), len(fields))

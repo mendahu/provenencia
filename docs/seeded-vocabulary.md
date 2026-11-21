@@ -80,7 +80,7 @@ edge-lock. Catalog row Install for types/properties/terms stays in
 
 ### Implementation (Source seed today)
 
-Product-seeded Source types/fields/suggestions live in a **code registry** (`core/database/sourcevocab/registry.go`, `registry_fields.go`, `registry_suggestions.go`) and are installed once by `sourcevocab.Install` at catalog **create** via `onboarding.createCatalog` (see `core/onboarding/ready.go`). Opens (`OpenCatalog`) do **not** re-install or heal deleted seed rows, and existing projects are not updated. Do not put seed rows in SQL migrations. The create-time Source seed is the citation vocabulary of [`evidence-explained-citation-map.md`](deployment-plan/spike-15/evidence-explained-citation-map.md) § 6.8: 26 types, each with its three citation formats, 63 fields and each type's suggested fields at the Source, the Artifact and the Evidence graph. It is the exception to "implement small" in §1: the Spike 15 rule "The seed is the product default" decided it.
+Product-seeded Source types/fields/suggestions live in a **code registry** (`core/database/sourcevocab/registry.go`, `registry_fields.go`, `registry_suggestions.go`) and are installed once by `sourcevocab.Install` at catalog **create** via `onboarding.createCatalog` (see `core/onboarding/ready.go`). Opens (`OpenCatalog`) do **not** re-install or heal deleted seed rows, and existing projects are not updated. Do not put seed rows in SQL migrations. The create-time Source seed is the citation vocabulary of [`evidence-explained-citation-map.md`](deployment-plan/spike-15/evidence-explained-citation-map.md) § 6.8: 26 types, each with its three citation formats, 67 fields and each type's suggested fields at the Source, the Artifact and the Evidence graph. The 67 are the map's 63 plus four place fields (user, 2026-11-21): `jurisdiction` is kept for the government records (census, the three certificates, record book, case file, statute), where it names the county, province, state or country whose office keeps the record. A newspaper item names its place with `publication_place`, a church register with `church_location`, a grave marker with `cemetery_location`, an interview and oral testimony with `interview_place`, and correspondence with `written_from`, where the map used `jurisdiction` for each. It is the exception to "implement small" in §1: the Spike 15 rule "The seed is the product default" decided it.
 
 When extending or adding another vocabulary domain’s seed, follow the project skill [`.agents/skills/add-seeded-vocabulary/SKILL.md`](../.agents/skills/add-seeded-vocabulary/SKILL.md).
 
@@ -134,6 +134,7 @@ Grouped by the level a field is usually set at (a type's suggestions follow §2.
 ```text
 source    creator author author_sort editor compiler translator photographer studio
           interviewer interviewee recipient testing_company software jurisdiction
+          church_location cemetery_location interview_place written_from
           published_in publisher publication_place edition series volume issue
           page_range site_name short_title coverage repository collection
           record_group call_number box folder document_number book case_number

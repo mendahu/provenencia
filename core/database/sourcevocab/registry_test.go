@@ -282,3 +282,36 @@ func TestSeededFormatsNeedOnlySuggestedFields(t *testing.T) {
 		}
 	}
 }
+
+// TestSeedPlaceFields: each seeded type that names a place suggests the field
+// that says what the place is. Only the government records, whose place is
+// the area whose office keeps them, use jurisdiction.
+func TestSeedPlaceFields(t *testing.T) {
+	want := map[string]string{
+		"census":               "jurisdiction",
+		"birth_certificate":    "jurisdiction",
+		"marriage_certificate": "jurisdiction",
+		"death_certificate":    "jurisdiction",
+		"record_book":          "jurisdiction",
+		"case_file":            "jurisdiction",
+		"statute":              "jurisdiction",
+		"newspaper_item":       "publication_place",
+		"church_register":      "church_location",
+		"cemetery_marker":      "cemetery_location",
+		"interview":            "interview_place",
+		"oral_testimony":       "interview_place",
+		"correspondence":       "written_from",
+	}
+	for _, s := range seedSuggestions {
+		if s.Level != vocabkey.LevelSource {
+			continue
+		}
+		key, ok := want[s.TypeKey]
+		if ok && !slices.Contains(s.FieldKeys, key) {
+			t.Errorf("type %s suggests %v at the source, want %s among them", s.TypeKey, s.FieldKeys, key)
+		}
+		if key != "jurisdiction" && slices.Contains(s.FieldKeys, "jurisdiction") {
+			t.Errorf("type %s suggests jurisdiction, which only government records use", s.TypeKey)
+		}
+	}
+}

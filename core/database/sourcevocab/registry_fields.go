@@ -2,7 +2,8 @@ package sourcevocab
 
 import "github.com/Jake-Robins-Studios/provenencia/core/database/metadatafields"
 
-// The 63 metadata fields of the Spike 15 map, section 6.8: label and a
+// The 67 metadata fields: the 63 of the Spike 15 map, section 6.8, and four
+// place fields for the types whose place is not a jurisdiction: label and a
 // description that says to enter the value as it should appear in a citation.
 // Only publisher and place of publication carry unknown text.
 var seedFields = []seedField{
@@ -33,7 +34,15 @@ var seedFields = []seedField{
 	{Key: "software", Label: "Software", DataType: metadatafields.DataTypeText,
 		Description: "The program the file was exported from, as it should appear in a citation (FamilyLedger 4.2)."},
 	{Key: "jurisdiction", Label: "Jurisdiction", DataType: metadatafields.DataTypeText,
-		Description: "The place the record belongs to, smallest first, as it should appear in a citation (Calder County, Westmark)."},
+		Description: "The county, province, state or country whose office registered or keeps the record, smallest first, as it should appear in a citation (Calder County, Westmark)."},
+	{Key: "church_location", Label: "Church location", DataType: metadatafields.DataTypeText,
+		Description: "Where the church is, smallest first, as it should appear in a citation (Port Ellis, Westmark)."},
+	{Key: "cemetery_location", Label: "Cemetery location", DataType: metadatafields.DataTypeText,
+		Description: "Where the cemetery is, smallest first, as it should appear in a citation (Port Ellis, Westmark)."},
+	{Key: "interview_place", Label: "Place of interview", DataType: metadatafields.DataTypeText,
+		Description: "Where the interview or conversation took place, smallest first, as it should appear in a citation (Port Ellis, Westmark)."},
+	{Key: "written_from", Label: "Written from", DataType: metadatafields.DataTypeText,
+		Description: "Where the letter or message was written, smallest first, as it should appear in a citation (Port Ellis, Westmark)."},
 	{Key: "published_in", Label: "Published in", DataType: metadatafields.DataTypeText,
 		Description: "The newspaper, journal, programme or statute book, as it should appear in a citation (Calder Valley Gazette)."},
 	{Key: "publisher", Label: "Publisher", DataType: metadatafields.DataTypeText,

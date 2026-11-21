@@ -84,9 +84,9 @@ var seedTypes = []seedType{
 		Description: "A parish register, church book or bishop's transcript of baptisms, marriages and burials.",
 		IconKey:     "type_scroll",
 		Formats: sourcetypes.Formats{
-			Full:  `{source.meta.creator}[ ({source.meta.jurisdiction})], *{source.title}*[, vol. {source.meta.volume}][, p. {citation.page}][, fol. {graph.meta.folio|source.meta.folio}][, no. {graph.meta.entry_number|source.meta.entry_number}][, {graph.meta.item|source.meta.item}][; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])][; film {artifact.meta.film_number}[, item {artifact.meta.item_number}]][; {source.meta.repository}].`,
+			Full:  `{source.meta.creator}[ ({source.meta.church_location})], *{source.title}*[, vol. {source.meta.volume}][, p. {citation.page}][, fol. {graph.meta.folio|source.meta.folio}][, no. {graph.meta.entry_number|source.meta.entry_number}][, {graph.meta.item|source.meta.item}][; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])][; film {artifact.meta.film_number}[, item {artifact.meta.item_number}]][; {source.meta.repository}].`,
 			Short: `{source.meta.creator}, *{source.meta.short_title|source.title}*[, vol. {source.meta.volume}][, p. {citation.page}][, no. {graph.meta.entry_number|source.meta.entry_number}].`,
-			List:  `{source.meta.creator}[ ({source.meta.jurisdiction})]. *{source.title}*[, {source.meta.coverage}].[ {source.meta.repository}.]`,
+			List:  `{source.meta.creator}[ ({source.meta.church_location})]. *{source.title}*[, {source.meta.coverage}].[ {source.meta.repository}.]`,
 		},
 	},
 	{
@@ -144,9 +144,9 @@ var seedTypes = []seedType{
 		Description: "A headstone or monument.",
 		IconKey:     "type_grave",
 		Formats: sourcetypes.Formats{
-			Full:  `{source.meta.creator}[ ({source.meta.jurisdiction})], {graph.meta.item|source.meta.item|source.title}[, section {source.meta.section}][, lot {source.meta.lot}][; photographed by {source.meta.photographer}[, {artifact.meta.accessed_date}]].`,
-			Short: `{source.meta.creator}[ ({source.meta.jurisdiction})], {graph.meta.item|source.meta.item|source.title}.`,
-			List:  `{source.meta.jurisdiction}. {source.meta.creator}. Grave markers.`,
+			Full:  `{source.meta.creator}[ ({source.meta.cemetery_location})], {graph.meta.item|source.meta.item|source.title}[, section {source.meta.section}][, lot {source.meta.lot}][; photographed by {source.meta.photographer}[, {artifact.meta.accessed_date}]].`,
+			Short: `{source.meta.creator}[ ({source.meta.cemetery_location})], {graph.meta.item|source.meta.item|source.title}.`,
+			List:  `{source.meta.cemetery_location}. {source.meta.creator}. Grave markers.`,
 		},
 	},
 	{
@@ -204,9 +204,9 @@ var seedTypes = []seedType{
 		Description: "A recorded or published interview.",
 		IconKey:     "type_oral_history",
 		Formats: sourcetypes.Formats{
-			Full:  `{source.meta.interviewee}[ ({source.meta.jurisdiction})], interview by {source.meta.interviewer}, {source.date:full}[, {graph.meta.item|source.meta.item}][; held by {source.meta.holder}].`,
+			Full:  `{source.meta.interviewee}[ ({source.meta.interview_place})], interview by {source.meta.interviewer}, {source.date:full}[, {graph.meta.item|source.meta.item}][; held by {source.meta.holder}].`,
 			Short: `{source.meta.interviewee}, interview, {source.date:full}.`,
-			List:  `{source.meta.interviewee}. Interview by {source.meta.interviewer}.[ {source.meta.jurisdiction},] {source.date:full}.[ Held by {source.meta.holder}.]`,
+			List:  `{source.meta.interviewee}. Interview by {source.meta.interviewer}.[ {source.meta.interview_place},] {source.date:full}.[ Held by {source.meta.holder}.]`,
 		},
 	},
 	{
@@ -214,9 +214,9 @@ var seedTypes = []seedType{
 		Description: "Informal family testimony, told to the researcher or someone else.",
 		IconKey:     "type_oral_history",
 		Formats: sourcetypes.Formats{
-			Full:  `{source.meta.interviewee}[ ({source.meta.jurisdiction})][, interview by {source.meta.interviewer}], {source.date:full}[, {graph.meta.item|source.meta.item}][; held by {source.meta.holder}].`,
+			Full:  `{source.meta.interviewee}[ ({source.meta.interview_place})][, interview by {source.meta.interviewer}], {source.date:full}[, {graph.meta.item|source.meta.item}][; held by {source.meta.holder}].`,
 			Short: `{source.meta.interviewee}, oral testimony, {source.date:full}.`,
-			List:  `{source.meta.interviewee}.[ Interview by {source.meta.interviewer}.][ {source.meta.jurisdiction},] {source.date:full}.[ Held by {source.meta.holder}.]`,
+			List:  `{source.meta.interviewee}.[ Interview by {source.meta.interviewer}.][ {source.meta.interview_place},] {source.date:full}.[ Held by {source.meta.holder}.]`,
 		},
 	},
 	{
@@ -224,7 +224,7 @@ var seedTypes = []seedType{
 		Description: "A letter or email written to the researcher.",
 		IconKey:     "type_email",
 		Formats: sourcetypes.Formats{
-			Full:  `{source.meta.creator}[ ({source.meta.jurisdiction})] to {source.meta.recipient}, {source.title}, {source.date:full}[; held by {source.meta.holder}].`,
+			Full:  `{source.meta.creator}[ ({source.meta.written_from})] to {source.meta.recipient}, {source.title}, {source.date:full}[; held by {source.meta.holder}].`,
 			Short: `{source.meta.creator} to {source.meta.recipient}, {source.date:full}.`,
 			List:  `{source.meta.creator}. Correspondence to {source.meta.recipient}[, {source.meta.coverage}].[ Held by {source.meta.holder}.]`,
 		},
@@ -256,9 +256,9 @@ var seedTypes = []seedType{
 		Description: "An article, notice or obituary in a newspaper.",
 		IconKey:     "type_newspaper",
 		Formats: sourcetypes.Formats{
-			Full:  `"{source.title}," *{source.meta.published_in}*[ ({source.meta.jurisdiction})], {source.date:full}[, p. {citation.page}][, col. {graph.meta.column|source.meta.column}][; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])].`,
+			Full:  `"{source.title}," *{source.meta.published_in}*[ ({source.meta.publication_place})], {source.date:full}[, p. {citation.page}][, col. {graph.meta.column|source.meta.column}][; {artifact.meta.format}, *{artifact.meta.provider}*][ ({artifact.meta.url}[ : accessed {artifact.meta.accessed_date}])].`,
 			Short: `"{source.meta.short_title|source.title}," *{source.meta.published_in}*, {source.date:full}.`,
-			List:  `*{source.meta.published_in}*[ ({source.meta.jurisdiction})].`,
+			List:  `*{source.meta.published_in}*[ ({source.meta.publication_place})].`,
 		},
 	},
 	{
